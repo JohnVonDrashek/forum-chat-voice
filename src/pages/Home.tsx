@@ -93,13 +93,13 @@ export default function Home() {
   return (
     <div className="mx-auto max-w-4xl">
       {/* Hero */}
-      <div className="mb-8 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white">
-        <h1 className="text-3xl font-bold">Welcome to Forum</h1>
-        <p className="mt-2 text-indigo-100">
+      <div className="mb-6 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white sm:mb-8 sm:p-8">
+        <h1 className="text-2xl font-bold sm:text-3xl">Welcome to Forum</h1>
+        <p className="mt-2 text-sm text-indigo-100 sm:text-base">
           A modern community platform combining forums, real-time chat, and voice rooms.
         </p>
         {!isConfigured && (
-          <div className="mt-4 rounded-lg bg-white/10 p-3 text-sm">
+          <div className="mt-4 rounded-lg bg-white/10 p-3 text-xs sm:text-sm">
             <strong>Demo Mode:</strong> Connect to Supabase to enable full functionality.
           </div>
         )}
@@ -119,38 +119,38 @@ export default function Home() {
               <Link
                 key={thread.id}
                 to={`/t/${thread.id}`}
-                className="flex items-start gap-4 px-4 py-4 transition-colors hover:bg-slate-700/30"
+                className="flex items-start gap-3 px-3 py-3 transition-colors hover:bg-slate-700/30 sm:gap-4 sm:px-4 sm:py-4"
               >
                 {/* Author Avatar */}
-                <div className="h-10 w-10 shrink-0 rounded-full bg-indigo-500 flex items-center justify-center text-sm font-medium text-white">
+                <div className="h-9 w-9 shrink-0 rounded-full bg-indigo-500 flex items-center justify-center text-sm font-medium text-white sm:h-10 sm:w-10">
                   {thread.author.display_name?.[0] || thread.author.username[0]}
                 </div>
 
                 {/* Content */}
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     {thread.is_pinned && (
-                      <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-xs font-medium text-amber-400">
+                      <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-400 sm:text-xs">
                         Pinned
                       </span>
                     )}
-                    <span className="rounded bg-slate-700 px-1.5 py-0.5 text-xs text-slate-400">
+                    <span className="rounded bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-400 sm:text-xs">
                       {thread.category.name}
                     </span>
                   </div>
-                  <h3 className="mt-1 font-medium text-white line-clamp-1">
+                  <h3 className="mt-1 text-sm font-medium text-white line-clamp-2 sm:text-base sm:line-clamp-1">
                     {thread.title}
                   </h3>
-                  <div className="mt-1 flex items-center gap-3 text-sm text-slate-400">
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-400 sm:gap-3 sm:text-sm">
                     <span>{thread.author.display_name || thread.author.username}</span>
-                    <span>·</span>
+                    <span className="hidden sm:inline">·</span>
                     <span>{formatTimeAgo(thread.created_at)}</span>
                     <span>·</span>
                     <span>{thread.post_count} replies</span>
                   </div>
                 </div>
 
-                {/* Activity */}
+                {/* Activity - hidden on mobile */}
                 <div className="hidden shrink-0 text-right text-sm sm:block">
                   <div className="text-slate-400">Last activity</div>
                   <div className="text-slate-300">{formatTimeAgo(thread.last_post_at || thread.updated_at)}</div>
