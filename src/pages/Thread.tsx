@@ -1,8 +1,10 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase, isConfigured } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import type { ThreadWithAuthor, PostWithAuthor } from '../types'
+
+const POSTS_PER_PAGE = 5
 
 // Demo data
 const demoThread: ThreadWithAuthor = {
@@ -15,7 +17,7 @@ const demoThread: ThreadWithAuthor = {
   updated_at: new Date().toISOString(),
   is_pinned: true,
   is_locked: false,
-  post_count: 3,
+  post_count: 12,
   last_post_at: new Date().toISOString(),
   author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, created_at: '' },
   category: { id: '1', name: 'General', slug: 'general', description: '', sort_order: 0, created_at: '' },
@@ -37,8 +39,8 @@ const demoPosts: PostWithAuthor[] = [
     thread_id: '1',
     author_id: '2',
     content: "This looks amazing! I've been looking for something like this - forums + Discord features in one place. Can't wait to see how this develops!",
-    created_at: new Date(Date.now() - 43200000).toISOString(),
-    updated_at: new Date(Date.now() - 43200000).toISOString(),
+    created_at: new Date(Date.now() - 82800000).toISOString(),
+    updated_at: new Date(Date.now() - 82800000).toISOString(),
     reply_to_id: null,
     author: { id: '2', username: 'sarah_dev', display_name: 'Sarah', avatar_url: null, bio: null, created_at: '' },
   },
@@ -47,8 +49,8 @@ const demoPosts: PostWithAuthor[] = [
     thread_id: '1',
     author_id: '3',
     content: "Hey everyone! Long-time forum enthusiast here. Really excited about the voice rooms feature - that's something I've wanted in a forum platform for ages.\n\nQuick question: will there be moderation tools for voice rooms?",
-    created_at: new Date(Date.now() - 28800000).toISOString(),
-    updated_at: new Date(Date.now() - 28800000).toISOString(),
+    created_at: new Date(Date.now() - 79200000).toISOString(),
+    updated_at: new Date(Date.now() - 79200000).toISOString(),
     reply_to_id: null,
     author: { id: '3', username: 'mike_m', display_name: 'Mike', avatar_url: null, bio: null, created_at: '' },
   },
@@ -57,8 +59,8 @@ const demoPosts: PostWithAuthor[] = [
     thread_id: '1',
     author_id: '1',
     content: "Great question! Yes, voice rooms will have full moderation support:\n\n- Mute/unmute participants\n- Kick from room\n- Temporary bans\n- Priority speaker mode for announcements\n\nWe're also planning stage-style rooms for larger events.",
-    created_at: new Date(Date.now() - 21600000).toISOString(),
-    updated_at: new Date(Date.now() - 21600000).toISOString(),
+    created_at: new Date(Date.now() - 75600000).toISOString(),
+    updated_at: new Date(Date.now() - 75600000).toISOString(),
     reply_to_id: '3',
     author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, created_at: '' },
   },
@@ -67,8 +69,8 @@ const demoPosts: PostWithAuthor[] = [
     thread_id: '1',
     author_id: '4',
     content: "Just signed up! The UI looks really clean. Is there a dark mode? (asking the important questions here)",
-    created_at: new Date(Date.now() - 7200000).toISOString(),
-    updated_at: new Date(Date.now() - 7200000).toISOString(),
+    created_at: new Date(Date.now() - 72000000).toISOString(),
+    updated_at: new Date(Date.now() - 72000000).toISOString(),
     reply_to_id: null,
     author: { id: '4', username: 'alex_tech', display_name: 'Alex', avatar_url: null, bio: null, created_at: '' },
   },
@@ -77,27 +79,105 @@ const demoPosts: PostWithAuthor[] = [
     thread_id: '1',
     author_id: '2',
     content: "You're already looking at it! The whole thing is dark mode by default. Love it.",
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    updated_at: new Date(Date.now() - 3600000).toISOString(),
+    created_at: new Date(Date.now() - 68400000).toISOString(),
+    updated_at: new Date(Date.now() - 68400000).toISOString(),
     reply_to_id: '5',
     author: { id: '2', username: 'sarah_dev', display_name: 'Sarah', avatar_url: null, bio: null, created_at: '' },
+  },
+  {
+    id: '7',
+    thread_id: '1',
+    author_id: '5',
+    content: "Hello from Australia! Just discovered this platform through a friend. The combination of forums and real-time features is exactly what our gaming community needs.",
+    created_at: new Date(Date.now() - 64800000).toISOString(),
+    updated_at: new Date(Date.now() - 64800000).toISOString(),
+    reply_to_id: null,
+    author: { id: '5', username: 'gamer_oz', display_name: 'OzGamer', avatar_url: null, bio: null, created_at: '' },
+  },
+  {
+    id: '8',
+    thread_id: '1',
+    author_id: '6',
+    content: "Software developer here. Would love to see an API for building integrations. Any plans for that?",
+    created_at: new Date(Date.now() - 57600000).toISOString(),
+    updated_at: new Date(Date.now() - 57600000).toISOString(),
+    reply_to_id: null,
+    author: { id: '6', username: 'dev_emma', display_name: 'Emma', avatar_url: null, bio: null, created_at: '' },
+  },
+  {
+    id: '9',
+    thread_id: '1',
+    author_id: '1',
+    content: "Absolutely! We're planning a full REST API and webhook support. Stay tuned for the developer documentation.",
+    created_at: new Date(Date.now() - 50400000).toISOString(),
+    updated_at: new Date(Date.now() - 50400000).toISOString(),
+    reply_to_id: '8',
+    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, created_at: '' },
+  },
+  {
+    id: '10',
+    thread_id: '1',
+    author_id: '7',
+    content: "This is giving me old-school forum vibes but with modern features. Nostalgic and fresh at the same time!",
+    created_at: new Date(Date.now() - 43200000).toISOString(),
+    updated_at: new Date(Date.now() - 43200000).toISOString(),
+    reply_to_id: null,
+    author: { id: '7', username: 'retro_fan', display_name: 'RetroFan', avatar_url: null, bio: null, created_at: '' },
+  },
+  {
+    id: '11',
+    thread_id: '1',
+    author_id: '3',
+    content: "Thanks for the info about moderation tools! That's exactly what we need. Looking forward to trying out the voice rooms once they're fully ready.",
+    created_at: new Date(Date.now() - 28800000).toISOString(),
+    updated_at: new Date(Date.now() - 28800000).toISOString(),
+    reply_to_id: '4',
+    author: { id: '3', username: 'mike_m', display_name: 'Mike', avatar_url: null, bio: null, created_at: '' },
+  },
+  {
+    id: '12',
+    thread_id: '1',
+    author_id: '4',
+    content: "Just tried the chat feature - super smooth! The real-time updates are instant. Great work on the performance.",
+    created_at: new Date(Date.now() - 14400000).toISOString(),
+    updated_at: new Date(Date.now() - 14400000).toISOString(),
+    reply_to_id: null,
+    author: { id: '4', username: 'alex_tech', display_name: 'Alex', avatar_url: null, bio: null, created_at: '' },
   },
 ]
 
 export default function Thread() {
   const { threadId } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
   const [thread, setThread] = useState<ThreadWithAuthor | null>(null)
-  const [posts, setPosts] = useState<PostWithAuthor[]>([])
+  const [allPosts, setAllPosts] = useState<PostWithAuthor[]>([])
   const [loading, setLoading] = useState(true)
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [replyingTo, setReplyingTo] = useState<PostWithAuthor | null>(null)
 
+  const currentPage = parseInt(searchParams.get('page') || '1', 10)
+  const totalPages = Math.ceil(allPosts.length / POSTS_PER_PAGE)
+  const paginatedPosts = allPosts.slice(
+    (currentPage - 1) * POSTS_PER_PAGE,
+    currentPage * POSTS_PER_PAGE
+  )
+
+  const goToPage = (page: number) => {
+    if (page === 1) {
+      searchParams.delete('page')
+    } else {
+      searchParams.set('page', page.toString())
+    }
+    setSearchParams(searchParams, { replace: true })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   useEffect(() => {
     if (!isConfigured) {
       setThread(demoThread)
-      setPosts(demoPosts)
+      setAllPosts(demoPosts)
       setLoading(false)
       return
     }
@@ -129,7 +209,7 @@ export default function Thread() {
           .eq('thread_id', threadId!)
           .order('created_at')
 
-        if (postsData) setPosts(postsData as PostWithAuthor[])
+        if (postsData) setAllPosts(postsData as PostWithAuthor[])
       }
 
       setLoading(false)
@@ -152,7 +232,7 @@ export default function Thread() {
               .eq('id', payload.new.id)
               .single()
             if (data) {
-              setPosts((prev) => [...prev, data as PostWithAuthor])
+              setAllPosts((prev) => [...prev, data as PostWithAuthor])
             }
           }
         )
@@ -189,10 +269,15 @@ export default function Thread() {
           created_at: '',
         },
       }
-      setPosts(prev => [...prev, newPost])
+      setAllPosts(prev => [...prev, newPost])
       setReplyContent('')
       setReplyingTo(null)
       setSubmitting(false)
+      // Go to last page to see the new post
+      const newTotalPages = Math.ceil((allPosts.length + 1) / POSTS_PER_PAGE)
+      if (newTotalPages > currentPage) {
+        goToPage(newTotalPages)
+      }
       return
     }
 
@@ -252,6 +337,36 @@ export default function Thread() {
     )
   }
 
+  // Generate page numbers to show
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = []
+
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1)
+
+      if (currentPage > 3) {
+        pages.push('ellipsis')
+      }
+
+      const start = Math.max(2, currentPage - 1)
+      const end = Math.min(totalPages - 1, currentPage + 1)
+
+      for (let i = start; i <= end; i++) {
+        if (!pages.includes(i)) pages.push(i)
+      }
+
+      if (currentPage < totalPages - 2) {
+        pages.push('ellipsis')
+      }
+
+      if (!pages.includes(totalPages)) pages.push(totalPages)
+    }
+
+    return pages
+  }
+
   return (
     <div className="mx-auto max-w-4xl">
       {/* Breadcrumb */}
@@ -276,19 +391,25 @@ export default function Thread() {
           )}
         </div>
         <h1 className="mt-2 text-2xl font-bold text-white">{thread.title}</h1>
-        <div className="mt-2 flex items-center gap-3 text-sm text-slate-400">
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-400 sm:gap-3">
           <span>Started by {thread.author.display_name || thread.author.username}</span>
-          <span>·</span>
+          <span className="hidden sm:inline">·</span>
           <span>{formatDate(thread.created_at)}</span>
           <span>·</span>
-          <span>{thread.post_count} {thread.post_count === 1 ? 'reply' : 'replies'}</span>
+          <span>{allPosts.length} {allPosts.length === 1 ? 'reply' : 'replies'}</span>
+          {totalPages > 1 && (
+            <>
+              <span>·</span>
+              <span>Page {currentPage} of {totalPages}</span>
+            </>
+          )}
         </div>
       </div>
 
       {/* Posts */}
       <div className="space-y-4">
-        {posts.map((post) => {
-          const replyToPost = post.reply_to_id ? posts.find(p => p.id === post.reply_to_id) : null
+        {paginatedPosts.map((post) => {
+          const replyToPost = post.reply_to_id ? allPosts.find(p => p.id === post.reply_to_id) : null
           const isOP = post.author_id === thread.author_id
 
           return (
@@ -357,6 +478,52 @@ export default function Thread() {
           )
         })}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-center gap-1">
+          {/* Previous */}
+          <button
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-700 hover:text-white disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          {/* Page numbers */}
+          {getPageNumbers().map((page, index) =>
+            page === 'ellipsis' ? (
+              <span key={`ellipsis-${index}`} className="px-2 text-slate-500">...</span>
+            ) : (
+              <button
+                key={page}
+                onClick={() => goToPage(page)}
+                className={`min-w-[2.5rem] rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  page === currentPage
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+                }`}
+              >
+                {page}
+              </button>
+            )
+          )}
+
+          {/* Next */}
+          <button
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-700 hover:text-white disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Reply Form */}
       {thread.is_locked ? (
