@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { useAuth } from '../lib/auth'
 
 interface HeaderProps {
@@ -7,6 +8,16 @@ interface HeaderProps {
 
 export default function Header({ onMenuClick }: HeaderProps) {
   const { user, signOut, loading } = useAuth()
+  const navigate = useNavigate()
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+      setSearchQuery('')
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-700 bg-slate-800/80 backdrop-blur-sm">
@@ -33,23 +44,28 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
         <div className="flex items-center gap-2 sm:gap-4">
           {/* Search */}
-          <div className="relative hidden md:block">
+          <form onSubmit={handleSearch} className="relative hidden md:block">
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search..."
               className="w-64 rounded-lg border border-slate-600 bg-slate-700 px-4 py-1.5 text-sm text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
             <kbd className="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-slate-600 bg-slate-800 px-1.5 text-xs text-slate-400">
               /
             </kbd>
-          </div>
+          </form>
 
           {/* Mobile search button */}
-          <button className="rounded-lg p-2 text-slate-400 hover:bg-slate-700 hover:text-white md:hidden">
+          <Link
+            to="/search"
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-700 hover:text-white md:hidden"
+          >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-          </button>
+          </Link>
 
           {/* Auth */}
           {loading ? (

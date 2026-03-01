@@ -9,6 +9,7 @@ import Thread from './pages/Thread'
 import NewThread from './pages/NewThread'
 import Profile from './pages/Profile'
 import Chat from './pages/Chat'
+import Search from './pages/Search'
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="u/:username" element={<Profile />} />
           <Route path="chat" element={<Chat />} />
           <Route path="chat/:channelId" element={<Chat />} />
+          <Route path="search" element={<Search />} />
         </Route>
       </Routes>
     </AuthProvider>
