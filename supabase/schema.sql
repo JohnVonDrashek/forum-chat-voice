@@ -203,7 +203,53 @@ insert into public.categories (name, slug, description, sort_order) values
   ('Feedback', 'feedback', 'Share your feedback and suggestions', 4);
 
 -- ============================================
+-- DIRECT MESSAGES TABLE
+-- Private messages between users
+-- ============================================
+create table public.direct_messages (
+  id uuid default uuid_generate_v4() primary key,
+  sender_id uuid references public.profiles on delete cascade not null,
+  recipient_id uuid references public.profiles on delete cascade not null,
+  content text not null,
+  read boolean default false not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+
+  constraint content_not_empty check (char_length(content) >= 1 and char_length(content) <= 10000),
+  constraint no_self_message check (sender_id <> recipient_id)
+);
+
+-- Indexes
+create index dm_sender_id_idx on public.direct_messages (sender_id);
+create index dm_recipient_id_idx on public.direct_messages (recipient_id);
+create index dm_created_at_idx on public.direct_messages (created_at desc);
+create index dm_conversation_idx on public.direct_messages (
+  least(sender_id, recipient_id),
+  greatest(sender_id, recipient_id),
+  created_at desc
+);
+create index dm_unread_idx on public.direct_messages (recipient_id, read)
+  where read = false;
+
+-- Enable RLS
+alter table public.direct_messages enable row level security;
+
+-- Policies
+create policy "Users can view their own DMs"
+  on public.direct_messages for select
+  using (auth.uid() = sender_id or auth.uid() = recipient_id);
+
+create policy "Authenticated users can send DMs"
+  on public.direct_messages for insert
+  with check (auth.uid() = sender_id);
+
+create policy "Recipients can mark DMs as read"
+  on public.direct_messages for update
+  using (auth.uid() = recipient_id)
+  with check (auth.uid() = recipient_id);
+
+-- ============================================
 -- REALTIME
--- Enable realtime for posts table
+-- Enable realtime for posts and direct_messages
 -- ============================================
 alter publication supabase_realtime add table public.posts;
+alter publication supabase_realtime add table public.direct_messages;

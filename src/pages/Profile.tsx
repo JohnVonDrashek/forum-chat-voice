@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { useAuth } from '../lib/auth'
 import { supabase, isConfigured } from '../lib/supabase'
 import type { Profile, ThreadWithAuthor, PostWithAuthor } from '../types'
 
@@ -194,6 +195,7 @@ type ActivityTab = 'threads' | 'posts'
 
 export default function ProfilePage() {
   const { username } = useParams()
+  const { user } = useAuth()
   const [profile, setProfile] = useState<(Profile & { threadCount?: number; postCount?: number }) | null>(null)
   const [threads, setThreads] = useState<ThreadWithAuthor[]>([])
   const [posts, setPosts] = useState<PostWithAuthor[]>([])
@@ -354,6 +356,19 @@ export default function ProfilePage() {
             <p className="mt-3 text-sm text-slate-500 sm:hidden">
               Joined {formatDate(profile.created_at)}
             </p>
+
+            {/* Message button - shown when viewing someone else's profile */}
+            {user && profile.id !== user.id && (
+              <Link
+                to={`/dm/${profile.id}`}
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                Message
+              </Link>
+            )}
           </div>
         </div>
       </div>

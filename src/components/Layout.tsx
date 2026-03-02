@@ -70,6 +70,18 @@ export default function Layout() {
     }
 
     fetchUnread()
+
+    // Subscribe to new DMs to update unread badge in real-time
+    const sub = supabase
+      .channel('layout-dm-unread')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'direct_messages', filter: `recipient_id=eq.${user.id}` },
+        () => fetchUnread()
+      )
+      .subscribe()
+
+    return () => { sub.unsubscribe() }
   }, [user])
 
   const handleMenuClick = useCallback(() => {
