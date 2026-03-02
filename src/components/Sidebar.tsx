@@ -1,93 +1,17 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import { supabase, isConfigured } from '../lib/supabase'
-import { useAuth } from '../lib/auth'
 import { useVoice } from '../lib/voice'
 import type { Category, ChatChannel, VoiceRoom } from '../types'
 
-// Demo data when Supabase is not configured
-const demoCategories: Category[] = [
-  { id: '1', name: 'General', slug: 'general', description: 'General discussion', sort_order: 0, created_at: '' },
-  { id: '2', name: 'Announcements', slug: 'announcements', description: 'Official announcements', sort_order: 1, created_at: '' },
-  { id: '3', name: 'Help & Support', slug: 'help', description: 'Get help from the community', sort_order: 2, created_at: '' },
-  { id: '4', name: 'Showcase', slug: 'showcase', description: 'Show off your projects', sort_order: 3, created_at: '' },
-]
+interface SidebarProps {
+  categories: Category[]
+  channels: ChatChannel[]
+  rooms: VoiceRoom[]
+  unreadDmCount: number
+}
 
-const demoChannels: ChatChannel[] = [
-  { id: 'general', name: 'general', slug: 'general', description: null, created_at: '' },
-  { id: 'random', name: 'random', slug: 'random', description: null, created_at: '' },
-  { id: 'introductions', name: 'introductions', slug: 'introductions', description: null, created_at: '' },
-  { id: 'help', name: 'help', slug: 'help', description: null, created_at: '' },
-]
-
-const demoRooms: VoiceRoom[] = [
-  { id: 'lounge', name: 'Lounge', slug: 'lounge', created_at: '' },
-  { id: 'gaming', name: 'Gaming', slug: 'gaming', created_at: '' },
-  { id: 'music', name: 'Music', slug: 'music', created_at: '' },
-  { id: 'study', name: 'Study Room', slug: 'study', created_at: '' },
-]
-
-export default function Sidebar() {
+export default function Sidebar({ categories, channels, rooms, unreadDmCount }: SidebarProps) {
   const location = useLocation()
-  const { user } = useAuth()
   const voice = useVoice()
-  const [categories, setCategories] = useState<Category[]>(demoCategories)
-  const [channels, setChannels] = useState<ChatChannel[]>(demoChannels)
-  const [rooms, setRooms] = useState<VoiceRoom[]>(demoRooms)
-  const [unreadDmCount, setUnreadDmCount] = useState(isConfigured ? 0 : 2)
-
-  useEffect(() => {
-    if (!isConfigured) return
-
-    const fetchData = async () => {
-      const [catRes, chanRes, roomRes] = await Promise.all([
-        supabase.from('categories').select('*').order('sort_order'),
-        supabase.from('chat_channels').select('*').order('name'),
-        supabase.from('voice_rooms').select('*').order('name'),
-      ])
-      if (catRes.data) setCategories(catRes.data)
-      if (chanRes.data) setChannels(chanRes.data)
-      if (roomRes.data) setRooms(roomRes.data)
-    }
-
-    fetchData()
-  }, [])
-
-  // Fetch unread DM count for logged-in users
-  useEffect(() => {
-    if (!isConfigured || !user) {
-      if (isConfigured) setUnreadDmCount(0)
-      return
-    }
-
-    const fetchUnread = async () => {
-      const { count } = await supabase
-        .from('direct_messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('recipient_id', user.id)
-        .eq('read', false)
-      setUnreadDmCount(count ?? 0)
-    }
-
-    fetchUnread()
-
-    // Subscribe to new DMs for unread count
-    const sub = supabase
-      .channel('sidebar-dm-count')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: `recipient_id=eq.${user.id}` },
-        () => fetchUnread()
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'direct_messages', filter: `recipient_id=eq.${user.id}` },
-        () => fetchUnread()
-      )
-      .subscribe()
-
-    return () => { sub.unsubscribe() }
-  }, [user])
 
   return (
     <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-64 shrink-0 border-r border-slate-700 bg-slate-800/50 lg:block">

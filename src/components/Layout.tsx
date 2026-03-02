@@ -95,7 +95,12 @@ export default function Layout() {
       />
 
       <div className="flex">
-        <Sidebar />
+        <Sidebar
+          categories={categories}
+          channels={channels}
+          rooms={rooms}
+          unreadDmCount={unreadDmCount}
+        />
         <main className="flex-1 p-4 sm:p-6">
           <Outlet />
         </main>

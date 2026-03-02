@@ -236,7 +236,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
   }, [isDeafened, isMuted])
 
-  // Poll participant counts for all rooms (for sidebar)
+  // Poll participant counts for all rooms (single batch request for sidebar)
   useEffect(() => {
     if (!isConfigured) return
 
@@ -244,37 +244,16 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
     const fetchCounts = async () => {
       try {
-        // First get the list of rooms from Supabase
-        const { data: rooms } = await supabase
-          .from('voice_rooms')
-          .select('slug')
-          .order('name')
-
-        if (!rooms || cancelled) return
-
-        const results = await Promise.all(
-          rooms.map(async (room) => {
-            try {
-              const resp = await fetch(`/api/livekit-participants?room=${encodeURIComponent(room.slug)}`)
-              if (!resp.ok) return { slug: room.slug, count: 0, names: [] as string[] }
-              const data = await resp.json()
-              const participants = data.participants || []
-              return {
-                slug: room.slug,
-                count: participants.length,
-                names: participants.map((p: { name: string }) => p.name),
-              }
-            } catch {
-              return { slug: room.slug, count: 0, names: [] as string[] }
-            }
-          })
-        )
+        const resp = await fetch('/api/livekit-participants-all')
+        if (!resp.ok || cancelled) return
+        const data = await resp.json()
+        const rooms: Record<string, { count: number; names: string[] }> = data.rooms || {}
 
         if (cancelled) return
 
         const counts: Record<string, RoomParticipantInfo> = {}
-        for (const r of results) {
-          counts[r.slug] = { count: r.count, names: r.names }
+        for (const [slug, info] of Object.entries(rooms)) {
+          counts[slug] = { count: info.count, names: info.names }
         }
         setRoomParticipantCounts(counts)
       } catch {
@@ -283,7 +262,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
 
     fetchCounts()
-    const interval = setInterval(fetchCounts, 10000)
+    const interval = setInterval(fetchCounts, 30000)
     return () => {
       cancelled = true
       clearInterval(interval)
