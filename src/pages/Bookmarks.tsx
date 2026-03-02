@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { supabase, isConfigured } from '../lib/supabase'
+import Avatar from '../components/Avatar'
 import type { ThreadWithAuthor } from '../types'
 
 interface BookmarkWithThread {
@@ -175,11 +176,7 @@ export default function Bookmarks() {
                 key={bookmark.id}
                 className="flex items-start gap-3 px-4 py-4 transition-colors hover:bg-slate-700/30"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/20">
-                  <svg className="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                  </svg>
-                </div>
+                <Avatar seed={bookmark.thread.id} type="thread" avatarUrl={bookmark.thread.image_url} className="h-10 w-10 shrink-0" />
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">

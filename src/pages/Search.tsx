@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { supabase, isConfigured } from '../lib/supabase'
+import Avatar from '../components/Avatar'
 import type { ThreadWithAuthor, PostWithAuthor } from '../types'
 
 // Demo data for search results
@@ -278,9 +279,7 @@ export default function Search() {
                     className="block rounded-xl border border-slate-700 bg-slate-800/50 p-4 transition-colors hover:bg-slate-700/50"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 shrink-0 rounded-full bg-indigo-500 flex items-center justify-center text-sm font-medium text-white">
-                        {(thread.author.display_name?.[0] || thread.author.username[0]).toUpperCase()}
-                      </div>
+                      <Avatar seed={thread.id} type="thread" avatarUrl={thread.image_url} className="h-10 w-10 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="rounded bg-slate-700 px-1.5 py-0.5 text-xs text-slate-400">
@@ -325,9 +324,7 @@ export default function Search() {
                     className="block rounded-xl border border-slate-700 bg-slate-800/50 p-4 transition-colors hover:bg-slate-700/50"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 shrink-0 rounded-full bg-indigo-500 flex items-center justify-center text-sm font-medium text-white">
-                        {(post.author.display_name?.[0] || post.author.username[0]).toUpperCase()}
-                      </div>
+                      <Avatar seed={post.author.id} type="user" avatarUrl={post.author.avatar_url} className="h-10 w-10 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 text-sm">
                           <span className="font-medium text-white">

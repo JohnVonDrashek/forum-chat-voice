@@ -122,12 +122,11 @@ export default function NewThread() {
         await supabase.from('threads').update({ image_url: imageUrl }).eq('id', thread.id)
       }
     } else {
-      // No custom image — generate and upload a default DiceBear thread image (fire-and-forget)
-      uploadDefaultAvatar(thread.id, 'thread').then(imageUrl => {
-        if (imageUrl) {
-          supabase.from('threads').update({ image_url: imageUrl }).eq('id', thread.id)
-        }
-      })
+      // No custom image — generate and upload a default DiceBear thread image
+      const imageUrl = await uploadDefaultAvatar(thread.id, 'thread')
+      if (imageUrl) {
+        await supabase.from('threads').update({ image_url: imageUrl }).eq('id', thread.id)
+      }
     }
 
     navigate(`/t/${thread.id}`)

@@ -418,6 +418,7 @@ export default function ProfilePage() {
                     to={`/t/${thread.id}`}
                     className="flex items-start gap-3 px-4 py-4 transition-colors hover:bg-slate-700/30"
                   >
+                    <Avatar seed={thread.id} type="thread" avatarUrl={thread.image_url} className="h-10 w-10 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded bg-slate-700 px-1.5 py-0.5 text-xs text-slate-400">
