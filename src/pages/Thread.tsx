@@ -1,5 +1,5 @@
 import { useParams, Link, useSearchParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase, isConfigured } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import type { ThreadWithAuthor, PostWithAuthor } from '../types'
@@ -159,6 +159,16 @@ export default function Thread() {
   const [submitting, setSubmitting] = useState(false)
   const [replyingTo, setReplyingTo] = useState<PostWithAuthor | null>(null)
   const [isBookmarked, setIsBookmarked] = useState(false)
+  const [pendingPosts, setPendingPosts] = useState<PostWithAuthor[]>([])
+  const [autoUpdate, setAutoUpdate] = useState(false)
+  const allPostsRef = useRef<PostWithAuthor[]>([])
+  const pendingPostsRef = useRef<PostWithAuthor[]>([])
+  const autoUpdateRef = useRef(false)
+
+  // Keep refs in sync so interval/subscription callbacks see latest values
+  allPostsRef.current = allPosts
+  pendingPostsRef.current = pendingPosts
+  autoUpdateRef.current = autoUpdate
 
   const currentPage = parseInt(searchParams.get('page') || '1', 10)
   const totalPages = Math.ceil(allPosts.length / POSTS_PER_PAGE)
@@ -235,10 +245,22 @@ export default function Thread() {
               .eq('id', payload.new.id)
               .single()
             if (data) {
-              setAllPosts((prev) => {
-                if (prev.some(p => p.id === data.id)) return prev
-                return [...prev, data as PostWithAuthor]
-              })
+              const post = data as PostWithAuthor
+              const known = allPostsRef.current.some(p => p.id === post.id)
+                || pendingPostsRef.current.some(p => p.id === post.id)
+              if (known) return
+
+              if (autoUpdateRef.current) {
+                setAllPosts(prev => {
+                  if (prev.some(p => p.id === post.id)) return prev
+                  return [...prev, post]
+                })
+              } else {
+                setPendingPosts(prev => {
+                  if (prev.some(p => p.id === post.id)) return prev
+                  return [...prev, post]
+                })
+              }
             }
           }
         )
@@ -267,6 +289,69 @@ export default function Thread() {
       setIsBookmarked(bookmarks.some((b: { id: string }) => b.id === thread.id))
     }
   }, [thread?.id, user])
+
+  // Poll for new replies every 10 seconds
+  useEffect(() => {
+    if (!isConfigured || !threadId) return
+
+    const poll = async () => {
+      const current = allPostsRef.current
+      const pending = pendingPostsRef.current
+      const knownIds = new Set([...current.map(p => p.id), ...pending.map(p => p.id)])
+
+      // Find the latest created_at among all known posts
+      const latestAt = current.length > 0
+        ? current[current.length - 1].created_at
+        : '1970-01-01T00:00:00Z'
+
+      const { data } = await supabase
+        .from('posts')
+        .select('*, author:profiles(*)')
+        .eq('thread_id', threadId)
+        .gt('created_at', latestAt)
+        .order('created_at')
+
+      if (!data || data.length === 0) return
+
+      const newPosts = (data as PostWithAuthor[]).filter(p => !knownIds.has(p.id))
+      if (newPosts.length === 0) return
+
+      if (autoUpdateRef.current) {
+        setAllPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.id))
+          const toAdd = newPosts.filter(p => !existingIds.has(p.id))
+          return toAdd.length > 0 ? [...prev, ...toAdd] : prev
+        })
+      } else {
+        setPendingPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.id))
+          const toAdd = newPosts.filter(p => !existingIds.has(p.id))
+          return toAdd.length > 0 ? [...prev, ...toAdd] : prev
+        })
+      }
+    }
+
+    const interval = setInterval(poll, 10000)
+    return () => clearInterval(interval)
+  }, [threadId])
+
+  const loadPendingPosts = useCallback(() => {
+    if (pendingPosts.length === 0) return
+    setAllPosts(prev => {
+      const existingIds = new Set(prev.map(p => p.id))
+      const toAdd = pendingPosts.filter(p => !existingIds.has(p.id))
+      return toAdd.length > 0 ? [...prev, ...toAdd] : prev
+    })
+    setPendingPosts([])
+  }, [pendingPosts])
+
+  const handleAutoUpdateToggle = useCallback((checked: boolean) => {
+    setAutoUpdate(checked)
+    if (checked) {
+      // Immediately merge any buffered posts
+      loadPendingPosts()
+    }
+  }, [loadPendingPosts])
 
   const toggleBookmark = async () => {
     if (!thread) return
@@ -623,6 +708,53 @@ export default function Thread() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
+        </div>
+      )}
+
+      {/* New replies banner */}
+      {pendingPosts.length > 0 && (
+        <div className="mt-4 flex items-center justify-between rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <svg className="h-4 w-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+            <span className="text-sm text-indigo-300">
+              {pendingPosts.length} new {pendingPosts.length === 1 ? 'reply' : 'replies'} available
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-slate-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoUpdate}
+                onChange={(e) => handleAutoUpdateToggle(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-slate-600 bg-slate-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
+              />
+              Auto-update
+            </label>
+            <button
+              onClick={loadPendingPosts}
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 transition-colors"
+            >
+              Load
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-update indicator (when enabled but no pending posts) */}
+      {autoUpdate && pendingPosts.length === 0 && isConfigured && (
+        <div className="mt-4 flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2">
+          <span className="text-xs text-slate-500">Auto-updating replies</span>
+          <label className="flex items-center gap-2 text-sm text-slate-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoUpdate}
+              onChange={(e) => setAutoUpdate(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-slate-600 bg-slate-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
+            />
+            Auto-update
+          </label>
         </div>
       )}
 
