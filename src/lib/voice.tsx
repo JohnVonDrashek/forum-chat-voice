@@ -78,6 +78,14 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   const leaveRoom = useCallback(() => {
     if (livekitRoomRef.current) {
+      // Detach all audio elements before disconnecting
+      livekitRoomRef.current.remoteParticipants.forEach(p => {
+        p.getTrackPublications().forEach(pub => {
+          if (pub.track) {
+            pub.track.detach().forEach(el => el.remove())
+          }
+        })
+      })
       livekitRoomRef.current.disconnect()
       livekitRoomRef.current = null
     }
@@ -152,6 +160,19 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       room.on(RoomEvent.TrackMuted, updateParticipants)
       room.on(RoomEvent.TrackUnmuted, updateParticipants)
       room.on(RoomEvent.ActiveSpeakersChanged, updateParticipants)
+
+      // Attach remote audio tracks to DOM for playback
+      room.on(RoomEvent.TrackSubscribed, (track) => {
+        if (track.kind === Track.Kind.Audio) {
+          const el = track.attach()
+          el.id = `lk-audio-${track.sid}`
+          document.body.appendChild(el)
+        }
+      })
+      room.on(RoomEvent.TrackUnsubscribed, (track) => {
+        track.detach().forEach(el => el.remove())
+      })
+
       room.on(RoomEvent.Disconnected, () => {
         setIsConnected(false)
         setParticipants([])
