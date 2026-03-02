@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
+import { supabase, isConfigured } from '../lib/supabase'
 import type { ThreadWithAuthor, PostWithAuthor } from '../types'
 
 // Demo data for search results
@@ -16,7 +17,9 @@ const demoThreads: ThreadWithAuthor[] = [
     is_locked: false,
     post_count: 42,
     last_post_at: new Date().toISOString(),
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, created_at: '' },
+    content: '',
+    view_count: 0,
+    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
     category: { id: '1', name: 'General', slug: 'general', description: '', sort_order: 0, created_at: '' },
   },
   {
@@ -31,7 +34,9 @@ const demoThreads: ThreadWithAuthor[] = [
     is_locked: false,
     post_count: 15,
     last_post_at: new Date(Date.now() - 3600000).toISOString(),
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, created_at: '' },
+    content: '',
+    view_count: 0,
+    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
     category: { id: '2', name: 'Announcements', slug: 'announcements', description: '', sort_order: 1, created_at: '' },
   },
   {
@@ -46,7 +51,9 @@ const demoThreads: ThreadWithAuthor[] = [
     is_locked: false,
     post_count: 28,
     last_post_at: new Date(Date.now() - 7200000).toISOString(),
-    author: { id: '2', username: 'user1', display_name: 'Forum User', avatar_url: null, bio: null, created_at: '' },
+    content: '',
+    view_count: 0,
+    author: { id: '2', username: 'user1', display_name: 'Forum User', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
     category: { id: '1', name: 'General', slug: 'general', description: '', sort_order: 0, created_at: '' },
   },
 ]
@@ -60,7 +67,7 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 86400000).toISOString(),
     updated_at: new Date(Date.now() - 86400000).toISOString(),
     reply_to_id: null,
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
   {
     id: '2',
@@ -70,33 +77,12 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 43200000).toISOString(),
     updated_at: new Date(Date.now() - 43200000).toISOString(),
     reply_to_id: null,
-    author: { id: '2', username: 'sarah_dev', display_name: 'Sarah', avatar_url: null, bio: null, created_at: '' },
-  },
-  {
-    id: '3',
-    thread_id: '2',
-    author_id: '3',
-    content: "Really excited about the voice rooms feature - that's something I've wanted in a forum platform for ages.",
-    created_at: new Date(Date.now() - 28800000).toISOString(),
-    updated_at: new Date(Date.now() - 28800000).toISOString(),
-    reply_to_id: null,
-    author: { id: '3', username: 'mike_m', display_name: 'Mike', avatar_url: null, bio: null, created_at: '' },
-  },
-  {
-    id: '4',
-    thread_id: '1',
-    author_id: '4',
-    content: "Just signed up! The UI looks really clean. Dark mode by default is perfect.",
-    created_at: new Date(Date.now() - 7200000).toISOString(),
-    updated_at: new Date(Date.now() - 7200000).toISOString(),
-    reply_to_id: null,
-    author: { id: '4', username: 'alex_tech', display_name: 'Alex', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '2', username: 'sarah_dev', display_name: 'Sarah', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
 ]
 
 type SearchFilter = 'all' | 'threads' | 'posts'
 
-// Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value)
 
@@ -104,10 +90,7 @@ function useDebounce<T>(value: T, delay: number): T {
     const handler = setTimeout(() => {
       setDebouncedValue(value)
     }, delay)
-
-    return () => {
-      clearTimeout(handler)
-    }
+    return () => clearTimeout(handler)
   }, [value, delay])
 
   return debouncedValue
@@ -123,65 +106,58 @@ export default function Search() {
   const [threadResults, setThreadResults] = useState<ThreadWithAuthor[]>([])
   const [postResults, setPostResults] = useState<PostWithAuthor[]>([])
 
-  // Debounce search input for performance
-  const debouncedSearch = useDebounce(searchInput, 150)
+  const debouncedSearch = useDebounce(searchInput, 300)
 
-  // Perform search whenever debounced input changes
-  const performSearch = useCallback((query: string) => {
+  const performSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
       setThreadResults([])
       setPostResults([])
       return
     }
 
-    const lowerQuery = query.toLowerCase()
+    if (!isConfigured) {
+      const lowerQuery = query.toLowerCase()
+      setThreadResults(demoThreads.filter(t =>
+        t.title.toLowerCase().includes(lowerQuery) ||
+        t.author.username.toLowerCase().includes(lowerQuery)
+      ))
+      setPostResults(demoPosts.filter(p =>
+        p.content.toLowerCase().includes(lowerQuery) ||
+        p.author.username.toLowerCase().includes(lowerQuery)
+      ))
+      return
+    }
 
-    // Filter threads
-    const matchingThreads = demoThreads.filter(thread =>
-      thread.title.toLowerCase().includes(lowerQuery) ||
-      thread.author.username.toLowerCase().includes(lowerQuery) ||
-      thread.author.display_name?.toLowerCase().includes(lowerQuery) ||
-      thread.category.name.toLowerCase().includes(lowerQuery)
-    )
+    const pattern = `%${query}%`
 
-    // Filter posts
-    const matchingPosts = demoPosts.filter(post =>
-      post.content.toLowerCase().includes(lowerQuery) ||
-      post.author.username.toLowerCase().includes(lowerQuery) ||
-      post.author.display_name?.toLowerCase().includes(lowerQuery)
-    )
+    const [threadsRes, postsRes] = await Promise.all([
+      supabase
+        .from('threads')
+        .select('*, author:profiles(*), category:categories(*)')
+        .ilike('title', pattern)
+        .order('created_at', { ascending: false })
+        .limit(20),
+      supabase
+        .from('posts')
+        .select('*, author:profiles(*)')
+        .ilike('content', pattern)
+        .order('created_at', { ascending: false })
+        .limit(20),
+    ])
 
-    setThreadResults(matchingThreads)
-    setPostResults(matchingPosts)
+    if (threadsRes.data) setThreadResults(threadsRes.data as ThreadWithAuthor[])
+    if (postsRes.data) setPostResults(postsRes.data as PostWithAuthor[])
   }, [])
 
-  // Trigger search on debounced input change
   useEffect(() => {
     performSearch(debouncedSearch)
 
-    // Update URL without causing navigation
     if (debouncedSearch.trim()) {
       setSearchParams({ q: debouncedSearch.trim(), filter }, { replace: true })
     } else if (searchParams.has('q')) {
       setSearchParams({}, { replace: true })
     }
   }, [debouncedSearch, filter, performSearch, setSearchParams, searchParams])
-
-  const handleFilterChange = (newFilter: SearchFilter) => {
-    setFilter(newFilter)
-  }
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchInput(e.target.value)
-  }
-
-  const handleClear = () => {
-    setSearchInput('')
-  }
-
-  const handleSuggestionClick = (term: string) => {
-    setSearchInput(term)
-  }
 
   const formatTimeAgo = (date: string) => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
@@ -221,13 +197,11 @@ export default function Search() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      {/* Search Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Search</h1>
         <p className="mt-1 text-slate-400">Results update as you type</p>
       </div>
 
-      {/* Search Input */}
       <div className="mb-6">
         <div className="relative">
           <svg className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -236,14 +210,14 @@ export default function Search() {
           <input
             type="text"
             value={searchInput}
-            onChange={handleInputChange}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Start typing to search..."
             className="w-full rounded-lg border border-slate-600 bg-slate-700 py-3 pl-12 pr-12 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             autoFocus
           />
           {hasQuery && (
             <button
-              onClick={handleClear}
+              onClick={() => setSearchInput('')}
               className="absolute right-4 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:bg-slate-600 hover:text-white"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -253,28 +227,22 @@ export default function Search() {
           )}
         </div>
 
-        {/* Live result count */}
         {hasQuery && (
           <p className="mt-2 text-sm text-slate-400">
-            {totalResults === 0 ? (
-              'No results found'
-            ) : (
-              <>
-                Found <span className="font-medium text-white">{totalResults}</span> result{totalResults !== 1 && 's'}
-              </>
+            {totalResults === 0 ? 'No results found' : (
+              <>Found <span className="font-medium text-white">{totalResults}</span> result{totalResults !== 1 && 's'}</>
             )}
           </p>
         )}
       </div>
 
-      {/* Filter Tabs */}
       <div className="mb-6 flex gap-2 border-b border-slate-700 pb-4">
         {(['all', 'threads', 'posts'] as SearchFilter[]).map((f) => {
           const count = f === 'all' ? totalResults : f === 'threads' ? threadResults.length : postResults.length
           return (
             <button
               key={f}
-              onClick={() => handleFilterChange(f)}
+              onClick={() => setFilter(f)}
               className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                 filter === f
                   ? 'bg-indigo-600 text-white'
@@ -283,19 +251,15 @@ export default function Search() {
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
               {hasQuery && (
-                <span className={`ml-2 text-xs ${filter === f ? 'opacity-75' : 'opacity-50'}`}>
-                  ({count})
-                </span>
+                <span className={`ml-2 text-xs ${filter === f ? 'opacity-75' : 'opacity-50'}`}>({count})</span>
               )}
             </button>
           )
         })}
       </div>
 
-      {/* Results */}
       {hasQuery ? (
         <div className="space-y-6">
-          {/* Thread Results */}
           {(filter === 'all' || filter === 'threads') && threadResults.length > 0 && (
             <div>
               {filter === 'all' && (
@@ -343,7 +307,6 @@ export default function Search() {
             </div>
           )}
 
-          {/* Post Results */}
           {(filter === 'all' || filter === 'posts') && postResults.length > 0 && (
             <div>
               {filter === 'all' && (
@@ -381,16 +344,13 @@ export default function Search() {
             </div>
           )}
 
-          {/* No Results */}
           {totalResults === 0 && (
             <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
               <svg className="mx-auto h-12 w-12 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <h3 className="mt-4 text-lg font-medium text-white">No results for "{searchInput}"</h3>
-              <p className="mt-2 text-slate-400">
-                Try different keywords or check your spelling.
-              </p>
+              <p className="mt-2 text-slate-400">Try different keywords or check your spelling.</p>
             </div>
           )}
         </div>
@@ -400,44 +360,23 @@ export default function Search() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <h3 className="mt-4 text-lg font-medium text-white">Search the forum</h3>
-          <p className="mt-2 text-slate-400">
-            Start typing to see results instantly.
-          </p>
+          <p className="mt-2 text-slate-400">Start typing to see results instantly.</p>
           <div className="mt-4">
             <p className="mb-2 text-xs text-slate-500">Try searching for:</p>
             <div className="flex flex-wrap justify-center gap-2">
-              <button
-                onClick={() => handleSuggestionClick('welcome')}
-                className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-600 transition-colors"
-              >
-                welcome
-              </button>
-              <button
-                onClick={() => handleSuggestionClick('voice')}
-                className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-600 transition-colors"
-              >
-                voice
-              </button>
-              <button
-                onClick={() => handleSuggestionClick('features')}
-                className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-600 transition-colors"
-              >
-                features
-              </button>
-              <button
-                onClick={() => handleSuggestionClick('admin')}
-                className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-600 transition-colors"
-              >
-                admin
-              </button>
+              {['welcome', 'voice', 'features', 'admin'].map(term => (
+                <button
+                  key={term}
+                  onClick={() => setSearchInput(term)}
+                  className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-600 transition-colors"
+                >
+                  {term}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       )}
-
-      <p className="mt-6 text-center text-xs text-slate-500">
-        Demo mode - searching local data only
-      </p>
     </div>
   )
 }

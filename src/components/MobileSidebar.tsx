@@ -1,14 +1,17 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
-import type { Category } from '../types'
+import type { Category, ChatChannel, VoiceRoom } from '../types'
 
 interface MobileSidebarProps {
   isOpen: boolean
   onClose: () => void
   categories: Category[]
+  channels: ChatChannel[]
+  rooms: VoiceRoom[]
+  unreadDmCount: number
 }
 
-export default function MobileSidebar({ isOpen, onClose, categories }: MobileSidebarProps) {
+export default function MobileSidebar({ isOpen, onClose, categories, channels, rooms, unreadDmCount }: MobileSidebarProps) {
   const location = useLocation()
 
   // Close sidebar on route change
@@ -86,6 +89,20 @@ export default function MobileSidebar({ isOpen, onClose, categories }: MobileSid
               </svg>
               Bookmarks
             </Link>
+            <Link
+              to="/settings"
+              className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                location.pathname === '/settings'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+              }`}
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Settings
+            </Link>
           </div>
 
           <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -116,12 +133,12 @@ export default function MobileSidebar({ isOpen, onClose, categories }: MobileSid
             Chat Channels
           </div>
           <div className="space-y-1">
-            {['general', 'random', 'introductions', 'help'].map((channel) => {
-              const isActive = location.pathname === `/chat/${channel}`
+            {channels.map((channel) => {
+              const isActive = location.pathname === `/chat/${channel.slug}`
               return (
                 <Link
-                  key={channel}
-                  to={`/chat/${channel}`}
+                  key={channel.id}
+                  to={`/chat/${channel.slug}`}
                   className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                     isActive
                       ? 'bg-slate-700 text-white'
@@ -129,7 +146,7 @@ export default function MobileSidebar({ isOpen, onClose, categories }: MobileSid
                   }`}
                 >
                   <span className="text-green-400">#</span>
-                  {channel}
+                  {channel.name}
                 </Link>
               )
             })}
@@ -140,12 +157,12 @@ export default function MobileSidebar({ isOpen, onClose, categories }: MobileSid
             Voice Rooms
           </div>
           <div className="space-y-1">
-            {['lounge', 'gaming', 'music', 'study'].map((room) => {
-              const isActive = location.pathname === `/voice/${room}`
+            {rooms.map((room) => {
+              const isActive = location.pathname === `/voice/${room.slug}`
               return (
                 <Link
-                  key={room}
-                  to={`/voice/${room}`}
+                  key={room.id}
+                  to={`/voice/${room.slug}`}
                   className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                     isActive
                       ? 'bg-slate-700 text-white'
@@ -155,7 +172,7 @@ export default function MobileSidebar({ isOpen, onClose, categories }: MobileSid
                   <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.414a5 5 0 001.414 1.414m2.828-9.9a9 9 0 0112.728 0" />
                   </svg>
-                  {room.charAt(0).toUpperCase() + room.slice(1)}
+                  {room.name}
                 </Link>
               )
             })}
@@ -180,9 +197,11 @@ export default function MobileSidebar({ isOpen, onClose, categories }: MobileSid
                 </svg>
                 Messages
               </div>
-              <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-indigo-500 px-1.5 text-xs font-medium text-white">
-                2
-              </span>
+              {unreadDmCount > 0 && (
+                <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-indigo-500 px-1.5 text-xs font-medium text-white">
+                  {unreadDmCount}
+                </span>
+              )}
             </Link>
           </div>
         </nav>

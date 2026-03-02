@@ -13,6 +13,8 @@ import Search from './pages/Search'
 import Voice from './pages/Voice'
 import DirectMessages from './pages/DirectMessages'
 import Bookmarks from './pages/Bookmarks'
+import Settings from './pages/Settings'
+import Admin from './pages/Admin'
 
 export default function App() {
   return (
@@ -34,6 +36,8 @@ export default function App() {
           <Route path="dm" element={<DirectMessages />} />
           <Route path="dm/:recipientId" element={<DirectMessages />} />
           <Route path="bookmarks" element={<Bookmarks />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="admin" element={<Admin />} />
         </Route>
       </Routes>
     </AuthProvider>

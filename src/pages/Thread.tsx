@@ -19,7 +19,9 @@ const demoThread: ThreadWithAuthor = {
   is_locked: false,
   post_count: 12,
   last_post_at: new Date().toISOString(),
-  author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, created_at: '' },
+  content: '',
+  view_count: 0,
+  author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   category: { id: '1', name: 'General', slug: 'general', description: '', sort_order: 0, created_at: '' },
 }
 
@@ -32,7 +34,7 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 86400000).toISOString(),
     updated_at: new Date(Date.now() - 86400000).toISOString(),
     reply_to_id: null,
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
   {
     id: '2',
@@ -42,7 +44,7 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 82800000).toISOString(),
     updated_at: new Date(Date.now() - 82800000).toISOString(),
     reply_to_id: null,
-    author: { id: '2', username: 'sarah_dev', display_name: 'Sarah', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '2', username: 'sarah_dev', display_name: 'Sarah', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
   {
     id: '3',
@@ -52,7 +54,7 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 79200000).toISOString(),
     updated_at: new Date(Date.now() - 79200000).toISOString(),
     reply_to_id: null,
-    author: { id: '3', username: 'mike_m', display_name: 'Mike', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '3', username: 'mike_m', display_name: 'Mike', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
   {
     id: '4',
@@ -62,7 +64,7 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 75600000).toISOString(),
     updated_at: new Date(Date.now() - 75600000).toISOString(),
     reply_to_id: '3',
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
   {
     id: '5',
@@ -72,7 +74,7 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 72000000).toISOString(),
     updated_at: new Date(Date.now() - 72000000).toISOString(),
     reply_to_id: null,
-    author: { id: '4', username: 'alex_tech', display_name: 'Alex', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '4', username: 'alex_tech', display_name: 'Alex', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
   {
     id: '6',
@@ -82,7 +84,7 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 68400000).toISOString(),
     updated_at: new Date(Date.now() - 68400000).toISOString(),
     reply_to_id: '5',
-    author: { id: '2', username: 'sarah_dev', display_name: 'Sarah', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '2', username: 'sarah_dev', display_name: 'Sarah', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
   {
     id: '7',
@@ -92,7 +94,7 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 64800000).toISOString(),
     updated_at: new Date(Date.now() - 64800000).toISOString(),
     reply_to_id: null,
-    author: { id: '5', username: 'gamer_oz', display_name: 'OzGamer', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '5', username: 'gamer_oz', display_name: 'OzGamer', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
   {
     id: '8',
@@ -102,7 +104,7 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 57600000).toISOString(),
     updated_at: new Date(Date.now() - 57600000).toISOString(),
     reply_to_id: null,
-    author: { id: '6', username: 'dev_emma', display_name: 'Emma', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '6', username: 'dev_emma', display_name: 'Emma', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
   {
     id: '9',
@@ -112,7 +114,7 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 50400000).toISOString(),
     updated_at: new Date(Date.now() - 50400000).toISOString(),
     reply_to_id: '8',
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
   {
     id: '10',
@@ -122,7 +124,7 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 43200000).toISOString(),
     updated_at: new Date(Date.now() - 43200000).toISOString(),
     reply_to_id: null,
-    author: { id: '7', username: 'retro_fan', display_name: 'RetroFan', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '7', username: 'retro_fan', display_name: 'RetroFan', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
   {
     id: '11',
@@ -132,7 +134,7 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 28800000).toISOString(),
     updated_at: new Date(Date.now() - 28800000).toISOString(),
     reply_to_id: '4',
-    author: { id: '3', username: 'mike_m', display_name: 'Mike', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '3', username: 'mike_m', display_name: 'Mike', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
   {
     id: '12',
@@ -142,7 +144,7 @@ const demoPosts: PostWithAuthor[] = [
     created_at: new Date(Date.now() - 14400000).toISOString(),
     updated_at: new Date(Date.now() - 14400000).toISOString(),
     reply_to_id: null,
-    author: { id: '4', username: 'alex_tech', display_name: 'Alex', avatar_url: null, bio: null, created_at: '' },
+    author: { id: '4', username: 'alex_tech', display_name: 'Alex', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
   },
 ]
 
@@ -156,6 +158,7 @@ export default function Thread() {
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [replyingTo, setReplyingTo] = useState<PostWithAuthor | null>(null)
+  const [isBookmarked, setIsBookmarked] = useState(false)
 
   const currentPage = parseInt(searchParams.get('page') || '1', 10)
   const totalPages = Math.ceil(allPosts.length / POSTS_PER_PAGE)
@@ -244,6 +247,58 @@ export default function Thread() {
     }
   }, [threadId])
 
+  // Check bookmark status
+  useEffect(() => {
+    if (!thread) return
+
+    if (isConfigured && user) {
+      supabase
+        .from('bookmarks')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('thread_id', thread.id)
+        .maybeSingle()
+        .then(({ data }) => setIsBookmarked(!!data))
+    } else if (!isConfigured) {
+      const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]')
+      setIsBookmarked(bookmarks.some((b: { id: string }) => b.id === thread.id))
+    }
+  }, [thread?.id, user])
+
+  const toggleBookmark = async () => {
+    if (!thread) return
+
+    if (isConfigured) {
+      if (!user) return
+      if (isBookmarked) {
+        await supabase.from('bookmarks').delete().eq('user_id', user.id).eq('thread_id', thread.id)
+        setIsBookmarked(false)
+      } else {
+        await supabase.from('bookmarks').insert({ user_id: user.id, thread_id: thread.id })
+        setIsBookmarked(true)
+      }
+    } else {
+      const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]')
+      if (isBookmarked) {
+        const updated = bookmarks.filter((b: { id: string }) => b.id !== thread.id)
+        localStorage.setItem('bookmarks', JSON.stringify(updated))
+        setIsBookmarked(false)
+      } else {
+        bookmarks.push({
+          id: thread.id,
+          title: thread.title,
+          category: thread.category.name,
+          categorySlug: thread.category.slug,
+          author: thread.author.display_name || thread.author.username,
+          createdAt: thread.created_at,
+          bookmarkedAt: new Date().toISOString(),
+        })
+        localStorage.setItem('bookmarks', JSON.stringify(bookmarks))
+        setIsBookmarked(true)
+      }
+    }
+  }
+
   const handleReply = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!thread || !replyContent.trim()) return
@@ -266,7 +321,10 @@ export default function Thread() {
           display_name: user?.user_metadata?.username || 'You',
           avatar_url: null,
           bio: null,
+          website: null,
+          is_admin: false,
           created_at: '',
+          updated_at: '2025-01-01',
         },
       }
       setAllPosts(prev => [...prev, newPost])
@@ -392,38 +450,18 @@ export default function Thread() {
             )}
           </div>
           <button
-            onClick={() => {
-              const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]')
-              const isBookmarked = bookmarks.some((b: { id: string }) => b.id === thread.id)
-              if (isBookmarked) {
-                const updated = bookmarks.filter((b: { id: string }) => b.id !== thread.id)
-                localStorage.setItem('bookmarks', JSON.stringify(updated))
-              } else {
-                bookmarks.push({
-                  id: thread.id,
-                  title: thread.title,
-                  category: thread.category.name,
-                  categorySlug: thread.category.slug,
-                  author: thread.author.display_name || thread.author.username,
-                  createdAt: thread.created_at,
-                  bookmarkedAt: new Date().toISOString(),
-                })
-                localStorage.setItem('bookmarks', JSON.stringify(bookmarks))
-              }
-              // Force re-render
-              setThread({ ...thread })
-            }}
+            onClick={toggleBookmark}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
-              JSON.parse(localStorage.getItem('bookmarks') || '[]').some((b: { id: string }) => b.id === thread.id)
+              isBookmarked
                 ? 'bg-amber-500/20 text-amber-400'
                 : 'text-slate-400 hover:bg-slate-700 hover:text-white'
             }`}
           >
-            <svg className="h-4 w-4" fill={JSON.parse(localStorage.getItem('bookmarks') || '[]').some((b: { id: string }) => b.id === thread.id) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-4 w-4" fill={isBookmarked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
             <span className="hidden sm:inline">
-              {JSON.parse(localStorage.getItem('bookmarks') || '[]').some((b: { id: string }) => b.id === thread.id) ? 'Bookmarked' : 'Bookmark'}
+              {isBookmarked ? 'Bookmarked' : 'Bookmark'}
             </span>
           </button>
         </div>
@@ -566,6 +604,12 @@ export default function Thread() {
       {thread.is_locked ? (
         <div className="mt-6 rounded-lg border border-slate-700 bg-slate-800/50 p-4 text-center text-slate-400">
           This thread is locked. No new replies can be posted.
+        </div>
+      ) : isConfigured && !user ? (
+        <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center">
+          <p className="text-slate-400">
+            <Link to="/login" className="font-medium text-indigo-400 hover:text-indigo-300">Sign in</Link> to reply to this thread
+          </p>
         </div>
       ) : (
         <form onSubmit={handleReply} className="mt-6">

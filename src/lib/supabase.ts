@@ -6,7 +6,6 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undef
 
 export const isConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
-// Only create client if configured, otherwise use a dummy that won't be called
 let supabase: SupabaseClient<Database>
 
 if (isConfigured) {
@@ -16,7 +15,6 @@ if (isConfigured) {
     'Supabase credentials not found. Running in demo mode.\n' +
     'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local'
   )
-  // Create a mock client that won't throw - all calls will be guarded by isConfigured
   supabase = new Proxy({} as SupabaseClient<Database>, {
     get: () => () => Promise.resolve({ data: null, error: null })
   })

@@ -17,7 +17,9 @@ const demoThreads: ThreadWithAuthor[] = [
     is_locked: false,
     post_count: 42,
     last_post_at: new Date().toISOString(),
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, created_at: '' },
+    content: '',
+    view_count: 0,
+    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
     category: { id: '1', name: 'General', slug: 'general', description: '', sort_order: 0, created_at: '' },
   },
   {
@@ -32,7 +34,9 @@ const demoThreads: ThreadWithAuthor[] = [
     is_locked: false,
     post_count: 15,
     last_post_at: new Date(Date.now() - 3600000).toISOString(),
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, created_at: '' },
+    content: '',
+    view_count: 0,
+    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
     category: { id: '2', name: 'Announcements', slug: 'announcements', description: '', sort_order: 1, created_at: '' },
   },
   {
@@ -47,7 +51,9 @@ const demoThreads: ThreadWithAuthor[] = [
     is_locked: false,
     post_count: 28,
     last_post_at: new Date(Date.now() - 7200000).toISOString(),
-    author: { id: '2', username: 'user1', display_name: 'Forum User', avatar_url: null, bio: null, created_at: '' },
+    content: '',
+    view_count: 0,
+    author: { id: '2', username: 'user1', display_name: 'Forum User', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
     category: { id: '1', name: 'General', slug: 'general', description: '', sort_order: 0, created_at: '' },
   },
 ]

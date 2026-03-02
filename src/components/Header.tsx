@@ -1,14 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../lib/auth'
+import { supabase, isConfigured } from '../lib/supabase'
+import type { Notification as DBNotification } from '../types'
 
 interface HeaderProps {
   onMenuClick?: () => void
 }
 
-interface Notification {
+interface NotifItem {
   id: string
-  type: 'reply' | 'mention' | 'like' | 'follow' | 'dm'
+  type: string
   title: string
   message: string
   link: string
@@ -16,7 +18,7 @@ interface Notification {
   timestamp: Date
 }
 
-const demoNotifications: Notification[] = [
+const demoNotifications: NotifItem[] = [
   {
     id: '1',
     type: 'reply',
@@ -64,15 +66,60 @@ const demoNotifications: Notification[] = [
   },
 ]
 
+function toNotifItem(n: DBNotification): NotifItem {
+  return {
+    id: n.id,
+    type: n.type,
+    title: n.title,
+    message: n.message,
+    link: n.link || '#',
+    read: n.read,
+    timestamp: new Date(n.created_at),
+  }
+}
+
 export default function Header({ onMenuClick }: HeaderProps) {
   const { user, signOut, loading } = useAuth()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
-  const [notifications, setNotifications] = useState<Notification[]>(demoNotifications)
+  const [notifications, setNotifications] = useState<NotifItem[]>(!isConfigured ? demoNotifications : [])
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const unreadCount = notifications.filter(n => !n.read).length
+
+  // Fetch notifications from Supabase
+  useEffect(() => {
+    if (!isConfigured || !user) {
+      if (isConfigured) setNotifications([])
+      return
+    }
+
+    const fetchNotifications = async () => {
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      if (data) setNotifications(data.map(toNotifItem))
+    }
+
+    fetchNotifications()
+
+    const sub = supabase
+      .channel('header-notifications')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          setNotifications(prev => [toNotifItem(payload.new as DBNotification), ...prev])
+        }
+      )
+      .subscribe()
+
+    return () => { sub.unsubscribe() }
+  }, [user])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -94,15 +141,23 @@ export default function Header({ onMenuClick }: HeaderProps) {
     }
   }
 
-  const handleNotificationClick = (notification: Notification) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
-    )
+  const handleNotificationClick = async (notification: NotifItem) => {
+    if (!notification.read) {
+      if (isConfigured) {
+        await supabase.from('notifications').update({ read: true }).eq('id', notification.id)
+      }
+      setNotifications(prev =>
+        prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
+      )
+    }
     setShowNotifications(false)
     navigate(notification.link)
   }
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    if (isConfigured && user) {
+      await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false)
+    }
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
   }
 
@@ -119,7 +174,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
     return `${days}d ago`
   }
 
-  const getNotificationIcon = (type: Notification['type']) => {
+  const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'reply':
         return (
@@ -145,7 +200,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
           </svg>
         )
-      case 'dm':
+      default:
         return (
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -154,13 +209,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
     }
   }
 
-  const getNotificationColor = (type: Notification['type']) => {
+  const getNotificationColor = (type: string) => {
     switch (type) {
       case 'reply': return 'bg-blue-500'
       case 'mention': return 'bg-amber-500'
       case 'like': return 'bg-pink-500'
       case 'follow': return 'bg-green-500'
       case 'dm': return 'bg-indigo-500'
+      default: return 'bg-slate-500'
     }
   }
 
@@ -282,13 +338,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 </div>
 
                 <div className="border-t border-slate-700 p-2">
-                  <Link
-                    to="/notifications"
+                  <button
                     onClick={() => setShowNotifications(false)}
-                    className="block rounded-lg py-2 text-center text-sm text-indigo-400 hover:bg-slate-700/50 hover:text-indigo-300"
+                    className="block w-full rounded-lg py-2 text-center text-sm text-indigo-400 hover:bg-slate-700/50 hover:text-indigo-300"
                   >
-                    View all notifications
-                  </Link>
+                    Close
+                  </button>
                 </div>
               </div>
             )}
@@ -299,6 +354,15 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <div className="h-8 w-16 animate-pulse rounded bg-slate-700" />
           ) : user ? (
             <div className="flex items-center gap-2 sm:gap-3">
+              <Link
+                to="/admin"
+                className="hidden rounded-lg p-2 text-slate-400 hover:bg-slate-700 hover:text-white sm:block"
+                title="Admin Dashboard"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </Link>
               <Link
                 to={`/u/${user.user_metadata?.username || 'me'}`}
                 className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-700 sm:px-3"

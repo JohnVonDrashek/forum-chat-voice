@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
+import { supabase, isConfigured } from '../lib/supabase'
+import type { VoiceRoom } from '../types'
 
 interface VoiceParticipant {
   id: string
@@ -7,42 +9,45 @@ interface VoiceParticipant {
   avatar: string
   isSpeaking: boolean
   isMuted: boolean
-  isDeafened: boolean
 }
 
-interface VoiceRoom {
-  id: string
-  name: string
-  description: string
+interface RoomWithParticipants extends VoiceRoom {
+  description?: string
   participants: VoiceParticipant[]
   maxParticipants: number
 }
 
 // Demo voice rooms
-const demoRooms: VoiceRoom[] = [
+const demoRooms: RoomWithParticipants[] = [
   {
     id: 'lounge',
     name: 'Lounge',
+    slug: 'lounge',
+    created_at: '',
     description: 'Casual hangout space',
     maxParticipants: 25,
     participants: [
-      { id: '1', name: 'Admin', avatar: 'A', isSpeaking: true, isMuted: false, isDeafened: false },
-      { id: '2', name: 'Sarah', avatar: 'S', isSpeaking: false, isMuted: false, isDeafened: false },
-      { id: '3', name: 'Mike', avatar: 'M', isSpeaking: false, isMuted: true, isDeafened: false },
+      { id: '1', name: 'Admin', avatar: 'A', isSpeaking: true, isMuted: false },
+      { id: '2', name: 'Sarah', avatar: 'S', isSpeaking: false, isMuted: false },
+      { id: '3', name: 'Mike', avatar: 'M', isSpeaking: false, isMuted: true },
     ],
   },
   {
     id: 'gaming',
     name: 'Gaming',
+    slug: 'gaming',
+    created_at: '',
     description: 'Voice chat for gaming sessions',
     maxParticipants: 10,
     participants: [
-      { id: '4', name: 'Alex', avatar: 'A', isSpeaking: false, isMuted: false, isDeafened: false },
+      { id: '4', name: 'Alex', avatar: 'A', isSpeaking: false, isMuted: false },
     ],
   },
   {
     id: 'music',
     name: 'Music',
+    slug: 'music',
+    created_at: '',
     description: 'Listen and share music together',
     maxParticipants: 50,
     participants: [],
@@ -50,26 +55,49 @@ const demoRooms: VoiceRoom[] = [
   {
     id: 'study',
     name: 'Study Room',
+    slug: 'study',
+    created_at: '',
     description: 'Quiet focus time with others',
     maxParticipants: 15,
     participants: [
-      { id: '5', name: 'Jordan', avatar: 'J', isSpeaking: false, isMuted: true, isDeafened: false },
-      { id: '6', name: 'Taylor', avatar: 'T', isSpeaking: false, isMuted: true, isDeafened: false },
+      { id: '5', name: 'Jordan', avatar: 'J', isSpeaking: false, isMuted: true },
+      { id: '6', name: 'Taylor', avatar: 'T', isSpeaking: false, isMuted: true },
     ],
   },
 ]
 
 export default function Voice() {
   const { roomId } = useParams()
-  const [rooms] = useState<VoiceRoom[]>(demoRooms)
+  const [rooms, setRooms] = useState<RoomWithParticipants[]>(demoRooms)
   const [isConnected, setIsConnected] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [isDeafened, setIsDeafened] = useState(false)
 
-  const currentRoom = roomId ? rooms.find(r => r.id === roomId) : null
+  useEffect(() => {
+    if (!isConfigured) return
 
-  const handleJoinRoom = (_room: VoiceRoom) => {
-    // In demo mode, just show that we'd connect
+    const fetchRooms = async () => {
+      const { data } = await supabase
+        .from('voice_rooms')
+        .select('*')
+        .order('name')
+
+      if (data) {
+        setRooms(data.map(r => ({
+          ...r,
+          description: '',
+          participants: [],
+          maxParticipants: 25,
+        })))
+      }
+    }
+
+    fetchRooms()
+  }, [])
+
+  const currentRoom = roomId ? rooms.find(r => r.slug === roomId || r.id === roomId) : null
+
+  const handleJoinRoom = () => {
     setIsConnected(true)
     setIsMuted(false)
     setIsDeafened(false)
@@ -90,7 +118,6 @@ export default function Voice() {
     }
   }
 
-  // Room list view (no room selected or on /voice)
   if (!currentRoom) {
     return (
       <div className="mx-auto max-w-4xl">
@@ -113,14 +140,15 @@ export default function Voice() {
                     </svg>
                     <h3 className="font-semibold text-white">{room.name}</h3>
                   </div>
-                  <p className="mt-1 text-sm text-slate-400">{room.description}</p>
+                  {room.description && (
+                    <p className="mt-1 text-sm text-slate-400">{room.description}</p>
+                  )}
                 </div>
                 <span className="rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-300">
                   {room.participants.length}/{room.maxParticipants}
                 </span>
               </div>
 
-              {/* Participants preview */}
               {room.participants.length > 0 && (
                 <div className="mt-4 flex items-center gap-2">
                   <div className="flex -space-x-2">
@@ -135,11 +163,6 @@ export default function Voice() {
                         {p.avatar}
                       </div>
                     ))}
-                    {room.participants.length > 5 && (
-                      <div className="h-8 w-8 rounded-full border-2 border-slate-800 bg-slate-600 flex items-center justify-center text-xs font-medium text-white">
-                        +{room.participants.length - 5}
-                      </div>
-                    )}
                   </div>
                   <span className="text-sm text-slate-400">
                     {room.participants.map(p => p.name).slice(0, 3).join(', ')}
@@ -149,7 +172,7 @@ export default function Voice() {
               )}
 
               <button
-                onClick={() => handleJoinRoom(room)}
+                onClick={handleJoinRoom}
                 className="mt-4 w-full rounded-lg bg-green-600 py-2 font-medium text-white hover:bg-green-500 transition-colors"
               >
                 Join Room
@@ -158,17 +181,17 @@ export default function Voice() {
           ))}
         </div>
 
-        <p className="mt-6 text-center text-xs text-slate-500">
-          Demo mode - voice functionality is simulated
-        </p>
+        {!isConfigured && (
+          <p className="mt-6 text-center text-xs text-slate-500">
+            Demo mode - voice functionality is simulated
+          </p>
+        )}
       </div>
     )
   }
 
-  // Inside a voice room
   return (
     <div className="mx-auto max-w-4xl">
-      {/* Room Header */}
       <div className="mb-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -179,7 +202,9 @@ export default function Voice() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">{currentRoom.name}</h1>
-              <p className="text-sm text-slate-400">{currentRoom.description}</p>
+              {currentRoom.description && (
+                <p className="text-sm text-slate-400">{currentRoom.description}</p>
+              )}
             </div>
           </div>
           <span className="rounded-full bg-slate-700 px-3 py-1 text-sm text-slate-300">
@@ -188,14 +213,12 @@ export default function Voice() {
         </div>
       </div>
 
-      {/* Participants Grid */}
       <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
           In This Room
         </h2>
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {/* Current user (if connected) */}
           {isConnected && (
             <div className="flex flex-col items-center gap-2 rounded-lg bg-slate-700/50 p-4">
               <div className={`relative h-16 w-16 rounded-full flex items-center justify-center text-2xl font-bold text-white ${
@@ -218,7 +241,6 @@ export default function Voice() {
             </div>
           )}
 
-          {/* Other participants */}
           {currentRoom.participants.map((participant) => (
             <div key={participant.id} className="flex flex-col items-center gap-2 rounded-lg bg-slate-700/50 p-4">
               <div className={`relative h-16 w-16 rounded-full flex items-center justify-center text-2xl font-bold text-white ${
@@ -243,7 +265,6 @@ export default function Voice() {
             </div>
           ))}
 
-          {/* Empty state */}
           {currentRoom.participants.length === 0 && !isConnected && (
             <div className="col-span-full py-8 text-center text-slate-400">
               No one is in this room yet. Be the first to join!
@@ -252,12 +273,10 @@ export default function Voice() {
         </div>
       </div>
 
-      {/* Controls */}
       <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
         <div className="flex items-center justify-center gap-4">
           {isConnected ? (
             <>
-              {/* Mute button */}
               <button
                 onClick={toggleMute}
                 className={`rounded-full p-4 transition-colors ${
@@ -278,7 +297,6 @@ export default function Voice() {
                 )}
               </button>
 
-              {/* Deafen button */}
               <button
                 onClick={toggleDeafen}
                 className={`rounded-full p-4 transition-colors ${
@@ -300,7 +318,6 @@ export default function Voice() {
                 )}
               </button>
 
-              {/* Disconnect button */}
               <button
                 onClick={handleLeaveRoom}
                 className="rounded-full bg-red-500 p-4 text-white hover:bg-red-600 transition-colors"
@@ -313,7 +330,7 @@ export default function Voice() {
             </>
           ) : (
             <button
-              onClick={() => handleJoinRoom(currentRoom)}
+              onClick={handleJoinRoom}
               className="rounded-lg bg-green-600 px-8 py-3 font-medium text-white hover:bg-green-500 transition-colors"
             >
               Join Voice
@@ -329,9 +346,11 @@ export default function Voice() {
         )}
       </div>
 
-      <p className="mt-6 text-center text-xs text-slate-500">
-        Demo mode - voice functionality is simulated
-      </p>
+      {!isConfigured && (
+        <p className="mt-6 text-center text-xs text-slate-500">
+          Demo mode - voice functionality is simulated
+        </p>
+      )}
     </div>
   )
 }

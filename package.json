@@ -8,21 +8,19 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit",
-    "db:init": "supabase init",
-    "db:start": "supabase start",
-    "db:stop": "supabase stop",
-    "db:push": "supabase db push",
-    "db:reset": "supabase db reset",
-    "db:types": "supabase gen types typescript --local > src/types/database.ts",
-    "setup": "npm run db:init && npm run db:start && npm run db:push"
+    "lint": "tsc --noEmit"
   },
-  "keywords": ["forum", "chat", "voice", "community"],
+  "keywords": [
+    "forum",
+    "chat",
+    "voice",
+    "community"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
-    "react": "^19.2.4",
+"react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.1"
   },
@@ -31,6 +29,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.4",
+    "pg": "^8.19.0",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"

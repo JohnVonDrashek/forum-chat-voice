@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
+import { supabase, isConfigured } from '../lib/supabase'
+import type { ChatChannel, Profile } from '../types'
 
-interface ChatMessage {
+interface ChatMsg {
   id: string
   channelId: string
   authorId: string
@@ -12,22 +14,16 @@ interface ChatMessage {
   createdAt: string
 }
 
-interface ChatChannel {
-  id: string
-  name: string
-  description: string
-}
-
 // Demo channels
 const demoChannels: ChatChannel[] = [
-  { id: 'general', name: 'general', description: 'General chat for everyone' },
-  { id: 'random', name: 'random', description: 'Off-topic conversations' },
-  { id: 'introductions', name: 'introductions', description: 'Say hello to the community' },
-  { id: 'help', name: 'help', description: 'Get help from the community' },
+  { id: 'general', name: 'general', slug: 'general', description: 'General chat for everyone', created_at: '' },
+  { id: 'random', name: 'random', slug: 'random', description: 'Off-topic conversations', created_at: '' },
+  { id: 'introductions', name: 'introductions', slug: 'introductions', description: 'Say hello to the community', created_at: '' },
+  { id: 'help', name: 'help', slug: 'help', description: 'Get help from the community', created_at: '' },
 ]
 
 // Demo messages
-const demoMessages: Record<string, ChatMessage[]> = {
+const demoMessages: Record<string, ChatMsg[]> = {
   general: [
     { id: '1', channelId: 'general', authorId: '1', authorName: 'Admin', authorAvatar: 'A', content: 'Welcome to the general chat! 👋', createdAt: new Date(Date.now() - 3600000).toISOString() },
     { id: '2', channelId: 'general', authorId: '2', authorName: 'Sarah', authorAvatar: 'S', content: 'Hey everyone! Excited to be here.', createdAt: new Date(Date.now() - 3000000).toISOString() },
@@ -50,20 +46,81 @@ const demoMessages: Record<string, ChatMessage[]> = {
   ],
 }
 
+function toMsg(row: { id: string; channel_id: string; author_id: string; content: string; created_at: string; author: Profile }): ChatMsg {
+  return {
+    id: row.id,
+    channelId: row.channel_id,
+    authorId: row.author_id,
+    authorName: row.author.display_name || row.author.username,
+    authorAvatar: (row.author.display_name?.[0] || row.author.username[0]).toUpperCase(),
+    content: row.content,
+    createdAt: row.created_at,
+  }
+}
+
 export default function Chat() {
-  const { channelId = 'general' } = useParams()
+  const { channelId: channelSlug = 'general' } = useParams()
   const { user } = useAuth()
-  const [messages, setMessages] = useState<ChatMessage[]>(demoMessages[channelId] || [])
+  const [channels, setChannels] = useState<ChatChannel[]>(demoChannels)
+  const [messages, setMessages] = useState<ChatMsg[]>([])
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const channel = demoChannels.find(c => c.id === channelId)
+  const channel = channels.find(c => c.slug === channelSlug || c.id === channelSlug)
 
-  // Update messages when channel changes
+  // Fetch channels
   useEffect(() => {
-    setMessages(demoMessages[channelId] || [])
-  }, [channelId])
+    if (!isConfigured) return
+    supabase.from('chat_channels').select('*').order('name').then(({ data }) => {
+      if (data) setChannels(data)
+    })
+  }, [])
+
+  // Fetch messages & subscribe
+  useEffect(() => {
+    if (!isConfigured) {
+      setMessages(demoMessages[channelSlug] || [])
+      return
+    }
+
+    if (!channel) {
+      setMessages([])
+      return
+    }
+
+    const fetchMessages = async () => {
+      const { data } = await supabase
+        .from('chat_messages')
+        .select('*, author:profiles(*)')
+        .eq('channel_id', channel.id)
+        .order('created_at')
+        .limit(100)
+      if (data) setMessages(data.map(toMsg))
+    }
+
+    fetchMessages()
+
+    const sub = supabase
+      .channel(`chat:${channel.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `channel_id=eq.${channel.id}` },
+        async (payload) => {
+          const { data } = await supabase
+            .from('chat_messages')
+            .select('*, author:profiles(*)')
+            .eq('id', payload.new.id)
+            .single()
+          if (data) {
+            setMessages(prev => [...prev, toMsg(data)])
+          }
+        }
+      )
+      .subscribe()
+
+    return () => { sub.unsubscribe() }
+  }, [channelSlug, channel?.id])
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -73,7 +130,7 @@ export default function Chat() {
   // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus()
-  }, [channelId])
+  }, [channelSlug])
 
   const formatTime = (date: string) => {
     return new Date(date).toLocaleTimeString('en-US', {
@@ -96,13 +153,25 @@ export default function Chat() {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!inputValue.trim()) return
 
-    const newMessage: ChatMessage = {
+    if (isConfigured) {
+      if (!user || !channel) return
+      await supabase.from('chat_messages').insert({
+        channel_id: channel.id,
+        author_id: user.id,
+        content: inputValue.trim(),
+      })
+      setInputValue('')
+      return
+    }
+
+    // Demo mode
+    const newMessage: ChatMsg = {
       id: Date.now().toString(),
-      channelId,
+      channelId: channelSlug,
       authorId: user?.id || 'demo',
       authorName: user?.user_metadata?.username || 'You',
       authorAvatar: (user?.user_metadata?.username?.[0] || 'Y').toUpperCase(),
@@ -115,7 +184,7 @@ export default function Chat() {
   }
 
   // Group messages by date
-  const groupedMessages: { date: string; messages: ChatMessage[] }[] = []
+  const groupedMessages: { date: string; messages: ChatMsg[] }[] = []
   messages.forEach(msg => {
     const date = formatDate(msg.createdAt)
     const lastGroup = groupedMessages[groupedMessages.length - 1]
@@ -132,7 +201,7 @@ export default function Chat() {
       <div className="flex items-center gap-3 border-b border-slate-700 px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="text-xl text-green-400">#</span>
-          <h1 className="text-lg font-semibold text-white">{channel?.name || channelId}</h1>
+          <h1 className="text-lg font-semibold text-white">{channel?.name || channelSlug}</h1>
         </div>
         {channel?.description && (
           <>
@@ -198,38 +267,49 @@ export default function Chat() {
 
       {/* Input Area */}
       <div className="border-t border-slate-700 px-4 py-4">
-        <form onSubmit={handleSend}>
-          <div className="flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2">
-            <button
-              type="button"
-              className="shrink-0 text-slate-400 hover:text-slate-300"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-            </button>
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder={`Message #${channel?.name || channelId}`}
-              className="flex-1 bg-transparent text-white placeholder-slate-400 outline-none"
-            />
-            <button
-              type="submit"
-              disabled={!inputValue.trim()}
-              className="shrink-0 text-slate-400 hover:text-indigo-400 disabled:opacity-50 disabled:hover:text-slate-400"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            </button>
+        {isConfigured && !user ? (
+          <div className="flex items-center justify-center gap-2 rounded-lg bg-slate-700/50 px-4 py-3">
+            <span className="text-slate-400">Sign in to chat</span>
+            <Link to="/login" className="font-medium text-indigo-400 hover:text-indigo-300">
+              Sign In
+            </Link>
           </div>
-        </form>
-        <p className="mt-2 text-center text-xs text-slate-500">
-          Demo mode - messages are stored locally
-        </p>
+        ) : (
+          <form onSubmit={handleSend}>
+            <div className="flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2">
+              <button
+                type="button"
+                className="shrink-0 text-slate-400 hover:text-slate-300"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </button>
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder={`Message #${channel?.name || channelSlug}`}
+                className="flex-1 bg-transparent text-white placeholder-slate-400 outline-none"
+              />
+              <button
+                type="submit"
+                disabled={!inputValue.trim()}
+                className="shrink-0 text-slate-400 hover:text-indigo-400 disabled:opacity-50 disabled:hover:text-slate-400"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </button>
+            </div>
+          </form>
+        )}
+        {!isConfigured && (
+          <p className="mt-2 text-center text-xs text-slate-500">
+            Demo mode - messages are stored locally
+          </p>
+        )}
       </div>
     </div>
   )

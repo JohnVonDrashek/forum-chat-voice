@@ -1,14 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-
-interface DirectMessage {
-  id: string
-  conversationId: string
-  senderId: string
-  content: string
-  timestamp: Date
-}
+import { supabase, isConfigured } from '../lib/supabase'
+import type { Profile } from '../types'
 
 interface Conversation {
   id: string
@@ -18,6 +12,13 @@ interface Conversation {
   lastMessage: string
   lastMessageTime: Date
   unreadCount: number
+}
+
+interface DM {
+  id: string
+  senderId: string
+  content: string
+  timestamp: Date
 }
 
 // Demo conversations
@@ -60,77 +61,219 @@ const demoConversations: Conversation[] = [
   },
 ]
 
-// Demo messages for each conversation
-const demoMessages: Record<string, DirectMessage[]> = {
+const demoMessages: Record<string, DM[]> = {
   sarah: [
-    { id: '1', conversationId: 'sarah', senderId: '2', content: 'Hey! How are you doing?', timestamp: new Date(Date.now() - 600000) },
-    { id: '2', conversationId: 'sarah', senderId: 'me', content: "I'm good! Working on the forum project.", timestamp: new Date(Date.now() - 540000) },
-    { id: '3', conversationId: 'sarah', senderId: '2', content: "That's awesome! The voice rooms look really cool.", timestamp: new Date(Date.now() - 480000) },
-    { id: '4', conversationId: 'sarah', senderId: 'me', content: 'Thanks! Want to test them out later?', timestamp: new Date(Date.now() - 420000) },
-    { id: '5', conversationId: 'sarah', senderId: '2', content: "That sounds great! Let me know when you're ready.", timestamp: new Date(Date.now() - 300000) },
+    { id: '1', senderId: '2', content: 'Hey! How are you doing?', timestamp: new Date(Date.now() - 600000) },
+    { id: '2', senderId: 'me', content: "I'm good! Working on the forum project.", timestamp: new Date(Date.now() - 540000) },
+    { id: '3', senderId: '2', content: "That's awesome! The voice rooms look really cool.", timestamp: new Date(Date.now() - 480000) },
+    { id: '4', senderId: 'me', content: 'Thanks! Want to test them out later?', timestamp: new Date(Date.now() - 420000) },
+    { id: '5', senderId: '2', content: "That sounds great! Let me know when you're ready.", timestamp: new Date(Date.now() - 300000) },
   ],
   mike: [
-    { id: '1', conversationId: 'mike', senderId: 'me', content: 'Hey Mike, the moderation tools are ready!', timestamp: new Date(Date.now() - 7200000) },
-    { id: '2', conversationId: 'mike', senderId: '3', content: 'Perfect timing! I was just about to ask.', timestamp: new Date(Date.now() - 7000000) },
-    { id: '3', conversationId: 'mike', senderId: 'me', content: 'You can mute, kick, and ban users now.', timestamp: new Date(Date.now() - 6800000) },
-    { id: '4', conversationId: 'mike', senderId: '3', content: 'Thanks for the help with the voice rooms!', timestamp: new Date(Date.now() - 3600000) },
+    { id: '1', senderId: 'me', content: 'Hey Mike, the moderation tools are ready!', timestamp: new Date(Date.now() - 7200000) },
+    { id: '2', senderId: '3', content: 'Perfect timing! I was just about to ask.', timestamp: new Date(Date.now() - 7000000) },
+    { id: '3', senderId: 'me', content: 'You can mute, kick, and ban users now.', timestamp: new Date(Date.now() - 6800000) },
+    { id: '4', senderId: '3', content: 'Thanks for the help with the voice rooms!', timestamp: new Date(Date.now() - 3600000) },
   ],
   alex: [
-    { id: '1', conversationId: 'alex', senderId: '4', content: 'The dark mode looks great!', timestamp: new Date(Date.now() - 172800000) },
-    { id: '2', conversationId: 'alex', senderId: 'me', content: "Thanks! It's the default now.", timestamp: new Date(Date.now() - 172000000) },
-    { id: '3', conversationId: 'alex', senderId: '4', content: 'Did you see the new update?', timestamp: new Date(Date.now() - 86400000) },
+    { id: '1', senderId: '4', content: 'The dark mode looks great!', timestamp: new Date(Date.now() - 172800000) },
+    { id: '2', senderId: 'me', content: "Thanks! It's the default now.", timestamp: new Date(Date.now() - 172000000) },
+    { id: '3', senderId: '4', content: 'Did you see the new update?', timestamp: new Date(Date.now() - 86400000) },
   ],
   emma: [
-    { id: '1', conversationId: 'emma', senderId: 'me', content: 'Hey Emma! Any updates on the API?', timestamp: new Date(Date.now() - 259200000) },
-    { id: '2', conversationId: 'emma', senderId: '6', content: "I'll send over the API docs tomorrow.", timestamp: new Date(Date.now() - 172800000) },
+    { id: '1', senderId: 'me', content: 'Hey Emma! Any updates on the API?', timestamp: new Date(Date.now() - 259200000) },
+    { id: '2', senderId: '6', content: "I'll send over the API docs tomorrow.", timestamp: new Date(Date.now() - 172800000) },
   ],
 }
 
 export default function DirectMessages() {
   const { recipientId } = useParams()
-  useAuth() // Keep for future auth checks
-  const [conversations, setConversations] = useState<Conversation[]>(demoConversations)
-  const [messages, setMessages] = useState<DirectMessage[]>([])
+  const { user, loading: authLoading } = useAuth()
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [messages, setMessages] = useState<DM[]>([])
   const [newMessage, setNewMessage] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const currentConversation = recipientId
-    ? conversations.find(c => c.id === recipientId)
+    ? conversations.find(c => c.id === recipientId || c.recipientId === recipientId)
     : null
 
+  // Fetch conversations
   useEffect(() => {
-    if (recipientId && demoMessages[recipientId]) {
-      setMessages(demoMessages[recipientId])
-      // Mark as read
-      setConversations(prev =>
-        prev.map(c =>
-          c.id === recipientId ? { ...c, unreadCount: 0 } : c
-        )
-      )
-    } else {
-      setMessages([])
+    if (!isConfigured) {
+      setConversations(demoConversations)
+      return
     }
-  }, [recipientId])
+    if (!user) return
+
+    const fetchConversations = async () => {
+      // Get all DMs involving this user, grouped by the other person
+      const { data } = await supabase
+        .from('direct_messages')
+        .select('*, sender:profiles!direct_messages_sender_id_fkey(*), recipient:profiles!direct_messages_recipient_id_fkey(*)')
+        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+        .order('created_at', { ascending: false })
+
+      if (!data) return
+
+      // Group by other user
+      const convMap = new Map<string, Conversation>()
+      for (const dm of data) {
+        const other: Profile = dm.sender_id === user.id ? dm.recipient : dm.sender
+        if (!convMap.has(other.id)) {
+          convMap.set(other.id, {
+            id: other.id,
+            recipientId: other.id,
+            recipientName: other.display_name || other.username,
+            recipientAvatar: (other.display_name?.[0] || other.username[0]).toUpperCase(),
+            lastMessage: dm.content,
+            lastMessageTime: new Date(dm.created_at),
+            unreadCount: 0,
+          })
+        }
+      }
+
+      // Count unreads
+      const { data: unreads } = await supabase
+        .from('direct_messages')
+        .select('sender_id')
+        .eq('recipient_id', user.id)
+        .eq('read', false)
+
+      if (unreads) {
+        for (const u of unreads) {
+          const conv = convMap.get(u.sender_id)
+          if (conv) conv.unreadCount++
+        }
+      }
+
+      setConversations(Array.from(convMap.values()))
+    }
+
+    fetchConversations()
+
+    // Subscribe to new DMs
+    const sub = supabase
+      .channel('dm-conversations')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'direct_messages' },
+        () => fetchConversations()
+      )
+      .subscribe()
+
+    return () => { sub.unsubscribe() }
+  }, [user])
+
+  // Fetch messages for selected conversation
+  useEffect(() => {
+    if (!recipientId) {
+      setMessages([])
+      return
+    }
+
+    if (!isConfigured) {
+      setMessages(demoMessages[recipientId] || [])
+      setConversations(prev =>
+        prev.map(c => c.id === recipientId ? { ...c, unreadCount: 0 } : c)
+      )
+      return
+    }
+
+    if (!user) return
+
+    const otherId = currentConversation?.recipientId || recipientId
+
+    const fetchMessages = async () => {
+      const { data } = await supabase
+        .from('direct_messages')
+        .select('*')
+        .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${user.id})`)
+        .order('created_at')
+
+      if (data) {
+        setMessages(data.map(dm => ({
+          id: dm.id,
+          senderId: dm.sender_id,
+          content: dm.content,
+          timestamp: new Date(dm.created_at),
+        })))
+      }
+
+      // Mark as read
+      await supabase
+        .from('direct_messages')
+        .update({ read: true })
+        .eq('sender_id', otherId)
+        .eq('recipient_id', user.id)
+        .eq('read', false)
+
+      // Update local unread count
+      setConversations(prev =>
+        prev.map(c => (c.id === recipientId || c.recipientId === otherId) ? { ...c, unreadCount: 0 } : c)
+      )
+    }
+
+    fetchMessages()
+
+    // Subscribe to new messages in this conversation
+    const sub = supabase
+      .channel(`dm:${otherId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'direct_messages' },
+        (payload) => {
+          const dm = payload.new as { id: string; sender_id: string; recipient_id: string; content: string; created_at: string }
+          const isRelevant =
+            (dm.sender_id === user.id && dm.recipient_id === otherId) ||
+            (dm.sender_id === otherId && dm.recipient_id === user.id)
+          if (isRelevant) {
+            setMessages(prev => [...prev, {
+              id: dm.id,
+              senderId: dm.sender_id,
+              content: dm.content,
+              timestamp: new Date(dm.created_at),
+            }])
+            // Mark incoming as read
+            if (dm.sender_id === otherId) {
+              supabase.from('direct_messages').update({ read: true }).eq('id', dm.id).then(() => {})
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    return () => { sub.unsubscribe() }
+  }, [recipientId, user])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim() || !recipientId) return
 
-    const message: DirectMessage = {
+    if (isConfigured) {
+      if (!user) return
+      const otherId = currentConversation?.recipientId || recipientId
+      await supabase.from('direct_messages').insert({
+        sender_id: user.id,
+        recipient_id: otherId,
+        content: newMessage.trim(),
+      })
+      setNewMessage('')
+      return
+    }
+
+    // Demo mode
+    const message: DM = {
       id: Date.now().toString(),
-      conversationId: recipientId,
       senderId: 'me',
       content: newMessage.trim(),
       timestamp: new Date(),
     }
-
     setMessages(prev => [...prev, message])
-
-    // Update last message in conversation
     setConversations(prev =>
       prev.map(c =>
         c.id === recipientId
@@ -138,7 +281,6 @@ export default function DirectMessages() {
           : c
       )
     )
-
     setNewMessage('')
   }
 
@@ -163,8 +305,24 @@ export default function DirectMessages() {
     })
   }
 
-  // Mobile: show conversation list or messages
-  // Desktop: show both
+  // Auth guard
+  if (isConfigured && !authLoading && !user) {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
+          <svg className="mx-auto h-12 w-12 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          <h3 className="mt-4 font-medium text-white">Sign in to view messages</h3>
+          <p className="mt-1 text-sm text-slate-400">You need to be logged in to send and receive direct messages.</p>
+          <Link to="/login" className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
+            Sign In
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   const showConversationList = !recipientId
   const showMessages = !!recipientId
 
@@ -175,11 +333,6 @@ export default function DirectMessages() {
         <div className={`${showConversationList ? 'flex' : 'hidden'} w-full flex-col border-r border-slate-700 md:flex md:w-80`}>
           <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
             <h2 className="font-semibold text-white">Messages</h2>
-            <button className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -191,9 +344,9 @@ export default function DirectMessages() {
               conversations.map(conversation => (
                 <Link
                   key={conversation.id}
-                  to={`/dm/${conversation.id}`}
+                  to={`/dm/${conversation.recipientId}`}
                   className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-700/50 ${
-                    recipientId === conversation.id ? 'bg-slate-700/50' : ''
+                    recipientId === conversation.id || recipientId === conversation.recipientId ? 'bg-slate-700/50' : ''
                   }`}
                 >
                   <div className="relative">
@@ -244,7 +397,6 @@ export default function DirectMessages() {
                 </div>
                 <div>
                   <h3 className="font-medium text-white">{currentConversation.recipientName}</h3>
-                  <p className="text-xs text-slate-400">Online</p>
                 </div>
               </div>
 
@@ -252,7 +404,7 @@ export default function DirectMessages() {
               <div className="flex-1 overflow-y-auto p-4">
                 <div className="space-y-4">
                   {messages.map(message => {
-                    const isMe = message.senderId === 'me'
+                    const isMe = message.senderId === 'me' || message.senderId === user?.id
                     return (
                       <div
                         key={message.id}
@@ -281,27 +433,31 @@ export default function DirectMessages() {
 
               {/* Input */}
               <div className="border-t border-slate-700 p-4">
-                <form onSubmit={handleSend} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={e => setNewMessage(e.target.value)}
-                    placeholder={`Message ${currentConversation.recipientName}...`}
-                    className="flex-1 rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newMessage.trim()}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
-                  >
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                  </button>
-                </form>
-                <p className="mt-2 text-center text-xs text-slate-500">
-                  Demo mode - messages are stored locally
-                </p>
+                {isConfigured && !user ? (
+                  <div className="flex items-center justify-center gap-2 rounded-lg bg-slate-700/50 px-4 py-3">
+                    <span className="text-slate-400">Sign in to send messages</span>
+                    <Link to="/login" className="font-medium text-indigo-400 hover:text-indigo-300">Sign In</Link>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSend} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={e => setNewMessage(e.target.value)}
+                      placeholder={`Message ${currentConversation.recipientName}...`}
+                      className="flex-1 rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newMessage.trim()}
+                      className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                    </button>
+                  </form>
+                )}
               </div>
             </>
           ) : (

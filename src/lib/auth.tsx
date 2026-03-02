@@ -1,10 +1,21 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User, Session } from '@supabase/supabase-js'
 import { supabase, isConfigured } from './supabase'
+import type { Profile } from '../types/database'
+import type { User } from '@supabase/supabase-js'
+
+interface AppUser {
+  id: string
+  email: string
+  username?: string
+  avatar?: string
+  user_metadata?: {
+    username?: string
+  }
+}
 
 interface AuthContextType {
-  user: User | null
-  session: Session | null
+  user: AppUser | null
+  profile: Profile | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, username: string) => Promise<{ error: Error | null }>
@@ -15,9 +26,32 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<AppUser | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    if (data) setProfile(data)
+    return data
+  }
+
+  const toAppUser = (supaUser: User | null, prof?: Profile | null): AppUser | null => {
+    if (!supaUser) return null
+    return {
+      id: supaUser.id,
+      email: supaUser.email || '',
+      username: prof?.username,
+      avatar: prof?.avatar_url || undefined,
+      user_metadata: {
+        username: prof?.username || supaUser.user_metadata?.username,
+      },
+    }
+  }
 
   useEffect(() => {
     if (!isConfigured) {
@@ -25,63 +59,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
+    // Check existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const prof = await fetchProfile(session.user.id)
+        setUser(toAppUser(session.user, prof))
+      }
       setLoading(false)
     })
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session?.user) {
+          const prof = await fetchProfile(session.user.id)
+          setUser(toAppUser(session.user, prof))
+        } else {
+          setUser(null)
+          setProfile(null)
+        }
+      }
+    )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signIn = async (email: string, password: string) => {
+    if (!isConfigured) return { error: new Error('Supabase not configured') }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error }
+    return { error: error ? new Error(error.message) : null }
   }
 
   const signUp = async (email: string, password: string, username: string) => {
-    const { data, error } = await supabase.auth.signUp({
+    if (!isConfigured) return { error: new Error('Supabase not configured') }
+
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { username }
-      }
+        data: { username, display_name: username },
+      },
     })
-
-    // Create profile after signup
-    if (data.user && !error) {
-      await supabase.from('profiles').insert({
-        id: data.user.id,
-        username,
-        display_name: username,
-      })
-    }
-
-    return { error }
+    return { error: error ? new Error(error.message) : null }
   }
 
   const signOut = async () => {
     await supabase.auth.signOut()
+    setUser(null)
+    setProfile(null)
   }
 
   const signInWithGitHub = async () => {
+    if (!isConfigured) return
+
     await supabase.auth.signInWithOAuth({
       provider: 'github',
-      options: {
-        redirectTo: window.location.origin + '/forum-chat-voice/'
-      }
+      options: { redirectTo: window.location.origin },
     })
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, signInWithGitHub }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, signInWithGitHub }}>
       {children}
     </AuthContext.Provider>
   )
