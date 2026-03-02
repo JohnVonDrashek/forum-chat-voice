@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase, isConfigured } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { useVoice } from '../lib/voice'
 import type { Category, ChatChannel, VoiceRoom } from '../types'
 
 // Demo data when Supabase is not configured
@@ -29,6 +30,7 @@ const demoRooms: VoiceRoom[] = [
 export default function Sidebar() {
   const location = useLocation()
   const { user } = useAuth()
+  const voice = useVoice()
   const [categories, setCategories] = useState<Category[]>(demoCategories)
   const [channels, setChannels] = useState<ChatChannel[]>(demoChannels)
   const [rooms, setRooms] = useState<VoiceRoom[]>(demoRooms)
@@ -187,24 +189,102 @@ export default function Sidebar() {
         <div className="space-y-1">
           {rooms.map((room) => {
             const isActive = location.pathname === `/voice/${room.slug}`
+            const isConnectedRoom = voice.isConnected && voice.connectedRoomSlug === room.slug
+            const participantInfo = voice.roomParticipantCounts[room.slug]
+            const count = participantInfo?.count || 0
             return (
               <Link
                 key={room.id}
                 to={`/voice/${room.slug}`}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
-                  isActive
+                className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors ${
+                  isConnectedRoom
+                    ? 'border-l-2 border-green-400 bg-green-500/10 text-green-300'
+                    : isActive
                     ? 'bg-slate-700 text-white'
                     : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
                 }`}
               >
-                <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.414a5 5 0 001.414 1.414m2.828-9.9a9 9 0 0112.728 0" />
-                </svg>
-                {room.name}
+                <div className="flex items-center gap-2">
+                  <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.414a5 5 0 001.414 1.414m2.828-9.9a9 9 0 0112.728 0" />
+                  </svg>
+                  {room.name}
+                </div>
+                {count > 0 && (
+                  <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-green-500/20 px-1.5 text-xs font-medium text-green-400">
+                    {count}
+                  </span>
+                )}
               </Link>
             )
           })}
         </div>
+
+        {/* Voice Controls — shown when connected */}
+        {voice.isConnected && voice.connectedRoomName && (
+          <div className="mt-3 rounded-lg border border-green-500/30 bg-green-500/5 p-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-green-300">
+              <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.414a5 5 0 001.414 1.414m2.828-9.9a9 9 0 0112.728 0" />
+              </svg>
+              {voice.connectedRoomName}
+            </div>
+            {voice.participants.length > 0 && (
+              <p className="mt-1 truncate text-xs text-slate-400">
+                {voice.participants.slice(0, 3).map(p => p.name).join(', ')}
+                {voice.participants.length > 3 && ` +${voice.participants.length - 3}`}
+              </p>
+            )}
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                onClick={voice.toggleMute}
+                className={`rounded-md p-1.5 transition-colors ${
+                  voice.isMuted
+                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                    : 'bg-slate-700 text-white hover:bg-slate-600'
+                }`}
+                title={voice.isMuted ? 'Unmute' : 'Mute'}
+              >
+                {voice.isMuted ? (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15.414a5 5 0 001.414 1.414m2.828-9.9a9 9 0 0112.728 0M19 19l-7-7m0 0l-7-7m7 7l7-7m-7 7l-7 7" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={voice.toggleDeafen}
+                className={`rounded-md p-1.5 transition-colors ${
+                  voice.isDeafened
+                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                    : 'bg-slate-700 text-white hover:bg-slate-600'
+                }`}
+                title={voice.isDeafened ? 'Undeafen' : 'Deafen'}
+              >
+                {voice.isDeafened ? (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={voice.leaveRoom}
+                className="ml-auto rounded-md bg-red-500/20 px-2 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/30 transition-colors"
+                title="Disconnect"
+              >
+                Disconnect
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Direct Messages */}
         <div className="mt-6 mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">

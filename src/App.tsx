@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './lib/auth'
+import { VoiceProvider } from './lib/voice'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import Login from './pages/Login'
@@ -19,6 +20,7 @@ import Admin from './pages/Admin'
 export default function App() {
   return (
     <AuthProvider>
+      <VoiceProvider>
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
@@ -40,6 +42,7 @@ export default function App() {
           <Route path="admin" element={<Admin />} />
         </Route>
       </Routes>
+      </VoiceProvider>
     </AuthProvider>
   )
 }
