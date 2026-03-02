@@ -19,14 +19,29 @@ async function main() {
     console.error(`   ✗ ${err.message}`)
   }
 
-  // 2. Recreate the trigger function (handles profile creation on signup)
-  console.log('\n2. Creating handle_new_user() trigger function...')
+  // 2. Fix RLS: allow postgres role (trigger function owner) to insert profiles
+  // Required because postgres is NOT a superuser in Supabase Marketplace instances
+  console.log('\n2. Adding RLS INSERT policy for postgres role...')
+  try {
+    await client.query(`DROP POLICY IF EXISTS "Service role can insert profiles" ON profiles`)
+    await client.query(`CREATE POLICY "Service role can insert profiles" ON profiles FOR INSERT TO postgres WITH CHECK (true)`)
+    console.log('   ✓ Policy created')
+  } catch (err) {
+    console.error(`   ✗ ${err.message}`)
+  }
+
+  // 3. Recreate the trigger function with SET search_path
+  console.log('\n3. Creating handle_new_user() trigger function...')
   try {
     await client.query(`
       CREATE OR REPLACE FUNCTION handle_new_user()
-      RETURNS TRIGGER AS $fn$
+      RETURNS TRIGGER
+      LANGUAGE plpgsql
+      SECURITY DEFINER
+      SET search_path = public
+      AS $fn$
       BEGIN
-        INSERT INTO profiles (id, username, display_name, avatar_url)
+        INSERT INTO public.profiles (id, username, display_name, avatar_url)
         VALUES (
           NEW.id,
           COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
@@ -35,15 +50,15 @@ async function main() {
         );
         RETURN NEW;
       END;
-      $fn$ LANGUAGE plpgsql SECURITY DEFINER;
+      $fn$;
     `)
     console.log('   ✓ Function created')
   } catch (err) {
     console.error(`   ✗ ${err.message}`)
   }
 
-  // 3. Recreate the trigger
-  console.log('\n3. Creating on_auth_user_created trigger...')
+  // 4. Recreate the trigger
+  console.log('\n4. Creating on_auth_user_created trigger...')
   try {
     await client.query(`DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users`)
     await client.query(`
@@ -56,8 +71,8 @@ async function main() {
     console.error(`   ✗ ${err.message}`)
   }
 
-  // 4. Fix any existing auth users that are missing profiles
-  console.log('\n4. Checking for auth users without profiles...')
+  // 5. Fix any existing auth users that are missing profiles
+  console.log('\n5. Checking for auth users without profiles...')
   try {
     const { rows } = await client.query(`
       SELECT au.id, au.email, au.raw_user_meta_data
@@ -87,29 +102,27 @@ async function main() {
     console.error(`   ✗ ${err.message}`)
   }
 
-  // 5. Verify
-  console.log('\n5. Verification...')
+  // 6. Verify
+  console.log('\n6. Verification...')
   try {
     const { rows: [col] } = await client.query(`
       SELECT column_name, data_type, column_default
       FROM information_schema.columns
       WHERE table_name = 'profiles' AND column_name = 'is_admin'
     `)
-    if (col) {
-      console.log(`   ✓ is_admin column exists (type: ${col.data_type}, default: ${col.column_default})`)
-    } else {
-      console.error('   ✗ is_admin column NOT found!')
-    }
+    console.log(`   ${col ? '✓' : '✗'} is_admin column: ${col ? `${col.data_type}, default=${col.column_default}` : 'NOT FOUND'}`)
 
     const { rows: [trigger] } = await client.query(`
       SELECT trigger_name FROM information_schema.triggers
       WHERE trigger_name = 'on_auth_user_created'
     `)
-    if (trigger) {
-      console.log(`   ✓ on_auth_user_created trigger exists`)
-    } else {
-      console.error('   ✗ Trigger NOT found!')
-    }
+    console.log(`   ${trigger ? '✓' : '✗'} on_auth_user_created trigger: ${trigger ? 'exists' : 'NOT FOUND'}`)
+
+    const { rows: policies } = await client.query(`
+      SELECT polname FROM pg_policy
+      WHERE polrelid = 'public.profiles'::regclass AND polname = 'Service role can insert profiles'
+    `)
+    console.log(`   ${policies.length ? '✓' : '✗'} RLS policy for postgres role: ${policies.length ? 'exists' : 'NOT FOUND'}`)
 
     const { rows: [counts] } = await client.query(`
       SELECT

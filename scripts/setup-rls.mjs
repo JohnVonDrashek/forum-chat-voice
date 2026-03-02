@@ -9,6 +9,7 @@ const policies = [
   { table: 'profiles', name: 'Public profiles are viewable by everyone', cmd: 'SELECT', using: 'true' },
   { table: 'profiles', name: 'Users can update own profile', cmd: 'UPDATE', using: 'auth.uid() = id' },
   { table: 'profiles', name: 'Users can insert own profile', cmd: 'INSERT', check: 'auth.uid() = id' },
+  { table: 'profiles', name: 'Service role can insert profiles', cmd: 'INSERT', check: 'true', role: 'postgres' },
   // Categories
   { table: 'categories', name: 'Categories are viewable by everyone', cmd: 'SELECT', using: 'true' },
   // Threads
@@ -52,7 +53,8 @@ async function main() {
     // Drop if exists, then create
     try {
       await client.query(`DROP POLICY IF EXISTS "${p.name}" ON ${p.table}`)
-      await client.query(`CREATE POLICY "${p.name}" ON ${p.table} FOR ${p.cmd} ${clause}`)
+      const roleClause = p.role ? `TO ${p.role}` : ''
+      await client.query(`CREATE POLICY "${p.name}" ON ${p.table} FOR ${p.cmd} ${roleClause} ${clause}`)
       console.log(`  ✓ ${p.table}: ${p.name}`)
     } catch (err) {
       console.error(`  ✗ ${p.table}: ${p.name} - ${err.message}`)
@@ -64,9 +66,13 @@ async function main() {
   try {
     await client.query(`
       CREATE OR REPLACE FUNCTION handle_new_user()
-      RETURNS TRIGGER AS $fn$
+      RETURNS TRIGGER
+      LANGUAGE plpgsql
+      SECURITY DEFINER
+      SET search_path = public
+      AS $fn$
       BEGIN
-        INSERT INTO profiles (id, username, display_name, avatar_url)
+        INSERT INTO public.profiles (id, username, display_name, avatar_url)
         VALUES (
           NEW.id,
           COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
@@ -75,7 +81,7 @@ async function main() {
         );
         RETURN NEW;
       END;
-      $fn$ LANGUAGE plpgsql SECURITY DEFINER;
+      $fn$;
     `)
     console.log('  ✓ handle_new_user() function created')
 

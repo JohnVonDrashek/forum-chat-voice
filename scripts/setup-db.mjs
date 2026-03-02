@@ -146,6 +146,7 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 CREATE POLICY IF NOT EXISTS "Public profiles are viewable by everyone" ON profiles FOR SELECT USING (true);
 CREATE POLICY IF NOT EXISTS "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY IF NOT EXISTS "Users can insert own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY IF NOT EXISTS "Service role can insert profiles" ON profiles FOR INSERT TO postgres WITH CHECK (true);
 
 -- RLS Policies: categories (public read)
 CREATE POLICY IF NOT EXISTS "Categories are viewable by everyone" ON categories FOR SELECT USING (true);
@@ -216,9 +217,13 @@ ON CONFLICT (slug) DO NOTHING;
 // Trigger function — run separately since it contains semicolons inside $$ block
 const triggerFnSql = `
 CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-  INSERT INTO profiles (id, username, display_name, avatar_url)
+  INSERT INTO public.profiles (id, username, display_name, avatar_url)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
@@ -227,7 +232,7 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 `
 
 const triggerSql = `
