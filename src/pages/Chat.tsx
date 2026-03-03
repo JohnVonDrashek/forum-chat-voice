@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
@@ -121,24 +121,29 @@ export default function Chat() {
     inputRef.current?.focus()
   }, [channelSlug])
 
-  const [sendError, setSendError] = useState<string | null>(null)
+  const sendMutation = useMutation({
+    mutationFn: async (content: string) => {
+      if (!user || !channel) throw new Error('Not authenticated')
+      const { error } = await supabase.from('chat_messages').insert({
+        channel_id: channel.id,
+        author_id: user.id,
+        content,
+      })
+      if (error) throw new Error('Failed to send message')
+    },
+    onSuccess: () => {
+      setInputValue('')
+      queryClient.invalidateQueries({ queryKey: queryKeys.chatMessages(channelSlug) })
+    },
+    onError: (error) => {
+      console.error('[FCV:Chat] Failed to send message:', error)
+    },
+  })
 
-  const handleSend = async (e: React.FormEvent) => {
+  const handleSend = (e: React.FormEvent) => {
     e.preventDefault()
     if (!inputValue.trim() || !user || !channel) return
-    setSendError(null)
-
-    const { error } = await supabase.from('chat_messages').insert({
-      channel_id: channel.id,
-      author_id: user.id,
-      content: inputValue.trim(),
-    })
-    if (error) {
-      console.error('[FCV:Chat] Failed to send message:', error)
-      setSendError('Failed to send message')
-      return
-    }
-    setInputValue('')
+    sendMutation.mutate(inputValue.trim())
   }
 
   // Group messages by date
@@ -243,11 +248,11 @@ export default function Chat() {
       </div>
 
       {/* Input Area */}
-      {sendError && (
+      {sendMutation.error && (
         <div className="shrink-0 px-3 sm:px-4">
           <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-            {sendError}
-            <button onClick={() => setSendError(null)} className="ml-2 text-red-300 hover:text-red-200">dismiss</button>
+            {sendMutation.error.message}
+            <button onClick={() => sendMutation.reset()} className="ml-2 text-red-300 hover:text-red-200">dismiss</button>
           </div>
         </div>
       )}

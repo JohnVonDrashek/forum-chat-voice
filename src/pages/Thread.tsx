@@ -1,6 +1,6 @@
 import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { uploadAvatar } from '../lib/avatars'
@@ -40,9 +40,7 @@ export default function Thread() {
   const hasError = threadError || postsError
 
   const [replyContent, setReplyContent] = useState('')
-  const [submitting, setSubmitting] = useState(false)
   const [replyingTo, setReplyingTo] = useState<PostWithAuthor | null>(null)
-  const [isBookmarked, setIsBookmarked] = useState(false)
   const [pendingPosts, setPendingPosts] = useState<PostWithAuthor[]>([])
   const [autoUpdate, setAutoUpdate] = useState(false)
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
@@ -125,24 +123,49 @@ export default function Thread() {
     }
   }, [threadId, queryClient])
 
-  // Check bookmark status
-  useEffect(() => {
-    if (!thread || !user) return
+  // Bookmark status via React Query
+  const { data: isBookmarked = false } = useQuery({
+    queryKey: queryKeys.isBookmarked(user?.id ?? '', thread?.id ?? ''),
+    queryFn: () => fetchers.isBookmarked(user!.id, thread!.id),
+    enabled: !!thread && !!user,
+  })
 
-    supabase
-      .from('bookmarks')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('thread_id', thread.id)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('[FCV:Thread] Failed to check bookmark status:', error)
-          return
-        }
-        setIsBookmarked(!!data)
-      })
-  }, [thread?.id, user])
+  // Bookmark toggle mutation with optimistic update
+  const bookmarkMutation = useMutation({
+    mutationFn: async () => {
+      if (!thread || !user) throw new Error('Not authenticated')
+      if (isBookmarked) {
+        const { error } = await supabase.from('bookmarks').delete().eq('user_id', user.id).eq('thread_id', thread.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('bookmarks').insert({ user_id: user.id, thread_id: thread.id })
+        if (error) throw error
+      }
+    },
+    onMutate: async () => {
+      if (!thread || !user) return
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.isBookmarked(user.id, thread.id) })
+      // Snapshot previous value
+      const previous = queryClient.getQueryData<boolean>(queryKeys.isBookmarked(user.id, thread.id))
+      // Optimistically update
+      queryClient.setQueryData(queryKeys.isBookmarked(user.id, thread.id), !isBookmarked)
+      return { previous }
+    },
+    onError: (_error, _variables, context) => {
+      if (!thread || !user) return
+      // Rollback on error
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(queryKeys.isBookmarked(user.id, thread.id), context.previous)
+      }
+      console.error('[FCV:Thread] Failed to toggle bookmark:', _error)
+    },
+    onSettled: () => {
+      if (!thread || !user) return
+      queryClient.invalidateQueries({ queryKey: queryKeys.isBookmarked(user.id, thread.id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookmarks(user.id) })
+    },
+  })
 
   const loadPendingPosts = useCallback(() => {
     if (pendingPosts.length === 0 || !threadId) return
@@ -165,52 +188,36 @@ export default function Thread() {
     }
   }, [loadPendingPosts])
 
-  const toggleBookmark = async () => {
+  const toggleBookmark = () => {
     if (!thread || !user) return
-
-    if (isBookmarked) {
-      const { error } = await supabase.from('bookmarks').delete().eq('user_id', user.id).eq('thread_id', thread.id)
-      if (error) {
-        console.error('[FCV:Thread] Failed to remove bookmark:', error)
-        return
-      }
-      setIsBookmarked(false)
-    } else {
-      const { error } = await supabase.from('bookmarks').insert({ user_id: user.id, thread_id: thread.id })
-      if (error) {
-        console.error('[FCV:Thread] Failed to add bookmark:', error)
-        return
-      }
-      setIsBookmarked(true)
-    }
-    // Invalidate bookmarks cache
-    queryClient.invalidateQueries({ queryKey: queryKeys.bookmarks(user.id) })
+    bookmarkMutation.mutate()
   }
 
-  const handleReply = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!thread || !replyContent.trim() || !user) return
-
-    setSubmitting(true)
-
-    const { error, data: insertedPost } = await supabase
-      .from('posts')
-      .insert({
-        thread_id: thread.id,
-        author_id: user.id,
-        content: replyContent.trim(),
-        reply_to_id: replyingTo?.id || null,
-      })
-      .select('*, author:profiles(*)')
-      .single()
-
-    if (!error && insertedPost) {
-      // Add to cache optimistically
+  // Reply mutation
+  const replyMutation = useMutation({
+    mutationFn: async () => {
+      if (!thread || !user) throw new Error('Not authenticated')
+      const { error, data: insertedPost } = await supabase
+        .from('posts')
+        .insert({
+          thread_id: thread.id,
+          author_id: user.id,
+          content: replyContent.trim(),
+          reply_to_id: replyingTo?.id || null,
+        })
+        .select('*, author:profiles(*)')
+        .single()
+      if (error) throw error
+      return insertedPost as PostWithAuthor
+    },
+    onSuccess: (insertedPost) => {
+      if (!thread) return
+      // Add to cache
       queryClient.setQueryData<PostWithAuthor[]>(
         queryKeys.posts(thread.id),
         (old = []) => {
           if (old.some(p => p.id === insertedPost.id)) return old
-          const updated = [...old, insertedPost as PostWithAuthor]
+          const updated = [...old, insertedPost]
           // Navigate to last page to see the new post
           const newTotalPages = Math.ceil(updated.length / POSTS_PER_PAGE)
           if (newTotalPages > currentPage) {
@@ -222,22 +229,30 @@ export default function Thread() {
 
       setReplyContent('')
       setReplyingTo(null)
+
       // Update thread's last_post_at
-      const { error: updateError } = await supabase
+      supabase
         .from('threads')
         .update({ last_post_at: new Date().toISOString(), post_count: thread.post_count + 1 })
         .eq('id', thread.id)
-      if (updateError) {
-        console.error('[FCV:Thread] Failed to update thread after reply:', updateError)
-      }
+        .then(({ error: updateError }) => {
+          if (updateError) {
+            console.error('[FCV:Thread] Failed to update thread after reply:', updateError)
+          }
+        })
 
       // Invalidate caches so home page shows updated post count/last activity
       queryClient.invalidateQueries({ queryKey: queryKeys.threads(20) })
-    } else if (error) {
+    },
+    onError: (error) => {
       console.error('[FCV:Thread] Failed to post reply:', error)
-    }
+    },
+  })
 
-    setSubmitting(false)
+  const handleReply = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!thread || !replyContent.trim() || !user) return
+    replyMutation.mutate()
   }
 
   if (loading) {
@@ -602,9 +617,9 @@ export default function Thread() {
               <div className="mt-3 flex justify-end">
                 <Button
                   type="submit"
-                  disabled={submitting || !replyContent.trim()}
+                  disabled={replyMutation.isPending || !replyContent.trim()}
                 >
-                  {submitting ? 'Posting...' : 'Post Reply'}
+                  {replyMutation.isPending ? 'Posting...' : 'Post Reply'}
                 </Button>
               </div>
             </div>

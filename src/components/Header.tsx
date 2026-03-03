@@ -1,9 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState, useRef, useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import Avatar from '../components/Avatar'
 import { supabase } from '../lib/supabase'
 import { formatNotificationTime } from '../lib/dateFormatters'
+import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import type { Notification as DBNotification } from '../types'
 
 interface HeaderProps {
@@ -35,45 +37,39 @@ function toNotifItem(n: DBNotification): NotifItem {
 export default function Header({ onMenuClick }: HeaderProps) {
   const { user, signOut, loading } = useAuth()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
-  const [notifications, setNotifications] = useState<NotifItem[]>([])
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Fetch notifications via React Query
+  const { data: rawNotifications = [] } = useQuery({
+    queryKey: queryKeys.notifications(user?.id ?? ''),
+    queryFn: () => fetchers.notifications(user!.id),
+    enabled: !!user,
+    ...queryOptions.realtime,
+  })
+
+  const notifications: NotifItem[] = rawNotifications.map(toNotifItem)
   const unreadCount = notifications.filter(n => !n.read).length
 
-  // Fetch notifications from Supabase
+  // Realtime subscription — invalidate query on new notifications
   useEffect(() => {
-    if (!user) {
-      setNotifications([])
-      return
-    }
-
-    const fetchNotifications = async () => {
-      const { data } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20)
-      if (data) setNotifications(data.map(toNotifItem))
-    }
-
-    fetchNotifications()
+    if (!user) return
 
     const sub = supabase
       .channel('header-notifications')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          setNotifications(prev => [toNotifItem(payload.new as DBNotification), ...prev])
+        () => {
+          queryClient.invalidateQueries({ queryKey: queryKeys.notifications(user.id) })
         }
       )
       .subscribe()
 
     return () => { sub.unsubscribe() }
-  }, [user])
+  }, [user, queryClient])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -98,9 +94,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const handleNotificationClick = async (notification: NotifItem) => {
     if (!notification.read) {
       await supabase.from('notifications').update({ read: true }).eq('id', notification.id)
-      setNotifications(prev =>
-        prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
-      )
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.notifications(user.id) })
+      }
     }
     setShowNotifications(false)
     navigate(notification.link)
@@ -109,8 +105,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const markAllAsRead = async () => {
     if (user) {
       await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false)
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications(user.id) })
     }
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
   }
 
   const getNotificationIcon = (type: string) => {

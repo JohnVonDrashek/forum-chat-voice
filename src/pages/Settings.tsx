@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useMutation } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import { uploadAvatar } from '../lib/avatars'
@@ -13,8 +13,6 @@ type Tab = 'profile' | 'account' | 'notifications' | 'appearance'
 export default function Settings() {
   const { user, profile } = useAuth()
   const [activeTab, setActiveTab] = useState<Tab>('profile')
-  const [saved, setSaved] = useState(false)
-  const [error, setError] = useState('')
 
   // Profile state
   const [displayName, setDisplayName] = useState('')
@@ -77,10 +75,10 @@ export default function Settings() {
     return (saved as 'small' | 'medium' | 'large') || 'medium'
   })
 
-  const handleSave = async () => {
-    setError('')
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error('Not authenticated')
 
-    if (user) {
       if (activeTab === 'profile') {
         const { error: updateError } = await supabase
           .from('profiles')
@@ -91,23 +89,15 @@ export default function Settings() {
             updated_at: new Date().toISOString(),
           })
           .eq('id', user.id)
-
-        if (updateError) {
-          setError(updateError.message)
-          return
-        }
+        if (updateError) throw new Error(updateError.message)
       }
 
       if (activeTab === 'account' && newPassword) {
         if (newPassword !== confirmPassword) {
-          setError('Passwords do not match')
-          return
+          throw new Error('Passwords do not match')
         }
         const { error: pwError } = await supabase.auth.updateUser({ password: newPassword })
-        if (pwError) {
-          setError(pwError.message)
-          return
-        }
+        if (pwError) throw new Error(pwError.message)
         setCurrentPassword('')
         setNewPassword('')
         setConfirmPassword('')
@@ -122,10 +112,11 @@ export default function Settings() {
         localStorage.setItem('theme', theme)
         localStorage.setItem('fontSize', fontSize)
       }
-    }
+    },
+  })
 
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const handleSave = () => {
+    saveMutation.mutate()
   }
 
   const tabs: { id: Tab; label: string; icon: ReactNode }[] = [
@@ -464,17 +455,18 @@ export default function Settings() {
 
           {/* Save Button */}
           <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-700 pt-6">
-            {error && (
-              <span className="text-sm text-red-400">{error}</span>
+            {saveMutation.error && (
+              <span className="text-sm text-red-400">{saveMutation.error.message}</span>
             )}
-            {saved && (
+            {saveMutation.isSuccess && (
               <span className="text-sm text-green-400">Settings saved!</span>
             )}
             <button
               onClick={handleSave}
-              className="rounded-lg bg-indigo-600 px-6 py-2 font-medium text-white hover:bg-indigo-500"
+              disabled={saveMutation.isPending}
+              className="rounded-lg bg-indigo-600 px-6 py-2 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
             >
-              Save Changes
+              {saveMutation.isPending ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </Card>
@@ -488,7 +480,7 @@ export default function Settings() {
             setCropImageSrc(null)
             if (!user) return
             setAvatarUploading(true)
-            setError('')
+            saveMutation.reset()
             const file = new File([blob], 'avatar.png', { type: 'image/png' })
             const path = `user/${user.id}/custom.png`
             const url = await uploadAvatar(file, path)
@@ -496,7 +488,7 @@ export default function Settings() {
               await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id)
               setAvatarUrl(url)
             } else {
-              setError('Failed to upload avatar')
+              console.error('[FCV:Settings] Failed to upload avatar')
             }
             setAvatarUploading(false)
           }}

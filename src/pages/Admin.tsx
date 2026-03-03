@@ -1,56 +1,32 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
-import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import Card from '../components/ui/Card'
 import { formatTimeAgo } from '../lib/dateFormatters'
-import type { Profile } from '../types'
+import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 
 type Tab = 'overview' | 'users' | 'content' | 'reports'
 
-interface Stats {
-  totalUsers: number
-  totalThreads: number
-  totalPosts: number
-}
-
 export default function Admin() {
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
-  const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalThreads: 0, totalPosts: 0 })
-  const [users, setUsers] = useState<Profile[]>([])
   const [userSearch, setUserSearch] = useState('')
 
-  useEffect(() => {
-    if (!user) return
+  const { data: stats = { totalUsers: 0, totalThreads: 0, totalPosts: 0 }, isLoading: statsLoading, isError: statsError } = useQuery({
+    queryKey: queryKeys.adminStats,
+    queryFn: fetchers.adminStats,
+    enabled: !!user,
+    ...queryOptions.threads,
+  })
 
-    const fetchStats = async () => {
-      const [usersRes, threadsRes, postsRes] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('threads').select('*', { count: 'exact', head: true }),
-        supabase.from('posts').select('*', { count: 'exact', head: true }),
-      ])
-
-      setStats({
-        totalUsers: usersRes.count ?? 0,
-        totalThreads: threadsRes.count ?? 0,
-        totalPosts: postsRes.count ?? 0,
-      })
-    }
-
-    const fetchUsers = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20)
-      if (data) setUsers(data)
-    }
-
-    fetchStats()
-    fetchUsers()
-  }, [user])
+  const { data: users = [], isLoading: usersLoading, isError: usersError } = useQuery({
+    queryKey: queryKeys.adminUsers,
+    queryFn: fetchers.adminUsers,
+    enabled: !!user,
+    ...queryOptions.threads,
+  })
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     {
@@ -128,6 +104,12 @@ export default function Admin() {
         <div className="flex-1 space-y-6">
           {activeTab === 'overview' && (
             <>
+              {statsLoading && (
+                <div className="py-8 text-center text-slate-400">Loading stats...</div>
+              )}
+              {statsError && (
+                <div className="py-8 text-center text-red-400">Failed to load stats.</div>
+              )}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Card className="p-4">
                   <div className="flex items-center gap-3">
@@ -176,6 +158,12 @@ export default function Admin() {
 
           {activeTab === 'users' && (
             <div className="space-y-4">
+              {usersLoading && (
+                <div className="py-8 text-center text-slate-400">Loading users...</div>
+              )}
+              {usersError && (
+                <div className="py-8 text-center text-red-400">Failed to load users.</div>
+              )}
               <div className="relative sm:max-w-xs">
                 <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

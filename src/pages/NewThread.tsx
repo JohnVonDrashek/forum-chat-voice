@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { uploadAvatar, uploadDefaultAvatar } from '../lib/avatars'
@@ -8,109 +9,93 @@ import ImageCropModal from '../components/ImageCropModal'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Card from '../components/ui/Card'
-import type { Category } from '../types'
+import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 
 export default function NewThread() {
   const { categorySlug } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [category, setCategory] = useState<Category | null>(null)
+  const { data: category } = useQuery({
+    queryKey: queryKeys.category(categorySlug!),
+    queryFn: () => fetchers.category(categorySlug!),
+    enabled: !!categorySlug,
+    ...queryOptions.static,
+  })
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
   const [threadImageBlob, setThreadImageBlob] = useState<Blob | null>(null)
   const [threadImagePreview, setThreadImagePreview] = useState<string | null>(null)
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    const fetchCategory = async () => {
-      const { data } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('slug', categorySlug!)
+  const submitMutation = useMutation({
+    mutationFn: async () => {
+      if (!user || !category) throw new Error('Not authenticated')
+
+      if (title.length < 5) {
+        throw new Error('Title must be at least 5 characters')
+      }
+
+      if (content.length < 10) {
+        throw new Error('Content must be at least 10 characters')
+      }
+
+      // Create slug from title
+      const slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 50)
+
+      // Create thread
+      const { data: thread, error: threadError } = await supabase
+        .from('threads')
+        .insert({
+          category_id: category.id,
+          author_id: user.id,
+          title,
+          slug,
+          post_count: 1,
+          last_post_at: new Date().toISOString(),
+        })
+        .select()
         .single()
-      if (data) setCategory(data)
-    }
 
-    fetchCategory()
-  }, [categorySlug])
+      if (threadError) throw new Error(threadError.message)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!user || !category) return
-
-    if (title.length < 5) {
-      setError('Title must be at least 5 characters')
-      return
-    }
-
-    if (content.length < 10) {
-      setError('Content must be at least 10 characters')
-      return
-    }
-
-    setSubmitting(true)
-    setError('')
-
-    // Create slug from title
-    const slug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 50)
-
-    // Create thread
-    const { data: thread, error: threadError } = await supabase
-      .from('threads')
-      .insert({
-        category_id: category.id,
+      // Create first post
+      const { error: postError } = await supabase.from('posts').insert({
+        thread_id: thread.id,
         author_id: user.id,
-        title,
-        slug,
-        post_count: 1,
-        last_post_at: new Date().toISOString(),
+        content,
       })
-      .select()
-      .single()
 
-    if (threadError) {
-      setError(threadError.message)
-      setSubmitting(false)
-      return
-    }
+      if (postError) throw new Error(postError.message)
 
-    // Create first post
-    const { error: postError } = await supabase.from('posts').insert({
-      thread_id: thread.id,
-      author_id: user.id,
-      content,
-    })
-
-    if (postError) {
-      setError(postError.message)
-      setSubmitting(false)
-      return
-    }
-
-    // Upload thread image
-    if (threadImageBlob) {
-      // User selected a custom image — upload and update synchronously before navigating
-      const imageUrl = await uploadAvatar(threadImageBlob, `thread/${thread.id}/custom.png`)
-      if (imageUrl) {
-        await supabase.from('threads').update({ image_url: imageUrl }).eq('id', thread.id)
+      // Upload thread image
+      if (threadImageBlob) {
+        const imageUrl = await uploadAvatar(threadImageBlob, `thread/${thread.id}/custom.png`)
+        if (imageUrl) {
+          await supabase.from('threads').update({ image_url: imageUrl }).eq('id', thread.id)
+        }
+      } else {
+        const imageUrl = await uploadDefaultAvatar(thread.id, 'thread')
+        if (imageUrl) {
+          await supabase.from('threads').update({ image_url: imageUrl }).eq('id', thread.id)
+        }
       }
-    } else {
-      // No custom image — generate and upload a default DiceBear thread image
-      const imageUrl = await uploadDefaultAvatar(thread.id, 'thread')
-      if (imageUrl) {
-        await supabase.from('threads').update({ image_url: imageUrl }).eq('id', thread.id)
-      }
-    }
 
-    navigate(`/t/${thread.id}`)
+      return thread
+    },
+    onSuccess: (thread) => {
+      navigate(`/t/${thread.id}`)
+    },
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !category) return
+    submitMutation.mutate()
   }
 
   if (!category) {
@@ -186,9 +171,9 @@ export default function NewThread() {
           />
         </div>
 
-        {error && (
+        {submitMutation.error && (
           <div className="mt-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
-            {error}
+            {submitMutation.error.message}
           </div>
         )}
 
@@ -233,9 +218,9 @@ export default function NewThread() {
             </button>
             <Button
               type="submit"
-              disabled={submitting}
+              disabled={submitMutation.isPending}
             >
-              {submitting ? 'Creating...' : 'Create Thread'}
+              {submitMutation.isPending ? 'Creating...' : 'Create Thread'}
             </Button>
           </div>
         </form>

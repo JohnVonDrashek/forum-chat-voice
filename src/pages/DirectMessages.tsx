@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
@@ -23,7 +23,6 @@ export default function DirectMessages() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const [messages, setMessages] = useState<DM[]>([])
   const [newMessage, setNewMessage] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -95,59 +94,48 @@ export default function DirectMessages() {
     return () => { sub.unsubscribe() }
   }, [user, queryClient])
 
-  // Fetch messages for selected conversation
+  // Fetch messages for selected conversation via React Query
+  const otherId = currentConversation?.recipientId || recipientId
+  const { data: rawMessages = [] } = useQuery({
+    queryKey: queryKeys.dmMessages(otherId ?? ''),
+    queryFn: () => fetchers.dmMessages(user!.id, otherId!),
+    enabled: !!recipientId && !!user && !!otherId,
+    ...queryOptions.realtime,
+  })
+
+  const messages: DM[] = rawMessages.map(dm => ({
+    id: dm.id,
+    senderId: dm.sender_id,
+    content: dm.content,
+    timestamp: new Date(dm.created_at),
+  }))
+
+  // Mark messages as read when conversation is opened or messages change
   useEffect(() => {
-    if (!recipientId) {
-      setMessages([])
-      return
-    }
+    if (!recipientId || !user || !otherId || rawMessages.length === 0) return
 
-    if (!user) return
-
-    const otherId = currentConversation?.recipientId || recipientId
-
-    const fetchMessages = async () => {
-      console.log('[FCV:DM] Fetching messages for conversation:', otherId)
-      const { data, error } = await supabase
-        .from('direct_messages')
-        .select('*')
-        .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${user.id})`)
-        .order('created_at')
-
-      if (error) {
-        console.error('[FCV:DM] Failed to fetch messages:', error)
-        return
-      }
-
-      if (data) {
-        setMessages(data.map(dm => ({
-          id: dm.id,
-          senderId: dm.sender_id,
-          content: dm.content,
-          timestamp: new Date(dm.created_at),
-        })))
-        console.log('[FCV:DM] Loaded', data.length, 'messages')
-      }
-
-      // Mark as read
-      const { error: readError } = await supabase
+    const markAsRead = async () => {
+      const { error } = await supabase
         .from('direct_messages')
         .update({ read: true })
         .eq('sender_id', otherId)
         .eq('recipient_id', user.id)
         .eq('read', false)
 
-      if (readError) {
-        console.error('[FCV:DM] Failed to mark messages as read:', readError)
+      if (error) {
+        console.error('[FCV:DM] Failed to mark messages as read:', error)
+      } else {
+        queryClient.invalidateQueries({ queryKey: queryKeys.dmConversationsList(user.id) })
       }
-
-      // Invalidate conversations to update unread count
-      queryClient.invalidateQueries({ queryKey: queryKeys.dmConversationsList(user.id) })
     }
 
-    fetchMessages()
+    markAsRead()
+  }, [recipientId, user, otherId, rawMessages.length, queryClient])
 
-    // Subscribe to new messages in this conversation
+  // Subscribe to new messages in this conversation — invalidate query on new messages
+  useEffect(() => {
+    if (!recipientId || !user || !otherId) return
+
     const sub = supabase
       .channel(`dm:${otherId}`)
       .on(
@@ -159,12 +147,8 @@ export default function DirectMessages() {
             (dm.sender_id === user.id && dm.recipient_id === otherId) ||
             (dm.sender_id === otherId && dm.recipient_id === user.id)
           if (isRelevant) {
-            setMessages(prev => [...prev, {
-              id: dm.id,
-              senderId: dm.sender_id,
-              content: dm.content,
-              timestamp: new Date(dm.created_at),
-            }])
+            // Invalidate to refetch messages
+            queryClient.invalidateQueries({ queryKey: queryKeys.dmMessages(otherId) })
             // Mark incoming as read
             if (dm.sender_id === otherId) {
               supabase.from('direct_messages').update({ read: true }).eq('id', dm.id).then(({ error }) => {
@@ -177,31 +161,41 @@ export default function DirectMessages() {
       .subscribe()
 
     return () => { sub.unsubscribe() }
-  }, [recipientId, user])
+  }, [recipientId, user, otherId, queryClient])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages.length])
 
-  const [sendError, setSendError] = useState<string | null>(null)
+  const sendMutation = useMutation({
+    mutationFn: async (content: string) => {
+      if (!recipientId || !user) throw new Error('Not authenticated')
+      const otherId = currentConversation?.recipientId || recipientId
+      const { error } = await supabase.from('direct_messages').insert({
+        sender_id: user.id,
+        recipient_id: otherId,
+        content,
+      })
+      if (error) throw new Error('Failed to send message')
+    },
+    onSuccess: () => {
+      setNewMessage('')
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.dmConversationsList(user.id) })
+        if (otherId) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.dmMessages(otherId) })
+        }
+      }
+    },
+    onError: (error) => {
+      console.error('[FCV:DM] Failed to send message:', error)
+    },
+  })
 
-  const handleSend = async (e: React.FormEvent) => {
+  const handleSend = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim() || !recipientId || !user) return
-    setSendError(null)
-
-    const otherId = currentConversation?.recipientId || recipientId
-    const { error } = await supabase.from('direct_messages').insert({
-      sender_id: user.id,
-      recipient_id: otherId,
-      content: newMessage.trim(),
-    })
-    if (error) {
-      console.error('[FCV:DM] Failed to send message:', error)
-      setSendError('Failed to send message')
-      return
-    }
-    setNewMessage('')
+    sendMutation.mutate(newMessage.trim())
   }
 
   const handleSelectUser = useCallback((profile: Profile) => {
@@ -356,10 +350,10 @@ export default function DirectMessages() {
               </div>
 
               {/* Input */}
-              {sendError && (
+              {sendMutation.error && (
                 <div className="mx-4 mb-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-                  {sendError}
-                  <button onClick={() => setSendError(null)} className="ml-2 text-red-300 hover:text-red-200">dismiss</button>
+                  {sendMutation.error.message}
+                  <button onClick={() => sendMutation.reset()} className="ml-2 text-red-300 hover:text-red-200">dismiss</button>
                 </div>
               )}
               <div className="border-t border-slate-700 p-4">
