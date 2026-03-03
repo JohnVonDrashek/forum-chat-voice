@@ -27,6 +27,6 @@ npm-debug.log*
 *.tsbuildinfo
 
 # Supabase CLI temp
-supabase/.temp/
+**/supabase/.temp/
 .vercel
 .env*.local

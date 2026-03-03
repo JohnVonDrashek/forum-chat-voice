@@ -1,12 +1,12 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "$schema": "../demo/node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Forumline",
   "version": "0.1.0",
   "identifier": "com.forumchatvoice.desktop",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist",
+    "beforeDevCommand": "cd ../demo && npm run dev",
+    "beforeBuildCommand": "cd ../demo && npm run build",
+    "frontendDist": "../demo/dist",
     "devUrl": "http://localhost:5173"
   },
   "app": {

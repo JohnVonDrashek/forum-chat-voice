@@ -17,9 +17,8 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@forumline/protocol": ["./packages/protocol/src/index.ts"]
+      "@forumline/protocol": ["../packages/protocol/src/index.ts"]
     }
   },
-  "include": ["src"],
-  "exclude": ["desktop"]
+  "include": ["src"]
 }

@@ -1,57 +1,9 @@
 {
-  "name": "forumline-demo",
-  "version": "1.0.0",
+  "name": "forumline",
   "private": true,
-  "type": "module",
-  "description": "A modern forum with real-time chat and voice rooms",
+  "workspaces": ["demo", "hub", "packages/*"],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "lint": "tsc --noEmit",
     "tauri:dev": "TAURI_DIR=desktop tauri dev",
     "tauri:build": "TAURI_DIR=desktop tauri build"
-  },
-  "keywords": [
-    "forum",
-    "chat",
-    "voice",
-    "community"
-  ],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "@dicebear/avataaars": "^9.3.2",
-    "@dicebear/core": "^9.3.2",
-    "@dicebear/shapes": "^9.3.2",
-    "@hookform/resolvers": "^5.2.2",
-    "@supabase/supabase-js": "^2.98.0",
-    "@tanstack/react-query": "^5.90.21",
-    "@tauri-apps/api": "^2.10.1",
-    "@tauri-apps/plugin-autostart": "^2.5.1",
-    "@tauri-apps/plugin-notification": "^2.3.3",
-    "@tauri-apps/plugin-shell": "^2.3.5",
-    "livekit-client": "^2.17.2",
-    "livekit-server-sdk": "^2.15.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-easy-crop": "^5.5.6",
-    "react-hook-form": "^7.71.2",
-    "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^7.13.1",
-    "zod": "^4.3.6"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.2.1",
-    "@tauri-apps/cli": "^2.10.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vercel/node": "^5.6.9",
-    "@vitejs/plugin-react": "^5.1.4",
-    "pg": "^8.19.0",
-    "playwright": "^1.58.2",
-    "tailwindcss": "^4.2.1",
-    "typescript": "^5.9.3",
-    "vite": "^7.3.1"
   }
 }

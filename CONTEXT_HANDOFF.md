@@ -21,5 +21,5 @@ Configure Supabase Auth settings to allow the production redirect URL. The Supab
 - Vercel integration provides SSO access to Supabase dashboard via `vercel integration open supabase`
 
 ## Files
-- `src/lib/auth.tsx` - Auth context with password reset logic
-- `supabase/` - Directory exists but no config.toml yet
+- `demo/src/lib/auth.tsx` - Auth context with password reset logic
+- `demo/supabase/` - Directory exists but no config.toml yet

@@ -28,8 +28,8 @@ vercel env ls --token "$VERCEL_TOKEN"
 # Add environment variable
 echo "value" | vercel env add VAR_NAME production --token "$VERCEL_TOKEN"
 
-# Deploy to production
-vercel --prod --token "$VERCEL_TOKEN"
+# Deploy demo to production
+cd demo && vercel --prod --token "$VERCEL_TOKEN"
 
 # View deployment logs
 vercel logs <deployment-url> --token "$VERCEL_TOKEN"
@@ -52,7 +52,7 @@ Set via CLI or Vercel Dashboard:
 
 ### Local Development
 
-Create `.env.local`:
+Create `demo/.env.local`:
 
 ```bash
 VITE_SUPABASE_URL=https://your-project.supabase.co
@@ -66,17 +66,17 @@ LIVEKIT_API_SECRET=your-api-secret
 ## Local Development
 
 ```bash
-npm install
-npm run dev
+npm install        # from root — sets up workspaces
+cd demo && npm run dev
 ```
 
 ## Deployment
 
-Vercel auto-deploys when you push to the main branch.
+Vercel auto-deploys when you push to the main branch (via GitHub Actions).
 
 Manual deploy:
 ```bash
-vercel --prod --token "$VERCEL_TOKEN"
+cd demo && vercel --prod --token "$VERCEL_TOKEN"
 ```
 
 ## Supabase Setup
@@ -96,12 +96,12 @@ vercel integration open supabase forum-chat-voice-db --token "$VERCEL_TOKEN"
 
 ```bash
 # Pull all Supabase env vars to local
-vercel env pull .env.local --token "$VERCEL_TOKEN"
+cd demo && vercel env pull .env.local --token "$VERCEL_TOKEN"
 ```
 
 ### Auth Redirect URLs
 
-Configure in Supabase Dashboard → Authentication → URL Configuration:
+Configure in Supabase Dashboard > Authentication > URL Configuration:
 
 - **Site URL**: `https://forum-chat-voice.vercel.app`
 - **Redirect URLs**:
