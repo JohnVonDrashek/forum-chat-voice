@@ -31,7 +31,7 @@ export default function DirectMessages() {
   const [searching, setSearching] = useState(false)
 
   // Use React Query for conversations list - cached globally!
-  const { data: conversations = [] } = useQuery({
+  const { data: conversations = [], isError: conversationsError } = useQuery({
     queryKey: queryKeys.dmConversationsList(user?.id ?? ''),
     queryFn: () => fetchers.dmConversations(user!.id),
     enabled: !!user,
@@ -237,7 +237,17 @@ export default function DirectMessages() {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {conversations.length === 0 ? (
+            {conversationsError ? (
+              <div className="p-4 text-center">
+                <p className="text-red-400">Failed to load conversations</p>
+                <button
+                  onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.dmConversationsList(user!.id) })}
+                  className="mt-2 text-sm text-indigo-400 hover:text-indigo-300"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : conversations.length === 0 ? (
               <div className="p-4 text-center text-slate-400">
                 <p>No conversations yet</p>
                 <button

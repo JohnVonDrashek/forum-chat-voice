@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { useQuery } from '@tanstack/react-query'
 import Avatar from '../components/Avatar'
 import { formatTimeAgo } from '../lib/dateFormatters'
 import { useDebounce } from '../lib/hooks'
-import type { ThreadWithAuthor, PostWithAuthor } from '../types'
+import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 
 type SearchFilter = 'all' | 'threads' | 'posts'
 
@@ -15,48 +15,33 @@ export default function Search() {
 
   const [searchInput, setSearchInput] = useState(initialQuery)
   const [filter, setFilter] = useState<SearchFilter>(filterParam)
-  const [threadResults, setThreadResults] = useState<ThreadWithAuthor[]>([])
-  const [postResults, setPostResults] = useState<PostWithAuthor[]>([])
 
   const debouncedSearch = useDebounce(searchInput, 300)
 
-  const performSearch = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setThreadResults([])
-      setPostResults([])
-      return
-    }
+  // Use React Query for search results - cached for quick navigation back
+  const { data: threadResults = [], isLoading: threadsLoading, isError: threadsError } = useQuery({
+    queryKey: queryKeys.searchThreads(debouncedSearch),
+    queryFn: () => fetchers.searchThreads(debouncedSearch),
+    enabled: !!debouncedSearch.trim(),
+    ...queryOptions.search,
+  })
 
-    const pattern = `%${query}%`
+  const { data: postResults = [], isLoading: postsLoading, isError: postsError } = useQuery({
+    queryKey: queryKeys.searchPosts(debouncedSearch),
+    queryFn: () => fetchers.searchPosts(debouncedSearch),
+    enabled: !!debouncedSearch.trim(),
+    ...queryOptions.search,
+  })
 
-    const [threadsRes, postsRes] = await Promise.all([
-      supabase
-        .from('threads')
-        .select('*, author:profiles(*), category:categories(*)')
-        .ilike('title', pattern)
-        .order('created_at', { ascending: false })
-        .limit(20),
-      supabase
-        .from('posts')
-        .select('*, author:profiles(*)')
-        .ilike('content', pattern)
-        .order('created_at', { ascending: false })
-        .limit(20),
-    ])
-
-    if (threadsRes.data) setThreadResults(threadsRes.data as ThreadWithAuthor[])
-    if (postsRes.data) setPostResults(postsRes.data as PostWithAuthor[])
-  }, [])
-
-  useEffect(() => {
-    performSearch(debouncedSearch)
-
-    if (debouncedSearch.trim()) {
-      setSearchParams({ q: debouncedSearch.trim(), filter }, { replace: true })
+  // Update URL params when search changes
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value)
+    if (value.trim()) {
+      setSearchParams({ q: value.trim(), filter }, { replace: true })
     } else if (searchParams.has('q')) {
       setSearchParams({}, { replace: true })
     }
-  }, [debouncedSearch, filter, performSearch, setSearchParams, searchParams])
+  }
 
   const highlightMatch = (text: string, query: string) => {
     if (!query.trim()) return text
@@ -78,6 +63,8 @@ export default function Search() {
     }
   }
 
+  const isLoading = threadsLoading || postsLoading
+  const hasError = threadsError || postsError
   const totalResults = (filter === 'all' || filter === 'threads' ? threadResults.length : 0) +
                        (filter === 'all' || filter === 'posts' ? postResults.length : 0)
 
@@ -98,14 +85,14 @@ export default function Search() {
           <input
             type="text"
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Start typing to search..."
             className="w-full rounded-lg border border-slate-600 bg-slate-700 py-3 pl-12 pr-12 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             autoFocus
           />
           {hasQuery && (
             <button
-              onClick={() => setSearchInput('')}
+              onClick={() => handleSearchChange('')}
               className="absolute right-4 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:bg-slate-600 hover:text-white"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -115,12 +102,20 @@ export default function Search() {
           )}
         </div>
 
-        {hasQuery && (
+        {hasQuery && !isLoading && (
           <p className="mt-2 text-sm text-slate-400">
-            {totalResults === 0 ? 'No results found' : (
+            {hasError ? (
+              <span className="text-red-400">Error loading results. Please try again.</span>
+            ) : totalResults === 0 ? (
+              'No results found'
+            ) : (
               <>Found <span className="font-medium text-white">{totalResults}</span> result{totalResults !== 1 && 's'}</>
             )}
           </p>
+        )}
+
+        {hasQuery && isLoading && (
+          <p className="mt-2 text-sm text-slate-400">Searching...</p>
         )}
       </div>
 
@@ -138,7 +133,7 @@ export default function Search() {
               }`}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
-              {hasQuery && (
+              {hasQuery && !isLoading && (
                 <span className={`ml-2 text-xs ${filter === f ? 'opacity-75' : 'opacity-50'}`}>({count})</span>
               )}
             </button>
@@ -228,7 +223,7 @@ export default function Search() {
             </div>
           )}
 
-          {totalResults === 0 && (
+          {totalResults === 0 && !isLoading && (
             <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
               <svg className="mx-auto h-12 w-12 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -251,7 +246,7 @@ export default function Search() {
               {['welcome', 'voice', 'features', 'admin'].map(term => (
                 <button
                   key={term}
-                  onClick={() => setSearchInput(term)}
+                  onClick={() => handleSearchChange(term)}
                   className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-600 transition-colors"
                 >
                   {term}

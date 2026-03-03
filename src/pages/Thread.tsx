@@ -8,7 +8,7 @@ import Avatar from '../components/Avatar'
 import ImageCropModal from '../components/ImageCropModal'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import { formatDate } from '../lib/dateFormatters'
-import type { ThreadWithAuthor, PostWithAuthor } from '../types'
+import type { PostWithAuthor } from '../types'
 
 const POSTS_PER_PAGE = 5
 
@@ -19,7 +19,7 @@ export default function Thread() {
   const queryClient = useQueryClient()
 
   // Use React Query for thread - instant on back navigation!
-  const { data: cachedThread, isLoading: threadLoading } = useQuery({
+  const { data: thread, isLoading: threadLoading, isError: threadError } = useQuery({
     queryKey: queryKeys.thread(threadId!),
     queryFn: () => fetchers.thread(threadId!),
     ...queryOptions.threads,
@@ -27,26 +27,16 @@ export default function Thread() {
   })
 
   // Use React Query for posts - instant on back navigation!
-  const { data: cachedPosts, isLoading: postsLoading } = useQuery({
+  const { data: posts = [], isLoading: postsLoading, isError: postsError } = useQuery({
     queryKey: queryKeys.posts(threadId!),
     queryFn: () => fetchers.posts(threadId!),
     ...queryOptions.posts,
     enabled: !!threadId,
   })
 
-  // Local state that can be updated by real-time events
-  const [thread, setThread] = useState<ThreadWithAuthor | null>(null)
-  const [allPosts, setAllPosts] = useState<PostWithAuthor[]>([])
   const loading = threadLoading || postsLoading
+  const hasError = threadError || postsError
 
-  // Sync cached data to local state
-  useEffect(() => {
-    if (cachedThread) setThread(cachedThread)
-  }, [cachedThread])
-
-  useEffect(() => {
-    if (cachedPosts) setAllPosts(cachedPosts)
-  }, [cachedPosts])
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [replyingTo, setReplyingTo] = useState<PostWithAuthor | null>(null)
@@ -56,18 +46,16 @@ export default function Thread() {
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const threadImageInputRef = useRef<HTMLInputElement>(null)
-  const allPostsRef = useRef<PostWithAuthor[]>([])
   const pendingPostsRef = useRef<PostWithAuthor[]>([])
   const autoUpdateRef = useRef(false)
 
-  // Keep refs in sync so interval/subscription callbacks see latest values
-  allPostsRef.current = allPosts
+  // Keep refs in sync so subscription callbacks see latest values
   pendingPostsRef.current = pendingPosts
   autoUpdateRef.current = autoUpdate
 
   const currentPage = parseInt(searchParams.get('page') || '1', 10)
-  const totalPages = Math.ceil(allPosts.length / POSTS_PER_PAGE)
-  const paginatedPosts = allPosts.slice(
+  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE)
+  const paginatedPosts = posts.slice(
     (currentPage - 1) * POSTS_PER_PAGE,
     currentPage * POSTS_PER_PAGE
   )
@@ -86,7 +74,6 @@ export default function Thread() {
   useEffect(() => {
     if (!threadId) return
 
-    // Set up real-time subscription
     const subscription = supabase
         .channel(`thread:${threadId}`)
         .on(
@@ -101,19 +88,19 @@ export default function Thread() {
               .single()
             if (data) {
               const post = data as PostWithAuthor
-              const known = allPostsRef.current.some(p => p.id === post.id)
+              const currentPosts = queryClient.getQueryData<PostWithAuthor[]>(queryKeys.posts(threadId)) ?? []
+              const known = currentPosts.some(p => p.id === post.id)
                 || pendingPostsRef.current.some(p => p.id === post.id)
               if (known) return
 
-              // Invalidate cache so next visit gets fresh data
-              queryClient.invalidateQueries({ queryKey: queryKeys.posts(threadId) })
-
               if (autoUpdateRef.current) {
-                setAllPosts(prev => {
-                  if (prev.some(p => p.id === post.id)) return prev
-                  return [...prev, post]
-                })
+                // Add directly to cache
+                queryClient.setQueryData<PostWithAuthor[]>(
+                  queryKeys.posts(threadId),
+                  (old = []) => old.some(p => p.id === post.id) ? old : [...old, post]
+                )
               } else {
+                // Buffer in pending posts
                 setPendingPosts(prev => {
                   if (prev.some(p => p.id === post.id)) return prev
                   return [...prev, post]
@@ -127,7 +114,7 @@ export default function Thread() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [threadId])
+  }, [threadId, queryClient])
 
   // Check bookmark status
   useEffect(() => {
@@ -142,60 +129,18 @@ export default function Thread() {
       .then(({ data }) => setIsBookmarked(!!data))
   }, [thread?.id, user])
 
-  // Poll for new replies every 10 seconds
-  useEffect(() => {
-    if (!threadId) return
-
-    const poll = async () => {
-      const current = allPostsRef.current
-      const pending = pendingPostsRef.current
-      const knownIds = new Set([...current.map(p => p.id), ...pending.map(p => p.id)])
-
-      // Find the latest created_at among all known posts
-      const latestAt = current.length > 0
-        ? current[current.length - 1].created_at
-        : '1970-01-01T00:00:00Z'
-
-      const { data } = await supabase
-        .from('posts')
-        .select('*, author:profiles(*)')
-        .eq('thread_id', threadId)
-        .gt('created_at', latestAt)
-        .order('created_at')
-
-      if (!data || data.length === 0) return
-
-      const newPosts = (data as PostWithAuthor[]).filter(p => !knownIds.has(p.id))
-      if (newPosts.length === 0) return
-
-      if (autoUpdateRef.current) {
-        setAllPosts(prev => {
-          const existingIds = new Set(prev.map(p => p.id))
-          const toAdd = newPosts.filter(p => !existingIds.has(p.id))
-          return toAdd.length > 0 ? [...prev, ...toAdd] : prev
-        })
-      } else {
-        setPendingPosts(prev => {
-          const existingIds = new Set(prev.map(p => p.id))
-          const toAdd = newPosts.filter(p => !existingIds.has(p.id))
-          return toAdd.length > 0 ? [...prev, ...toAdd] : prev
-        })
-      }
-    }
-
-    const interval = setInterval(poll, 10000)
-    return () => clearInterval(interval)
-  }, [threadId])
-
   const loadPendingPosts = useCallback(() => {
-    if (pendingPosts.length === 0) return
-    setAllPosts(prev => {
-      const existingIds = new Set(prev.map(p => p.id))
-      const toAdd = pendingPosts.filter(p => !existingIds.has(p.id))
-      return toAdd.length > 0 ? [...prev, ...toAdd] : prev
-    })
+    if (pendingPosts.length === 0 || !threadId) return
+    queryClient.setQueryData<PostWithAuthor[]>(
+      queryKeys.posts(threadId),
+      (old = []) => {
+        const existingIds = new Set(old.map(p => p.id))
+        const toAdd = pendingPosts.filter(p => !existingIds.has(p.id))
+        return toAdd.length > 0 ? [...old, ...toAdd] : old
+      }
+    )
     setPendingPosts([])
-  }, [pendingPosts])
+  }, [pendingPosts, threadId, queryClient])
 
   const handleAutoUpdateToggle = useCallback((checked: boolean) => {
     setAutoUpdate(checked)
@@ -215,6 +160,8 @@ export default function Thread() {
       await supabase.from('bookmarks').insert({ user_id: user.id, thread_id: thread.id })
       setIsBookmarked(true)
     }
+    // Invalidate bookmarks cache
+    queryClient.invalidateQueries({ queryKey: queryKeys.bookmarks(user.id) })
   }
 
   const handleReply = async (e: React.FormEvent) => {
@@ -223,36 +170,32 @@ export default function Thread() {
 
     setSubmitting(true)
 
-    const { error } = await supabase.from('posts').insert({
-      thread_id: thread.id,
-      author_id: user.id,
-      content: replyContent.trim(),
-      reply_to_id: replyingTo?.id || null,
-    })
+    const { error, data: insertedPost } = await supabase
+      .from('posts')
+      .insert({
+        thread_id: thread.id,
+        author_id: user.id,
+        content: replyContent.trim(),
+        reply_to_id: replyingTo?.id || null,
+      })
+      .select('*, author:profiles(*)')
+      .single()
 
-    if (!error) {
-      // Fetch the newly created post with author data and add to local state
-      const { data: newPostData } = await supabase
-        .from('posts')
-        .select('*, author:profiles(*)')
-        .eq('thread_id', thread.id)
-        .eq('author_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (newPostData) {
-        setAllPosts(prev => {
-          if (prev.some(p => p.id === newPostData.id)) return prev
-          const updated = [...prev, newPostData as PostWithAuthor]
+    if (!error && insertedPost) {
+      // Add to cache optimistically
+      queryClient.setQueryData<PostWithAuthor[]>(
+        queryKeys.posts(thread.id),
+        (old = []) => {
+          if (old.some(p => p.id === insertedPost.id)) return old
+          const updated = [...old, insertedPost as PostWithAuthor]
           // Navigate to last page to see the new post
           const newTotalPages = Math.ceil(updated.length / POSTS_PER_PAGE)
           if (newTotalPages > currentPage) {
-            goToPage(newTotalPages)
+            setTimeout(() => goToPage(newTotalPages), 0)
           }
           return updated
-        })
-      }
+        }
+      )
 
       setReplyContent('')
       setReplyingTo(null)
@@ -264,7 +207,6 @@ export default function Thread() {
 
       // Invalidate caches so home page shows updated post count/last activity
       queryClient.invalidateQueries({ queryKey: queryKeys.threads(20) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.posts(thread.id) })
     }
 
     setSubmitting(false)
@@ -276,6 +218,29 @@ export default function Thread() {
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-3/4 rounded bg-slate-700" />
           <div className="h-32 rounded bg-slate-700" />
+        </div>
+      </div>
+    )
+  }
+
+  if (hasError) {
+    return (
+      <div className="mx-auto max-w-4xl text-center">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-8">
+          <svg className="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <h1 className="mt-4 text-xl font-bold text-white">Error loading thread</h1>
+          <p className="mt-2 text-slate-400">Something went wrong. Please try again.</p>
+          <button
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: queryKeys.thread(threadId!) })
+              queryClient.invalidateQueries({ queryKey: queryKeys.posts(threadId!) })
+            }}
+            className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500"
+          >
+            Retry
+          </button>
         </div>
       </div>
     )
@@ -396,7 +361,7 @@ export default function Thread() {
           <span className="hidden sm:inline">·</span>
           <span>{formatDate(thread.created_at)}</span>
           <span>·</span>
-          <span>{allPosts.length} {allPosts.length === 1 ? 'reply' : 'replies'}</span>
+          <span>{posts.length} {posts.length === 1 ? 'reply' : 'replies'}</span>
           {totalPages > 1 && (
             <>
               <span>·</span>
@@ -409,7 +374,7 @@ export default function Thread() {
       {/* Posts */}
       <div className="space-y-4">
         {paginatedPosts.map((post) => {
-          const replyToPost = post.reply_to_id ? allPosts.find(p => p.id === post.reply_to_id) : null
+          const replyToPost = post.reply_to_id ? posts.find(p => p.id === post.reply_to_id) : null
           const isOP = post.author_id === thread.author_id
 
           return (
@@ -547,7 +512,7 @@ export default function Thread() {
               </>
             ) : (
               <span className="text-xs text-slate-500">
-                {autoUpdate ? 'Auto-updating replies' : 'Checking for new replies'}
+                {autoUpdate ? 'Auto-updating replies' : 'Live updates enabled'}
               </span>
             )}
           </div>
@@ -646,7 +611,8 @@ export default function Thread() {
             const imageUrl = await uploadAvatar(blob, `thread/${thread.id}/custom.png`)
             if (imageUrl) {
               await supabase.from('threads').update({ image_url: imageUrl }).eq('id', thread.id)
-              setThread(prev => prev ? { ...prev, image_url: imageUrl } : prev)
+              // Update cache
+              queryClient.setQueryData(queryKeys.thread(thread.id), { ...thread, image_url: imageUrl })
             }
             setAvatarUploading(false)
           }}

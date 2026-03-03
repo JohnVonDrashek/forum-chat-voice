@@ -51,7 +51,7 @@ export default function Chat() {
   const channel = channels.find(c => c.slug === channelSlug || c.id === channelSlug)
 
   // Use React Query for messages - instant on channel switch!
-  const { data: cachedMessages = [], isLoading: loading } = useQuery({
+  const { data: cachedMessages = [], isLoading: loading, isError } = useQuery({
     queryKey: queryKeys.chatMessages(channelSlug),
     queryFn: () => fetchers.chatMessagesBySlug(channelSlug),
     ...queryOptions.realtime,
@@ -159,6 +159,22 @@ export default function Chat() {
         {loading && (
           <div className="flex h-full items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-600 border-t-indigo-500" />
+          </div>
+        )}
+        {isError && (
+          <div className="flex h-full items-center justify-center">
+            <div className="text-center">
+              <svg className="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p className="mt-2 text-slate-400">Failed to load messages</p>
+              <button
+                onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.chatMessages(channelSlug) })}
+                className="mt-2 text-sm text-indigo-400 hover:text-indigo-300"
+              >
+                Try again
+              </button>
+            </div>
           </div>
         )}
         {groupedMessages.map((group) => (

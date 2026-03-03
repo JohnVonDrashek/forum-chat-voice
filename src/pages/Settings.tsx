@@ -42,26 +42,38 @@ export default function Settings() {
     setEmail(user?.email || '')
   }, [profile, user])
 
-  // Notification state
-  const [emailNotifs, setEmailNotifs] = useState({
-    replies: true,
-    mentions: true,
-    likes: false,
-    follows: true,
-    directMessages: true,
-    newsletter: false,
+  // Notification state - persisted to localStorage
+  const [emailNotifs, setEmailNotifs] = useState(() => {
+    const saved = localStorage.getItem('emailNotifs')
+    return saved ? JSON.parse(saved) : {
+      replies: true,
+      mentions: true,
+      likes: false,
+      follows: true,
+      directMessages: true,
+      newsletter: false,
+    }
   })
-  const [pushNotifs, setPushNotifs] = useState({
-    replies: true,
-    mentions: true,
-    likes: true,
-    follows: false,
-    directMessages: true,
+  const [pushNotifs, setPushNotifs] = useState(() => {
+    const saved = localStorage.getItem('pushNotifs')
+    return saved ? JSON.parse(saved) : {
+      replies: true,
+      mentions: true,
+      likes: true,
+      follows: false,
+      directMessages: true,
+    }
   })
 
-  // Appearance state
-  const [theme, setTheme] = useState<'dark' | 'light' | 'system'>('dark')
-  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium')
+  // Appearance state - persisted to localStorage
+  const [theme, setTheme] = useState<'dark' | 'light' | 'system'>(() => {
+    const saved = localStorage.getItem('theme')
+    return (saved as 'dark' | 'light' | 'system') || 'dark'
+  })
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>(() => {
+    const saved = localStorage.getItem('fontSize')
+    return (saved as 'small' | 'medium' | 'large') || 'medium'
+  })
 
   const handleSave = async () => {
     setError('')
@@ -97,6 +109,16 @@ export default function Settings() {
         setCurrentPassword('')
         setNewPassword('')
         setConfirmPassword('')
+      }
+
+      if (activeTab === 'notifications') {
+        localStorage.setItem('emailNotifs', JSON.stringify(emailNotifs))
+        localStorage.setItem('pushNotifs', JSON.stringify(pushNotifs))
+      }
+
+      if (activeTab === 'appearance') {
+        localStorage.setItem('theme', theme)
+        localStorage.setItem('fontSize', fontSize)
       }
     }
 

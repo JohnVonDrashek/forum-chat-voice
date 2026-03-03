@@ -53,6 +53,8 @@ export const queryKeys = {
 
   // Search
   search: (query: string, filter: string) => ['search', query, filter] as const,
+  searchThreads: (query: string) => ['search', 'threads', query] as const,
+  searchPosts: (query: string) => ['search', 'posts', query] as const,
 
   // Bookmarks
   bookmarks: (userId: string) => ['bookmarks', userId] as const,
@@ -244,6 +246,31 @@ export const fetchers = {
     return (data || []) as PostWithAuthor[]
   },
 
+  // Search
+  searchThreads: async (query: string): Promise<ThreadWithAuthor[]> => {
+    if (!query.trim()) return []
+    const pattern = `%${query}%`
+    const { data } = await supabase
+      .from('threads')
+      .select('*, author:profiles(*), category:categories(*)')
+      .ilike('title', pattern)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    return (data || []) as ThreadWithAuthor[]
+  },
+
+  searchPosts: async (query: string): Promise<PostWithAuthor[]> => {
+    if (!query.trim()) return []
+    const pattern = `%${query}%`
+    const { data } = await supabase
+      .from('posts')
+      .select('*, author:profiles(*)')
+      .ilike('content', pattern)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    return (data || []) as PostWithAuthor[]
+  },
+
   // DM conversations list
   dmConversations: async (userId: string): Promise<Array<{
     recipientId: string
@@ -337,5 +364,11 @@ export const queryOptions = {
   profiles: {
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 15, // 15 minutes
+  },
+
+  // Search - cache for quick navigation back
+  search: {
+    staleTime: 1000 * 30, // 30 seconds
+    gcTime: 1000 * 60 * 2, // 2 minutes
   },
 }
