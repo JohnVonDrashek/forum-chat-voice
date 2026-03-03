@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useRef, ReactNode } fro
 import { getAuthProvider, type AppUser } from './auth-provider'
 import { getDataProvider } from './data-provider'
 import { uploadDefaultAvatar } from './avatars'
+import { supabase } from './supabase'
 import type { Profile } from '../types/database'
 
 interface AuthContextType {
@@ -80,9 +81,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const auth = getAuthProvider()
 
-    // Check existing session
+    // Detect session tokens from URL hash (e.g. after Forumline OAuth redirect).
+    // Supabase PKCE flow doesn't auto-detect hash fragments, so we handle it manually.
+    const initSession = async () => {
+      const hash = window.location.hash
+      if (hash) {
+        const params = new URLSearchParams(hash.substring(1))
+        const accessToken = params.get('access_token')
+        const refreshToken = params.get('refresh_token')
+        if (accessToken && refreshToken) {
+          console.log('[FLD:Auth] Detected session tokens in URL hash, setting session...')
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+          if (error) {
+            console.error('[FLD:Auth] Failed to set session from hash:', error)
+          } else {
+            console.log('[FLD:Auth] Session set from URL hash')
+          }
+          // Clear hash from URL
+          window.history.replaceState({}, '', window.location.pathname)
+        }
+      }
+    }
+
+    // Check existing session (after handling any hash tokens)
     console.log('[FLD:Auth] Checking existing session...')
-    auth.getRawUser().then(async (rawUser) => {
+    initSession().then(() => auth.getRawUser()).then(async (rawUser) => {
       if (rawUser) {
         console.log('[FLD:Auth] Session found, ensuring profile for user:', rawUser.id)
         try {
@@ -111,15 +137,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         console.log('[FLD:Auth] Auth state changed:', event, session?.user?.id ?? '(no user)')
 
-        // INITIAL_SESSION is usually handled by getRawUser() above — skip if
-        // we already loaded a user. But if getRawUser() found no session and
-        // INITIAL_SESSION has one (e.g. from URL hash fragment), process it.
+        // INITIAL_SESSION is fully handled by getRawUser() above — always skip.
         if (event === 'INITIAL_SESSION') {
-          if (loadedUserIdRef.current || !session?.user) {
-            console.log('[FLD:Auth] INITIAL_SESSION handled by getRawUser, skipping')
-            return
-          }
-          console.log('[FLD:Auth] INITIAL_SESSION has new session from URL hash, processing')
+          console.log('[FLD:Auth] INITIAL_SESSION handled by getRawUser, skipping')
+          return
         }
 
         // For SIGNED_IN and TOKEN_REFRESHED: if we already loaded this exact
