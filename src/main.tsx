@@ -11,8 +11,9 @@ const queryClient = new QueryClient({
     queries: {
       // Don't refetch on window focus by default (can be overridden per-query)
       refetchOnWindowFocus: false,
-      // Retry failed requests once
-      retry: 1,
+      // Retry failed requests twice with exponential backoff
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
       // Default stale time of 30 seconds
       staleTime: 1000 * 30,
     },

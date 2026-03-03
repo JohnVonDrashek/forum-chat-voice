@@ -9,7 +9,7 @@ export default function Home() {
   const queryClient = useQueryClient()
 
   // Use React Query - instant on return visits!
-  const { data: threads = [], isLoading } = useQuery({
+  const { data: threads = [], isLoading, isError } = useQuery({
     queryKey: queryKeys.threads(20),
     queryFn: () => fetchers.threads(20),
     ...queryOptions.threads,
@@ -49,7 +49,17 @@ export default function Home() {
           <h2 className="text-lg font-semibold text-white">Recent Discussions</h2>
         </div>
 
-        {isLoading ? (
+        {isError ? (
+          <div className="p-8 text-center">
+            <p className="text-red-400">Failed to load threads</p>
+            <button
+              onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.threads(20) })}
+              className="mt-2 text-sm text-indigo-400 hover:text-indigo-300"
+            >
+              Try again
+            </button>
+          </div>
+        ) : isLoading ? (
           <div className="divide-y divide-slate-700/50">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="flex items-start gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4 animate-pulse">
