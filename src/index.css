@@ -37,20 +37,17 @@ body {
   background-color: #64748b;
 }
 
-/* Chat page layout - remove padding and fill available space */
+/* Chat page layout - fill available space and remove parent padding */
 .chat-page-wrapper {
   margin: -1rem;
-  height: calc(100vh - 3.5rem);
+  margin-bottom: -1rem;
+  height: calc(100% + 2rem);
 }
 
 @media (min-width: 640px) {
   .chat-page-wrapper {
     margin: -1.5rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .chat-page-wrapper {
-    height: calc(100vh - 3.5rem);
+    margin-bottom: -1.5rem;
+    height: calc(100% + 3rem);
   }
 }
