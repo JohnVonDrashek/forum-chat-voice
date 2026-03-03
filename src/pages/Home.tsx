@@ -1,61 +1,31 @@
 import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Avatar from '../components/Avatar'
-import { useCachedData, usePreload, cacheKeys } from '../lib/useCache'
-import type { ThreadWithAuthor } from '../types'
-
-// Fetcher function for threads (reusable for preloading)
-const fetchThreads = async (): Promise<ThreadWithAuthor[]> => {
-  const { data } = await supabase
-    .from('threads')
-    .select(`
-      *,
-      author:profiles(*),
-      category:categories(*)
-    `)
-    .order('is_pinned', { ascending: false })
-    .order('last_post_at', { ascending: false })
-    .limit(20)
-  return (data || []) as ThreadWithAuthor[]
-}
-
-// Fetcher for individual thread (for preloading on hover)
-export const fetchThread = async (threadId: string) => {
-  const { data } = await supabase
-    .from('threads')
-    .select(`
-      *,
-      author:profiles(*),
-      category:categories(*)
-    `)
-    .eq('id', threadId)
-    .single()
-  return data
-}
-
-// Fetcher for thread posts (for preloading on hover)
-export const fetchPosts = async (threadId: string) => {
-  const { data } = await supabase
-    .from('posts')
-    .select(`
-      *,
-      author:profiles(*)
-    `)
-    .eq('thread_id', threadId)
-    .order('created_at', { ascending: true })
-  return data || []
-}
+import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 
 export default function Home() {
-  // Use cached data - instant on return visits!
-  const { data: threads = [], loading } = useCachedData<ThreadWithAuthor[]>(
-    cacheKeys.threads(20),
-    'threads',
-    fetchThreads
-  )
+  const queryClient = useQueryClient()
 
-  // Preload hook for thread hover
-  const preload = usePreload()
+  // Use React Query - instant on return visits!
+  const { data: threads = [], isLoading } = useQuery({
+    queryKey: queryKeys.threads(20),
+    queryFn: () => fetchers.threads(20),
+    ...queryOptions.threads,
+  })
+
+  // Prefetch thread data on hover
+  const prefetchThread = (threadId: string) => {
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.thread(threadId),
+      queryFn: () => fetchers.thread(threadId),
+      ...queryOptions.threads,
+    })
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.posts(threadId),
+      queryFn: () => fetchers.posts(threadId),
+      ...queryOptions.posts,
+    })
+  }
 
   const formatTimeAgo = (date: string) => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
@@ -84,7 +54,7 @@ export default function Home() {
           <h2 className="text-lg font-semibold text-white">Recent Discussions</h2>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="divide-y divide-slate-700/50">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="flex items-start gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4 animate-pulse">
@@ -118,11 +88,7 @@ export default function Home() {
                 key={thread.id}
                 to={`/t/${thread.id}`}
                 className="flex items-start gap-3 px-3 py-3 transition-colors hover:bg-slate-700/30 sm:gap-4 sm:px-4 sm:py-4"
-                onMouseEnter={() => {
-                  // Preload thread and posts on hover for instant navigation
-                  preload(cacheKeys.thread(thread.id), 'threads', () => fetchThread(thread.id))
-                  preload(cacheKeys.posts(thread.id), 'posts', () => fetchPosts(thread.id))
-                }}
+                onMouseEnter={() => prefetchThread(thread.id)}
               >
                 {/* Thread Avatar */}
                 <Avatar seed={thread.id} type="thread" avatarUrl={thread.image_url} className="h-9 w-9 shrink-0 sm:h-10 sm:w-10" />

@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
-import type { ChatChannel, Profile } from '../types'
+import { queryKeys, fetchers, queryOptions } from '../lib/queries'
+import type { Profile } from '../types'
 
 interface ChatMsg {
   id: string
@@ -32,21 +34,20 @@ function toMsg(row: { id: string; channel_id: string; author_id: string; content
 export default function Chat() {
   const { channelId: channelSlug = 'general' } = useParams()
   const { user } = useAuth()
-  const [channels, setChannels] = useState<ChatChannel[]>([])
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [loading, setLoading] = useState(true)
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const channel = channels.find(c => c.slug === channelSlug || c.id === channelSlug)
+  // Use React Query for channels - instant on tab switch!
+  const { data: channels = [] } = useQuery({
+    queryKey: queryKeys.channels,
+    queryFn: fetchers.channels,
+    ...queryOptions.static,
+  })
 
-  // Fetch channels
-  useEffect(() => {
-    supabase.from('chat_channels').select('*').order('name').then(({ data }) => {
-      if (data) setChannels(data)
-    })
-  }, [])
+  const channel = channels.find(c => c.slug === channelSlug || c.id === channelSlug)
 
   // Fetch messages & subscribe
   useEffect(() => {

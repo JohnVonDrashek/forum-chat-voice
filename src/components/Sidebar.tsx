@@ -1,5 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useVoice } from '../lib/voice'
+import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import type { Category, ChatChannel, VoiceRoom } from '../types'
 
 interface SidebarProps {
@@ -12,6 +14,25 @@ interface SidebarProps {
 export default function Sidebar({ categories, channels, rooms, unreadDmCount }: SidebarProps) {
   const location = useLocation()
   const voice = useVoice()
+  const queryClient = useQueryClient()
+
+  // Prefetch category threads on hover
+  const prefetchCategory = (categorySlug: string) => {
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.threadsByCategory(categorySlug),
+      queryFn: () => fetchers.threadsByCategory(categorySlug),
+      ...queryOptions.threads,
+    })
+  }
+
+  // Prefetch home threads on hover
+  const prefetchHome = () => {
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.threads(20),
+      queryFn: () => fetchers.threads(20),
+      ...queryOptions.threads,
+    })
+  }
 
   return (
     <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-64 shrink-0 border-r border-slate-700 bg-slate-800/50 lg:block">
@@ -19,6 +40,7 @@ export default function Sidebar({ categories, channels, rooms, unreadDmCount }: 
         <div className="mb-4 space-y-1">
           <Link
             to="/"
+            onMouseEnter={prefetchHome}
             className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               location.pathname === '/'
                 ? 'bg-indigo-600 text-white'
@@ -77,6 +99,7 @@ export default function Sidebar({ categories, channels, rooms, unreadDmCount }: 
                 <Link
                   key={category.id}
                   to={`/c/${category.slug}`}
+                  onMouseEnter={() => prefetchCategory(category.slug)}
                   className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
                     isActive
                       ? 'bg-slate-700 text-white'

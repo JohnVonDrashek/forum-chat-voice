@@ -1,45 +1,36 @@
 import { Outlet } from 'react-router-dom'
 import { useState, useCallback, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import MobileSidebar from './MobileSidebar'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
-import { useCachedData, cacheKeys } from '../lib/useCache'
-import type { Category, ChatChannel, VoiceRoom } from '../types'
+import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 
 export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user } = useAuth()
   const [unreadDmCount, setUnreadDmCount] = useState(0)
 
-  // Use cached data for static sidebar content - instant on tab switch!
-  const { data: categories = [] } = useCachedData<Category[]>(
-    cacheKeys.categories(),
-    'categories',
-    async () => {
-      const { data } = await supabase.from('categories').select('*').order('sort_order')
-      return data || []
-    }
-  )
+  // Use React Query for sidebar data - cached globally, instant on tab switch!
+  const { data: categories = [] } = useQuery({
+    queryKey: queryKeys.categories,
+    queryFn: fetchers.categories,
+    ...queryOptions.static,
+  })
 
-  const { data: channels = [] } = useCachedData<ChatChannel[]>(
-    cacheKeys.channels(),
-    'channels',
-    async () => {
-      const { data } = await supabase.from('chat_channels').select('*').order('name')
-      return data || []
-    }
-  )
+  const { data: channels = [] } = useQuery({
+    queryKey: queryKeys.channels,
+    queryFn: fetchers.channels,
+    ...queryOptions.static,
+  })
 
-  const { data: rooms = [] } = useCachedData<VoiceRoom[]>(
-    cacheKeys.voiceRooms(),
-    'voiceRooms',
-    async () => {
-      const { data } = await supabase.from('voice_rooms').select('*').order('name')
-      return data || []
-    }
-  )
+  const { data: rooms = [] } = useQuery({
+    queryKey: queryKeys.voiceRooms,
+    queryFn: fetchers.voiceRooms,
+    ...queryOptions.static,
+  })
 
   useEffect(() => {
     if (!user) {

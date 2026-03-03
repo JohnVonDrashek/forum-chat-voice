@@ -1,11 +1,12 @@
 import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState, useRef, useCallback } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { uploadAvatar } from '../lib/avatars'
 import Avatar from '../components/Avatar'
 import ImageCropModal from '../components/ImageCropModal'
-import { useCachedData, useCacheInvalidation, cacheKeys } from '../lib/useCache'
+import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import type { ThreadWithAuthor, PostWithAuthor } from '../types'
 
 const POSTS_PER_PAGE = 5
@@ -14,44 +15,23 @@ export default function Thread() {
   const { threadId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
-  const invalidateCache = useCacheInvalidation()
+  const queryClient = useQueryClient()
 
-  // Use cached data for thread - instant on back navigation!
-  const { data: cachedThread, loading: threadLoading } = useCachedData<ThreadWithAuthor>(
-    cacheKeys.thread(threadId!),
-    'threads',
-    async () => {
-      const { data } = await supabase
-        .from('threads')
-        .select(`
-          *,
-          author:profiles(*),
-          category:categories(*)
-        `)
-        .eq('id', threadId!)
-        .single()
-      return data as ThreadWithAuthor
-    },
-    { skip: !threadId }
-  )
+  // Use React Query for thread - instant on back navigation!
+  const { data: cachedThread, isLoading: threadLoading } = useQuery({
+    queryKey: queryKeys.thread(threadId!),
+    queryFn: () => fetchers.thread(threadId!),
+    ...queryOptions.threads,
+    enabled: !!threadId,
+  })
 
-  // Use cached data for posts - instant on back navigation!
-  const { data: cachedPosts, loading: postsLoading } = useCachedData<PostWithAuthor[]>(
-    cacheKeys.posts(threadId!),
-    'posts',
-    async () => {
-      const { data } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          author:profiles(*)
-        `)
-        .eq('thread_id', threadId!)
-        .order('created_at')
-      return (data || []) as PostWithAuthor[]
-    },
-    { skip: !threadId }
-  )
+  // Use React Query for posts - instant on back navigation!
+  const { data: cachedPosts, isLoading: postsLoading } = useQuery({
+    queryKey: queryKeys.posts(threadId!),
+    queryFn: () => fetchers.posts(threadId!),
+    ...queryOptions.posts,
+    enabled: !!threadId,
+  })
 
   // Local state that can be updated by real-time events
   const [thread, setThread] = useState<ThreadWithAuthor | null>(null)
@@ -125,7 +105,7 @@ export default function Thread() {
               if (known) return
 
               // Invalidate cache so next visit gets fresh data
-              invalidateCache(cacheKeys.posts(threadId))
+              queryClient.invalidateQueries({ queryKey: queryKeys.posts(threadId) })
 
               if (autoUpdateRef.current) {
                 setAllPosts(prev => {
@@ -282,8 +262,8 @@ export default function Thread() {
         .eq('id', thread.id)
 
       // Invalidate caches so home page shows updated post count/last activity
-      invalidateCache(cacheKeys.threads(20))
-      invalidateCache(cacheKeys.posts(thread.id))
+      queryClient.invalidateQueries({ queryKey: queryKeys.threads(20) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.posts(thread.id) })
     }
 
     setSubmitting(false)

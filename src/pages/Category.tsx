@@ -1,51 +1,45 @@
 import { Link, useParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import Avatar from '../components/Avatar'
-import type { Category as CategoryType, ThreadWithAuthor } from '../types'
+import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 
 export default function Category() {
   const { categorySlug } = useParams()
   const { user } = useAuth()
-  const [category, setCategory] = useState<CategoryType | null>(null)
-  const [threads, setThreads] = useState<ThreadWithAuthor[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true)
+  // Use React Query for category data - cached!
+  const { data: category, isLoading: categoryLoading } = useQuery({
+    queryKey: queryKeys.category(categorySlug!),
+    queryFn: () => fetchers.category(categorySlug!),
+    ...queryOptions.static,
+    enabled: !!categorySlug,
+  })
 
-      // Fetch category
-      const { data: categoryData } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('slug', categorySlug!)
-        .single()
+  // Use React Query for threads - cached!
+  const { data: threads = [], isLoading: threadsLoading } = useQuery({
+    queryKey: queryKeys.threadsByCategory(categorySlug!),
+    queryFn: () => fetchers.threadsByCategory(categorySlug!),
+    ...queryOptions.threads,
+    enabled: !!categorySlug,
+  })
 
-      if (categoryData) {
-        setCategory(categoryData)
+  const loading = categoryLoading || threadsLoading
 
-        // Fetch threads in this category
-        const { data: threadsData } = await supabase
-          .from('threads')
-          .select(`
-            *,
-            author:profiles(*),
-            category:categories(*)
-          `)
-          .eq('category_id', categoryData.id)
-          .order('is_pinned', { ascending: false })
-          .order('last_post_at', { ascending: false })
-
-        if (threadsData) setThreads(threadsData as ThreadWithAuthor[])
-      }
-
-      setLoading(false)
-    }
-
-    fetchData()
-  }, [categorySlug])
+  // Prefetch thread data on hover
+  const prefetchThread = (threadId: string) => {
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.thread(threadId),
+      queryFn: () => fetchers.thread(threadId),
+      ...queryOptions.threads,
+    })
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.posts(threadId),
+      queryFn: () => fetchers.posts(threadId),
+      ...queryOptions.posts,
+    })
+  }
 
   const formatTimeAgo = (date: string) => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
@@ -129,6 +123,7 @@ export default function Category() {
                 key={thread.id}
                 to={`/t/${thread.id}`}
                 className="flex items-start gap-4 px-4 py-4 transition-colors hover:bg-slate-700/30"
+                onMouseEnter={() => prefetchThread(thread.id)}
               >
                 <Avatar seed={thread.id} type="thread" avatarUrl={thread.image_url} className="h-10 w-10 shrink-0" />
 
