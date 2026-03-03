@@ -1,21 +1,8 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
-import { supabase } from './supabase'
+import { getAuthProvider, type AppUser } from './auth-provider'
+import { getDataProvider } from './data-provider'
 import { uploadDefaultAvatar } from './avatars'
 import type { Profile } from '../types/database'
-import type { User } from '@supabase/supabase-js'
-
-// Use configured site URL or fall back to current origin
-const siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin
-
-interface AppUser {
-  id: string
-  email: string
-  username?: string
-  avatar?: string
-  user_metadata?: {
-    username?: string
-  }
-}
 
 interface AuthContextType {
   user: AppUser | null
@@ -40,77 +27,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadedUserIdRef = useRef<string | null>(null)
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
+    const data = await getDataProvider().getProfile(userId)
     if (data) setProfile(data)
     return data
   }
 
-  const ensureProfile = async (supaUser: User): Promise<Profile | null> => {
+  const ensureProfile = async (rawUser: { id: string; email?: string; user_metadata?: Record<string, unknown> }): Promise<Profile | null> => {
     // Try to fetch existing profile first
-    let prof = await fetchProfile(supaUser.id)
+    let prof = await fetchProfile(rawUser.id)
     if (prof) return prof
 
-    // Profile doesn't exist — create it (covers missing DB trigger, OAuth, etc.)
-    const username = supaUser.user_metadata?.username
-      || supaUser.email?.split('@')[0]
-      || `user_${supaUser.id.slice(0, 8)}`
-    const displayName = supaUser.user_metadata?.display_name || username
+    // Profile doesn't exist — create it
+    const username = (rawUser.user_metadata?.username as string)
+      || rawUser.email?.split('@')[0]
+      || `user_${rawUser.id.slice(0, 8)}`
+    const displayName = (rawUser.user_metadata?.display_name as string) || username
 
-    const { error } = await supabase.from('profiles').upsert({
-      id: supaUser.id,
-      username,
-      display_name: displayName,
-      avatar_url: supaUser.user_metadata?.avatar_url || null,
-    }, { onConflict: 'id' })
-
-    if (error) {
-      console.error('Failed to create profile:', error.message)
+    try {
+      await getDataProvider().upsertProfile(rawUser.id, {
+        username,
+        display_name: displayName,
+        avatar_url: (rawUser.user_metadata?.avatar_url as string) || null,
+      })
+    } catch (error) {
+      console.error('Failed to create profile:', error)
       return null
     }
 
     // Generate and upload a default DiceBear avatar
-    const avatarUrl = await uploadDefaultAvatar(supaUser.id, 'user')
+    const avatarUrl = await uploadDefaultAvatar(rawUser.id, 'user')
     if (avatarUrl) {
-      await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', supaUser.id)
+      await getDataProvider().updateProfile(rawUser.id, { avatar_url: avatarUrl })
     }
 
     // Fetch the newly created profile
-    return fetchProfile(supaUser.id)
+    return fetchProfile(rawUser.id)
   }
 
-  const toAppUser = (supaUser: User | null, prof?: Profile | null): AppUser | null => {
-    if (!supaUser) return null
+  const toAppUser = (rawUser: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null, prof?: Profile | null): AppUser | null => {
+    if (!rawUser) return null
     return {
-      id: supaUser.id,
-      email: supaUser.email || '',
+      id: rawUser.id,
+      email: rawUser.email || '',
       username: prof?.username,
       avatar: prof?.avatar_url || undefined,
       user_metadata: {
-        username: prof?.username || supaUser.user_metadata?.username,
+        username: prof?.username || (rawUser.user_metadata?.username as string | undefined),
       },
     }
   }
 
   useEffect(() => {
+    const auth = getAuthProvider()
+
     // Check existing session
     console.log('[FCV:Auth] Checking existing session...')
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        console.log('[FCV:Auth] Session found, ensuring profile for user:', session.user.id)
+    auth.getRawUser().then(async (rawUser) => {
+      if (rawUser) {
+        console.log('[FCV:Auth] Session found, ensuring profile for user:', rawUser.id)
         try {
-          const prof = await ensureProfile(session.user)
-          setUser(toAppUser(session.user, prof))
-          loadedUserIdRef.current = session.user.id
+          const prof = await ensureProfile(rawUser)
+          setUser(toAppUser(rawUser, prof))
+          loadedUserIdRef.current = rawUser.id
           console.log('[FCV:Auth] Profile loaded successfully:', prof?.username)
         } catch (err) {
           console.error('[FCV:Auth] Failed to ensure profile during init:', err)
           // Still set user even if profile fails, so app doesn't hang
-          setUser(toAppUser(session.user, null))
-          loadedUserIdRef.current = session.user.id
+          setUser(toAppUser(rawUser, null))
+          loadedUserIdRef.current = rawUser.id
         }
       } else {
         console.log('[FCV:Auth] No existing session')
@@ -123,20 +107,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const unsubscribe = auth.onAuthStateChange(
       async (event, session) => {
         console.log('[FCV:Auth] Auth state changed:', event, session?.user?.id ?? '(no user)')
 
-        // INITIAL_SESSION is fully handled by getSession() above — always skip.
+        // INITIAL_SESSION is fully handled by getRawUser() above — always skip.
         if (event === 'INITIAL_SESSION') {
-          console.log('[FCV:Auth] INITIAL_SESSION handled by getSession, skipping')
+          console.log('[FCV:Auth] INITIAL_SESSION handled by getRawUser, skipping')
           return
         }
 
         // For SIGNED_IN and TOKEN_REFRESHED: if we already loaded this exact
-        // user (via getSession or a previous auth event), skip the redundant
-        // ensureProfile + setUser that would trigger a re-render cascade,
-        // killing realtime subscriptions and hanging in-flight queries.
+        // user, skip the redundant ensureProfile + setUser.
         if (
           (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') &&
           session?.user &&
@@ -148,14 +130,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (session?.user) {
           console.log('[FCV:Auth] New/changed user, loading profile:', session.user.id)
+          // Get the raw user with full metadata
+          const rawUser = await auth.getRawUser()
+          if (!rawUser) return
           try {
-            const prof = await ensureProfile(session.user)
-            setUser(toAppUser(session.user, prof))
-            loadedUserIdRef.current = session.user.id
+            const prof = await ensureProfile(rawUser)
+            setUser(toAppUser(rawUser, prof))
+            loadedUserIdRef.current = rawUser.id
           } catch (err) {
             console.error('[FCV:Auth] Failed to ensure profile on auth change:', err)
-            setUser(toAppUser(session.user, null))
-            loadedUserIdRef.current = session.user.id
+            setUser(toAppUser(rawUser, null))
+            loadedUserIdRef.current = rawUser.id
           }
 
           // Redirect to reset-password page on PASSWORD_RECOVERY event
@@ -173,73 +158,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     )
 
     return () => {
-      subscription.unsubscribe()
+      unsubscribe()
     }
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error ? new Error(error.message) : null }
+    return getAuthProvider().signIn(email, password)
   }
 
   const signUp = async (email: string, password: string, username: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { username, display_name: username },
-      },
-    })
-    if (error) return { error: new Error(error.message) }
-
-    // Create profile immediately (don't rely solely on DB trigger)
-    if (data.user) {
-      const { error: profileError } = await supabase.from('profiles').upsert({
-        id: data.user.id,
-        username,
-        display_name: username,
-      }, { onConflict: 'id' })
-
-      if (profileError) {
-        return { error: new Error(profileError.message) }
-      }
-    }
-
-    return { error: null }
+    return getAuthProvider().signUp(email, password, username)
   }
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut()
-    } catch (err) {
-      console.error('[FCV:Auth] signOut failed:', err)
-    }
+    await getAuthProvider().signOut()
     setUser(null)
     setProfile(null)
     loadedUserIdRef.current = null
   }
 
   const signInWithGitHub = async () => {
-    try {
-      await supabase.auth.signInWithOAuth({
-        provider: 'github',
-        options: { redirectTo: siteUrl },
-      })
-    } catch (err) {
-      console.error('[FCV:Auth] GitHub OAuth failed:', err)
-    }
+    await getAuthProvider().signInWithOAuth('github')
   }
 
   const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${siteUrl}/reset-password`,
-    })
-    return { error: error ? new Error(error.message) : null }
+    return getAuthProvider().resetPassword(email)
   }
 
   const updatePassword = async (newPassword: string) => {
-    const { error } = await supabase.auth.updateUser({ password: newPassword })
-    return { error: error ? new Error(error.message) : null }
+    return getAuthProvider().updatePassword(newPassword)
   }
 
   return (

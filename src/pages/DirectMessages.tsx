@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
+import { getDataProvider } from '../lib/data-provider'
 import Avatar from '../components/Avatar'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
@@ -117,17 +118,11 @@ export default function DirectMessages() {
     if (!recipientId || !user || !otherId || rawMessages.length === 0) return
 
     const markAsRead = async () => {
-      const { error } = await supabase
-        .from('direct_messages')
-        .update({ read: true })
-        .eq('sender_id', otherId)
-        .eq('recipient_id', user.id)
-        .eq('read', false)
-
-      if (error) {
-        console.error('[FCV:DM] Failed to mark messages as read:', error)
-      } else {
+      try {
+        await getDataProvider().markDmsReadFrom(otherId, user.id)
         queryClient.invalidateQueries({ queryKey: queryKeys.dmConversationsList(user.id) })
+      } catch (error) {
+        console.error('[FCV:DM] Failed to mark messages as read:', error)
       }
     }
 
@@ -153,8 +148,8 @@ export default function DirectMessages() {
             queryClient.invalidateQueries({ queryKey: queryKeys.dmMessages(otherId) })
             // Mark incoming as read
             if (dm.sender_id === otherId) {
-              supabase.from('direct_messages').update({ read: true }).eq('id', dm.id).then(({ error }) => {
-                if (error) console.error('[FCV:DM] Failed to mark realtime DM as read:', error)
+              getDataProvider().markDmRead(dm.id).catch((error) => {
+                console.error('[FCV:DM] Failed to mark realtime DM as read:', error)
               })
             }
           }
@@ -173,12 +168,11 @@ export default function DirectMessages() {
     mutationFn: async (content: string) => {
       if (!recipientId || !user) throw new Error('Not authenticated')
       const targetId = currentConversation?.recipientId || recipientId
-      const { error } = await supabase.from('direct_messages').insert({
+      await getDataProvider().sendDm({
         sender_id: user.id,
         recipient_id: targetId,
         content,
       })
-      if (error) throw new Error('Failed to send message')
     },
     onMutate: async (content: string) => {
       if (!recipientId || !user || !otherId) return

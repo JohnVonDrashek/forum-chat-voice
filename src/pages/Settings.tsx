@@ -6,13 +6,16 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
+import { getDataProvider } from '../lib/data-provider'
 import { uploadAvatar } from '../lib/avatars'
 import Avatar from '../components/Avatar'
 import ImageCropModal from '../components/ImageCropModal'
 import Input from '../components/ui/Input'
 import Card from '../components/ui/Card'
+import { isTauri, getTauriAutostart, getTauriNotification } from '../lib/tauri'
+import { invoke } from '@tauri-apps/api/core'
 
-type Tab = 'profile' | 'account' | 'notifications' | 'appearance'
+type Tab = 'profile' | 'account' | 'notifications' | 'appearance' | 'desktop'
 
 const profileSchema = z.object({
   displayName: z.string().optional(),
@@ -130,22 +133,38 @@ export default function Settings() {
     return (saved as 'small' | 'medium' | 'large') || 'medium'
   })
 
+  // Desktop settings (only relevant in Tauri)
+  const [launchAtLogin, setLaunchAtLogin] = useState(() => {
+    return localStorage.getItem('launchAtLogin') === 'true'
+  })
+  const [closeToTray, setCloseToTray] = useState(() => {
+    return localStorage.getItem('closeToTray') !== 'false'
+  })
+  const [nativeNotifications, setNativeNotifications] = useState(() => {
+    return localStorage.getItem('nativeNotifications') !== 'false'
+  })
+
+  // Sync autostart state from system on mount
+  useEffect(() => {
+    if (!isTauri()) return
+    getTauriAutostart().then(async ({ isEnabled }) => {
+      const enabled = await isEnabled()
+      setLaunchAtLogin(enabled)
+      localStorage.setItem('launchAtLogin', String(enabled))
+    }).catch(() => {})
+  }, [])
+
   const saveMutation = useMutation({
     mutationFn: async (data: ProfileFormData | AccountFormData | undefined) => {
       if (!user) throw new Error('Not authenticated')
 
       if (activeTab === 'profile' && data) {
         const profileData = data as ProfileFormData
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            display_name: profileData.displayName || null,
-            bio: profileData.bio || null,
-            website: profileData.website || null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', user.id)
-        if (updateError) throw new Error(updateError.message)
+        await getDataProvider().updateProfile(user.id, {
+          display_name: profileData.displayName || null,
+          bio: profileData.bio || null,
+          website: profileData.website || null,
+        })
       }
 
       if (activeTab === 'account' && data) {
@@ -171,6 +190,34 @@ export default function Settings() {
         localStorage.setItem('theme', theme)
         localStorage.setItem('fontSize', fontSize)
       }
+
+      if (activeTab === 'desktop') {
+        localStorage.setItem('launchAtLogin', String(launchAtLogin))
+        localStorage.setItem('closeToTray', String(closeToTray))
+        localStorage.setItem('nativeNotifications', String(nativeNotifications))
+
+        if (isTauri()) {
+          // Toggle autostart
+          const { enable, disable } = await getTauriAutostart()
+          if (launchAtLogin) {
+            await enable()
+          } else {
+            await disable()
+          }
+
+          // Toggle close-to-tray via Rust IPC
+          await invoke('set_close_to_tray', { enabled: closeToTray })
+
+          // Request notification permission if enabled
+          if (nativeNotifications) {
+            const { isPermissionGranted, requestPermission } = await getTauriNotification()
+            const permitted = await isPermissionGranted()
+            if (!permitted) {
+              await requestPermission()
+            }
+          }
+        }
+      }
     },
     onSuccess: () => {
       toast.success('Settings saved')
@@ -190,9 +237,9 @@ export default function Settings() {
     }
   }
 
-  const tabs: { id: Tab; label: string; icon: ReactNode }[] = [
+  const tabs: { id: Tab; label: string; icon: ReactNode }[] = ([
     {
-      id: 'profile',
+      id: 'profile' as Tab,
       label: 'Profile',
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -220,7 +267,7 @@ export default function Settings() {
       ),
     },
     {
-      id: 'appearance',
+      id: 'appearance' as Tab,
       label: 'Appearance',
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -228,7 +275,21 @@ export default function Settings() {
         </svg>
       ),
     },
-  ]
+  ] as { id: Tab; label: string; icon: ReactNode }[]).concat(
+    isTauri()
+      ? [
+          {
+            id: 'desktop' as Tab,
+            label: 'Desktop',
+            icon: (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            ),
+          },
+        ]
+      : []
+  )
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -551,6 +612,84 @@ export default function Settings() {
             </div>
           )}
 
+          {/* Desktop Tab (Tauri only) */}
+          {activeTab === 'desktop' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Desktop Settings</h2>
+                <p className="text-sm text-slate-400">Configure desktop app behavior</p>
+              </div>
+
+              <div className="space-y-4">
+                <label className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-medium text-slate-300">Launch at login</span>
+                    <p className="text-xs text-slate-500">Start the app automatically when you log in</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={launchAtLogin}
+                    aria-label="Launch at login"
+                    onClick={() => setLaunchAtLogin(!launchAtLogin)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      launchAtLogin ? 'bg-indigo-600' : 'bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        launchAtLogin ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                </label>
+
+                <label className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-medium text-slate-300">Close to tray</span>
+                    <p className="text-xs text-slate-500">Keep running in the background when the window is closed</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={closeToTray}
+                    aria-label="Close to tray"
+                    onClick={() => setCloseToTray(!closeToTray)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      closeToTray ? 'bg-indigo-600' : 'bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        closeToTray ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                </label>
+
+                <label className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-medium text-slate-300">Native notifications</span>
+                    <p className="text-xs text-slate-500">Show system notifications for new messages</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={nativeNotifications}
+                    aria-label="Native notifications"
+                    onClick={() => setNativeNotifications(!nativeNotifications)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      nativeNotifications ? 'bg-indigo-600' : 'bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        nativeNotifications ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                </label>
+              </div>
+            </div>
+          )}
+
           {/* Save Button */}
           <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-700 pt-6">
             <button
@@ -577,7 +716,7 @@ export default function Settings() {
             const path = `user/${user.id}/custom.png`
             const url = await uploadAvatar(file, path)
             if (url) {
-              await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id)
+              await getDataProvider().updateProfile(user.id, { avatar_url: url })
               setAvatarUrl(url)
               toast.success('Avatar updated')
             } else {

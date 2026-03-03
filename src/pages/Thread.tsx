@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { getDataProvider } from '../lib/data-provider'
 import { uploadAvatar } from '../lib/avatars'
 import Avatar from '../components/Avatar'
 import ImageCropModal from '../components/ImageCropModal'
@@ -136,12 +137,11 @@ export default function Thread() {
   const bookmarkMutation = useMutation({
     mutationFn: async () => {
       if (!thread || !user) throw new Error('Not authenticated')
+      const dp = getDataProvider()
       if (isBookmarked) {
-        const { error } = await supabase.from('bookmarks').delete().eq('user_id', user.id).eq('thread_id', thread.id)
-        if (error) throw error
+        await dp.removeBookmark(user.id, thread.id)
       } else {
-        const { error } = await supabase.from('bookmarks').insert({ user_id: user.id, thread_id: thread.id })
-        if (error) throw error
+        await dp.addBookmark(user.id, thread.id)
       }
     },
     onMutate: async () => {
@@ -200,18 +200,19 @@ export default function Thread() {
   const replyMutation = useMutation({
     mutationFn: async ({ content, replyToId }: { content: string; replyToId: string | null }) => {
       if (!thread || !user) throw new Error('Not authenticated')
-      const { error, data: insertedPost } = await supabase
-        .from('posts')
-        .insert({
-          thread_id: thread.id,
-          author_id: user.id,
-          content,
-          reply_to_id: replyToId,
-        })
-        .select('*, author:profiles(*)')
-        .single()
-      if (error) throw error
-      return insertedPost as PostWithAuthor
+      const dp = getDataProvider()
+      const result = await dp.createPost({
+        thread_id: thread.id,
+        author_id: user.id,
+        content,
+        reply_to_id: replyToId || undefined,
+      })
+      if (!result) throw new Error('Failed to create post')
+      // Re-fetch the post with author data
+      const posts = await dp.getPosts(thread.id)
+      const insertedPost = posts.find(p => p.id === result.id)
+      if (!insertedPost) throw new Error('Post created but not found')
+      return insertedPost
     },
     onMutate: async ({ content, replyToId }) => {
       if (!thread || !user) return
@@ -287,15 +288,12 @@ export default function Thread() {
       )
 
       // Update thread's last_post_at
-      supabase
-        .from('threads')
-        .update({ last_post_at: new Date().toISOString(), post_count: thread.post_count + 1 })
-        .eq('id', thread.id)
-        .then(({ error: updateError }) => {
-          if (updateError) {
-            console.error('[FCV:Thread] Failed to update thread after reply:', updateError)
-          }
-        })
+      getDataProvider().updateThread(thread.id, {
+        last_post_at: new Date().toISOString(),
+        post_count: thread.post_count + 1,
+      }).catch((updateError) => {
+        console.error('[FCV:Thread] Failed to update thread after reply:', updateError)
+      })
     },
     onSettled: () => {
       if (!thread) return
@@ -754,7 +752,7 @@ export default function Thread() {
             try {
               const imageUrl = await uploadAvatar(blob, `thread/${thread.id}/custom.png`)
               if (imageUrl) {
-                await supabase.from('threads').update({ image_url: imageUrl }).eq('id', thread.id)
+                await getDataProvider().updateThread(thread.id, { image_url: imageUrl })
                 // Update cache
                 queryClient.setQueryData(queryKeys.thread(thread.id), { ...thread, image_url: imageUrl })
                 toast.success('Thread image updated')

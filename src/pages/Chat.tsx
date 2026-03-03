@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
+import { getDataProvider } from '../lib/data-provider'
 import Avatar from '../components/Avatar'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import Skeleton from '../components/ui/Skeleton'
@@ -128,12 +129,11 @@ export default function Chat() {
   const sendMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!user || !channel) throw new Error('Not authenticated')
-      const { error } = await supabase.from('chat_messages').insert({
+      await getDataProvider().sendChatMessage({
         channel_id: channel.id,
         author_id: user.id,
         content,
       })
-      if (error) throw new Error('Failed to send message')
     },
     onMutate: async (content: string) => {
       if (!user || !channel) return

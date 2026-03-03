@@ -5,8 +5,8 @@ import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { getDataProvider } from '../lib/data-provider'
 import { uploadAvatar, uploadDefaultAvatar } from '../lib/avatars'
 import Avatar from '../components/Avatar'
 import ImageCropModal from '../components/ImageCropModal'
@@ -56,41 +56,35 @@ export default function NewThread() {
         .replace(/^-|-$/g, '')
         .slice(0, 50)
 
-      // Create thread
-      const { data: thread, error: threadError } = await supabase
-        .from('threads')
-        .insert({
-          category_id: category.id,
-          author_id: user.id,
-          title: data.title,
-          slug,
-          post_count: 1,
-          last_post_at: new Date().toISOString(),
-        })
-        .select()
-        .single()
+      const dp = getDataProvider()
 
-      if (threadError) throw new Error(threadError.message)
+      // Create thread
+      const thread = await dp.createThread({
+        category_id: category.id,
+        author_id: user.id,
+        title: data.title,
+        slug,
+      })
+
+      if (!thread) throw new Error('Failed to create thread')
 
       // Create first post
-      const { error: postError } = await supabase.from('posts').insert({
+      await dp.createPost({
         thread_id: thread.id,
         author_id: user.id,
         content: data.content,
       })
 
-      if (postError) throw new Error(postError.message)
-
       // Upload thread image
       if (threadImageBlob) {
         const imageUrl = await uploadAvatar(threadImageBlob, `thread/${thread.id}/custom.png`)
         if (imageUrl) {
-          await supabase.from('threads').update({ image_url: imageUrl }).eq('id', thread.id)
+          await dp.updateThread(thread.id, { image_url: imageUrl })
         }
       } else {
         const imageUrl = await uploadDefaultAvatar(thread.id, 'thread')
         if (imageUrl) {
-          await supabase.from('threads').update({ image_url: imageUrl }).eq('id', thread.id)
+          await dp.updateThread(thread.id, { image_url: imageUrl })
         }
       }
 

@@ -1,0 +1,10 @@
+{
+  "forumline_version": "1",
+  "name": "Forum Chat Voice",
+  "domain": "forum-chat-voice.vercel.app",
+  "icon_url": "/forum.svg",
+  "api_base": "https://forum-chat-voice.vercel.app/api/forumline",
+  "web_base": "https://forum-chat-voice.vercel.app",
+  "capabilities": ["threads", "chat", "voice", "notifications"],
+  "description": "A modern forum with real-time chat and voice rooms"
+}

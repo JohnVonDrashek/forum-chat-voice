@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import Avatar from '../components/Avatar'
 import { supabase } from '../lib/supabase'
+import { getDataProvider } from '../lib/data-provider'
 import Skeleton from '../components/ui/Skeleton'
 import { formatNotificationTime } from '../lib/dateFormatters'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
@@ -106,7 +107,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   const handleNotificationClick = async (notification: NotifItem) => {
     if (!notification.read) {
-      await supabase.from('notifications').update({ read: true }).eq('id', notification.id)
+      await getDataProvider().markNotificationRead(notification.id)
       if (user) {
         queryClient.invalidateQueries({ queryKey: queryKeys.notifications(user.id) })
       }
@@ -117,7 +118,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   const markAllAsRead = async () => {
     if (user) {
-      await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false)
+      await getDataProvider().markAllNotificationsRead(user.id)
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications(user.id) })
     }
   }

@@ -12,6 +12,9 @@ Do NOT deploy this project from vercel directly. Vercel has a workflow to auto-d
 ## Vercel
 The Vercel CLI token is stored in macOS Keychain under `vercel-token`.
 
+## Supabase
+The Supabase personal access token is stored in macOS Keychain under `supabase-access-token`.
+
 ## Stack
 
 - React 19 + Vite + TailwindCSS

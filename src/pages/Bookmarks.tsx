@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { useAuth } from '../lib/auth'
-import { supabase } from '../lib/supabase'
+import { getDataProvider } from '../lib/data-provider'
 import Avatar from '../components/Avatar'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
@@ -25,7 +25,7 @@ export default function Bookmarks() {
   // Optimistic removal mutation
   const removeBookmarkMutation = useMutation({
     mutationFn: async (bookmarkId: string) => {
-      await supabase.from('bookmarks').delete().eq('id', bookmarkId)
+      await getDataProvider().removeBookmarkById(bookmarkId)
     },
     onMutate: async (bookmarkId) => {
       // Cancel any outgoing refetches

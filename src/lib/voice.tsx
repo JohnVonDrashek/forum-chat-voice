@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useRef, useCallback, useEffect, Re
 import type { Room as RoomType, Participant } from 'livekit-client'
 import { supabase } from './supabase'
 import { useAuth } from './auth'
+import { getDataProvider } from './data-provider'
 
 // Lazily loaded livekit module — only fetched when joinRoom() is called
 let livekitModule: typeof import('livekit-client') | null = null
@@ -204,43 +205,21 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Write presence to Supabase when joining a room
+  // Write presence when joining a room
   const writePresence = useCallback(async (roomSlug: string) => {
     if (!user) return
-
     try {
-      // Upsert presence - the unique constraint on user_id ensures one room per user
-      const { error } = await supabase
-        .from('voice_presence')
-        .upsert({
-          user_id: user.id,
-          room_slug: roomSlug,
-          joined_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id',
-        })
-
-      if (error) {
-        console.error('Failed to write voice presence:', error)
-      }
+      await getDataProvider().setVoicePresence(user.id, roomSlug)
     } catch (err) {
       console.error('Failed to write voice presence:', err)
     }
   }, [user])
 
-  // Delete presence from Supabase when leaving
+  // Delete presence when leaving
   const deletePresence = useCallback(async () => {
     if (!user) return
-
     try {
-      const { error } = await supabase
-        .from('voice_presence')
-        .delete()
-        .eq('user_id', user.id)
-
-      if (error) {
-        console.error('Failed to delete voice presence:', error)
-      }
+      await getDataProvider().clearVoicePresence(user.id)
     } catch (err) {
       console.error('Failed to delete voice presence:', err)
     }
