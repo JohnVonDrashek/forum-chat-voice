@@ -12,7 +12,7 @@ import Avatar from '../components/Avatar'
 import ImageCropModal from '../components/ImageCropModal'
 import Input from '../components/ui/Input'
 import Card from '../components/ui/Card'
-import { isTauri, getTauriAutostart, getTauriNotification } from '../lib/tauri'
+import { isTauri, getTauriAutostart, getTauriNotification } from '@forumline/react'
 import { invoke } from '@tauri-apps/api/core'
 
 type Tab = 'profile' | 'account' | 'notifications' | 'appearance' | 'desktop'

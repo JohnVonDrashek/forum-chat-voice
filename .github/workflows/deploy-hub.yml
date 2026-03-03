@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'hub/**'
+      - 'central-services/**'
 
 jobs:
   deploy:
@@ -21,4 +21,4 @@ jobs:
 
       - name: Deploy to production
         run: vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
-        working-directory: hub
+        working-directory: central-services

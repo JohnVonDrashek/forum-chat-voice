@@ -1,11 +1,12 @@
 /**
- * ForumContext — Shared state for multi-forum management in the Tauri desktop app.
+ * ForumProvider — Shared state for multi-forum management in the Tauri desktop app.
  *
- * Follows the same Provider/hook pattern as AuthProvider and VoiceProvider.
+ * Follows the standard Provider/hook pattern.
  * On web (non-Tauri), provides empty state and no-op functions.
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import type { UnreadCounts } from '@forumline/protocol'
 import { isTauri } from './tauri'
 
 // ============================================================================
@@ -21,12 +22,6 @@ export interface ForumMembership {
   capabilities: string[]
   accent_color?: string
   added_at: string
-}
-
-export interface UnreadCounts {
-  notifications: number
-  chat_mentions: number
-  dms: number
 }
 
 interface ForumContextType {
@@ -104,11 +99,10 @@ export function ForumProvider({ children }: { children: ReactNode }) {
     let unlisten: (() => void) | undefined
     tauriListen<string>('forum-switched', (event) => {
       const domain = event.payload
-      // Use setForums callback to access the current forums list without stale closures
       setForums(currentForums => {
         const match = currentForums.find(f => f.domain === domain) ?? null
         setActiveForum(match)
-        return currentForums // no change to forums
+        return currentForums
       })
     }).then(fn => { unlisten = fn })
     return () => { unlisten?.() }
@@ -118,7 +112,6 @@ export function ForumProvider({ children }: { children: ReactNode }) {
     if (!tauriActive) return
     try {
       await tauriInvoke('switch_forum', { domain })
-      // Optimistically update — look up from current list
       setForums(currentForums => {
         const match = currentForums.find(f => f.domain === domain) ?? null
         setActiveForum(match)
@@ -136,7 +129,6 @@ export function ForumProvider({ children }: { children: ReactNode }) {
   const addForum = useCallback(async (url: string) => {
     if (!tauriActive) return
     await tauriInvoke('add_forum', { url })
-    // Refresh the forum list
     const list = await tauriInvoke<ForumMembership[]>('get_forum_list')
     setForums(list)
   }, [tauriActive])
@@ -144,12 +136,9 @@ export function ForumProvider({ children }: { children: ReactNode }) {
   const removeForum = useCallback(async (domain: string) => {
     if (!tauriActive) return
     await tauriInvoke('remove_forum', { domain })
-    // Refresh the forum list
     const list = await tauriInvoke<ForumMembership[]>('get_forum_list')
     setForums(list)
-    // If the removed forum was active, go home
     setActiveForum(prev => prev?.domain === domain ? null : prev)
-    // Clean up unread counts
     setUnreadCounts(prev => {
       const next = { ...prev }
       delete next[domain]

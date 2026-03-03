@@ -6,19 +6,16 @@ import Header from './Header'
 import Sidebar from './Sidebar'
 import MobileSidebar from './MobileSidebar'
 import ErrorBoundary from './ErrorBoundary'
-import ForumRail from './ForumRail'
-import ForumWebview from './ForumWebview'
+import { ForumRail, ForumWebview, useForum, useNativeNotifications } from '@forumline/react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
-import { useForum } from '../lib/forum'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
-import { useNativeNotifications } from '../hooks/useNativeNotifications'
 
 export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user } = useAuth()
   const { activeForum } = useForum()
-  useNativeNotifications()
+  useNativeNotifications(user, supabase)
   const [unreadDmCount, setUnreadDmCount] = useState(0)
   const queryClient = useQueryClient()
 

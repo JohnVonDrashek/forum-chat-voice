@@ -3,12 +3,12 @@
  *
  * Displays joined forums as icons in a vertical rail (like Discord's server list).
  * Only rendered in the Tauri desktop app context.
- * State is managed by ForumContext (src/lib/forum.tsx).
+ * State is managed by ForumProvider.
  */
 
 import { useState, useCallback } from 'react'
-import { isTauri } from '../lib/tauri'
-import { useForum } from '../lib/forum'
+import { isTauri } from './tauri'
+import { useForum } from './ForumProvider'
 
 export default function ForumRail() {
   const { forums, activeForum, unreadCounts, switchForum, goHome, addForum } = useForum()

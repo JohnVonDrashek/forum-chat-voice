@@ -1,16 +1,18 @@
 import type { HubDirectMessage, HubDmConversation, HubProfile } from '@forumline/protocol'
 
-const HUB_URL = import.meta.env.VITE_HUB_URL || 'https://forumline-hub.vercel.app'
-
 /**
- * HTTP client for hub DM API endpoints.
+ * Headless HTTP client for Forumline Central Services.
+ * Provides access to cross-forum DMs and profile search.
  * All requests use the hub Supabase access token for authentication.
  */
-export class HubDmClient {
-  constructor(private accessToken: string) {}
+export class CentralServicesClient {
+  constructor(
+    private hubUrl: string,
+    private accessToken: string,
+  ) {}
 
   private async fetch<T>(path: string, options?: RequestInit): Promise<T> {
-    const res = await fetch(`${HUB_URL}${path}`, {
+    const res = await fetch(`${this.hubUrl}${path}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -20,7 +22,7 @@ export class HubDmClient {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      throw new Error(err.error || `Hub API error: ${res.status}`)
+      throw new Error(err.error || `Central Services API error: ${res.status}`)
     }
     return res.json()
   }

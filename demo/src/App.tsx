@@ -1,8 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { AuthProvider } from './lib/auth'
-import { ForumProvider } from './lib/forum'
-import { HubProvider } from './lib/hub-context'
+import { AuthProvider, useAuth } from './lib/auth'
+import { ForumProvider, HubProvider } from '@forumline/react'
 import { VoiceProvider } from './lib/voice'
 import ScrollToTop from './components/ScrollToTop'
 import Layout from './components/Layout'
@@ -27,6 +26,10 @@ const Bookmarks = lazy(() => import('./pages/Bookmarks'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Admin = lazy(() => import('./pages/Admin'))
 
+const HUB_SUPABASE_URL = import.meta.env.VITE_HUB_SUPABASE_URL as string
+const HUB_SUPABASE_ANON_KEY = import.meta.env.VITE_HUB_SUPABASE_ANON_KEY as string
+const HUB_URL = (import.meta.env.VITE_HUB_URL as string) || 'https://forumline-hub.vercel.app'
+
 function PageFallback() {
   return (
     <div className="mx-auto max-w-4xl">
@@ -39,12 +42,29 @@ function PageFallback() {
   )
 }
 
+/** Bridges AuthProvider's user into HubProvider props. */
+function AuthenticatedProviders({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  return (
+    <HubProvider
+      user={user}
+      hubSupabaseUrl={HUB_SUPABASE_URL}
+      hubSupabaseAnonKey={HUB_SUPABASE_ANON_KEY}
+      hubUrl={HUB_URL}
+    >
+      <ForumProvider>
+        <VoiceProvider>
+          {children}
+        </VoiceProvider>
+      </ForumProvider>
+    </HubProvider>
+  )
+}
+
 export default function App() {
   return (
     <AuthProvider>
-      <HubProvider>
-      <ForumProvider>
-      <VoiceProvider>
+      <AuthenticatedProviders>
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Layout />}>
@@ -69,9 +89,7 @@ export default function App() {
           <Route path="admin" element={<RequireAdmin><Suspense fallback={<PageFallback />}><Admin /></Suspense></RequireAdmin>} />
         </Route>
       </Routes>
-      </VoiceProvider>
-      </ForumProvider>
-      </HubProvider>
+      </AuthenticatedProviders>
     </AuthProvider>
   )
 }

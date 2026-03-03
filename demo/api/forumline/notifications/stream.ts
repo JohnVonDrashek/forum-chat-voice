@@ -1,12 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 
+/**
+ * GET /api/forumline/notifications/stream
+ * SSE notification stream using Supabase Realtime.
+ * This endpoint uses Supabase-specific subscriptions, so it stays as a
+ * demo-specific implementation rather than using the generic server-sdk handler.
+ */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // Validate auth
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing authorization token' })
@@ -25,7 +30,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'Invalid auth token' })
   }
 
-  // Set up SSE headers
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -34,7 +38,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const forumDomain = 'forum-chat-voice.vercel.app'
 
-  // Subscribe to notification changes for this user via Supabase Realtime
   const channel = supabase
     .channel(`forumline-notif-${user.id}`)
     .on(
@@ -47,22 +50,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       (payload) => {
         const n = payload.new as {
-          id: string
-          type: string
-          title: string
-          message: string
-          link: string | null
-          read: boolean
-          created_at: string
+          id: string; type: string; title: string; message: string
+          link: string | null; read: boolean; created_at: string
         }
         const event = {
-          id: n.id,
-          type: n.type,
-          title: n.title,
-          body: n.message,
-          timestamp: n.created_at,
-          read: n.read,
-          link: n.link || '/',
+          id: n.id, type: n.type, title: n.title, body: n.message,
+          timestamp: n.created_at, read: n.read, link: n.link || '/',
           forum_domain: forumDomain,
         }
         res.write(`data: ${JSON.stringify(event)}\n\n`)
@@ -70,15 +63,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     )
     .subscribe()
 
-  // Send initial heartbeat
   res.write(':connected\n\n')
 
-  // Send heartbeat every 30 seconds to keep connection alive
   const heartbeat = setInterval(() => {
     res.write(':heartbeat\n\n')
   }, 30000)
 
-  // Cleanup on client disconnect
   req.on('close', () => {
     clearInterval(heartbeat)
     channel.unsubscribe()

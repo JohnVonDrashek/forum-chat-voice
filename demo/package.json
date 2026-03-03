@@ -19,6 +19,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@forumline/central-services-client": "file:../packages/central-services-client",
+    "@forumline/react": "file:../packages/react",
+    "@forumline/server-sdk": "file:../packages/server-sdk",
     "@dicebear/avataaars": "^9.3.2",
     "@dicebear/core": "^9.3.2",
     "@dicebear/shapes": "^9.3.2",

@@ -1,23 +1,23 @@
 import { useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../lib/auth'
-import { isTauri, getTauriNotification } from '../lib/tauri'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { isTauri, getTauriNotification } from './tauri'
 
 /**
  * Listens to Supabase Realtime for new DMs and sends native notifications
  * when the window is not focused. Uses Tauri notifications in the desktop
  * app and falls back to browser Notification API on the web.
  */
-export function useNativeNotifications() {
-  const { user } = useAuth()
-
+export function useNativeNotifications(
+  user: { id: string } | null,
+  supabaseClient: SupabaseClient,
+) {
   useEffect(() => {
     if (!user) return
 
     const enabled = localStorage.getItem('nativeNotifications') !== 'false'
     if (!enabled) return
 
-    const sub = supabase
+    const sub = supabaseClient
       .channel('native-notifications')
       .on(
         'postgres_changes',
@@ -73,5 +73,5 @@ export function useNativeNotifications() {
     return () => {
       sub.unsubscribe()
     }
-  }, [user])
+  }, [user, supabaseClient])
 }

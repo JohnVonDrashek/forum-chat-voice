@@ -1,10 +1,9 @@
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { HubDmClient } from './hub-dm-client'
-import { useAuth } from './auth'
+import { CentralServicesClient } from '@forumline/central-services-client'
 
 interface HubContextType {
-  hubClient: HubDmClient | null
+  hubClient: CentralServicesClient | null
   hubSupabase: SupabaseClient | null
   hubUserId: string | null
   isHubConnected: boolean
@@ -21,12 +20,29 @@ export function useHub() {
   return useContext(HubContext)
 }
 
-const HUB_SUPABASE_URL = import.meta.env.VITE_HUB_SUPABASE_URL as string
-const HUB_SUPABASE_ANON_KEY = import.meta.env.VITE_HUB_SUPABASE_ANON_KEY as string
+interface HubProviderProps {
+  /** The current authenticated user, or null if logged out. */
+  user: { id: string } | null
+  /** Supabase URL for the hub project (for Realtime subscriptions). */
+  hubSupabaseUrl: string
+  /** Supabase anon key for the hub project. */
+  hubSupabaseAnonKey: string
+  /** Base URL of the hub API (e.g. 'https://forumline-hub.vercel.app'). */
+  hubUrl: string
+  /** Endpoint to fetch the hub access token. Defaults to '/api/forumline/auth/hub-token'. */
+  hubTokenEndpoint?: string
+  children: ReactNode
+}
 
-export function HubProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
-  const [hubClient, setHubClient] = useState<HubDmClient | null>(null)
+export function HubProvider({
+  user,
+  hubSupabaseUrl,
+  hubSupabaseAnonKey,
+  hubUrl,
+  hubTokenEndpoint = '/api/forumline/auth/hub-token',
+  children,
+}: HubProviderProps) {
+  const [hubClient, setHubClient] = useState<CentralServicesClient | null>(null)
   const [hubSupabase, setHubSupabase] = useState<SupabaseClient | null>(null)
   const [hubUserId, setHubUserId] = useState<string | null>(null)
   const [isHubConnected, setIsHubConnected] = useState(false)
@@ -34,14 +50,14 @@ export function HubProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user || initRef.current) return
-    if (!HUB_SUPABASE_URL || !HUB_SUPABASE_ANON_KEY) return
+    if (!hubSupabaseUrl || !hubSupabaseAnonKey) return
 
     initRef.current = true
 
     const init = async () => {
       try {
         // Fetch the hub access token from our server-side cookie
-        const res = await fetch('/api/forumline/auth/hub-token', { credentials: 'include' })
+        const res = await fetch(hubTokenEndpoint, { credentials: 'include' })
         const data = await res.json()
 
         if (!data.hub_access_token) {
@@ -52,11 +68,11 @@ export function HubProvider({ children }: { children: ReactNode }) {
         const token = data.hub_access_token
 
         // Create hub DM client
-        const client = new HubDmClient(token)
+        const client = new CentralServicesClient(hubUrl, token)
         setHubClient(client)
 
         // Create hub Supabase client for Realtime
-        const hubSb = createClient(HUB_SUPABASE_URL, HUB_SUPABASE_ANON_KEY, {
+        const hubSb = createClient(hubSupabaseUrl, hubSupabaseAnonKey, {
           global: {
             headers: { Authorization: `Bearer ${token}` },
           },
@@ -81,7 +97,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
     }
 
     init()
-  }, [user])
+  }, [user, hubSupabaseUrl, hubSupabaseAnonKey, hubUrl, hubTokenEndpoint])
 
   // Reset when user logs out
   useEffect(() => {

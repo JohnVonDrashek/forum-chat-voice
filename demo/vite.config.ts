@@ -29,6 +29,9 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@forumline/protocol': path.resolve(__dirname, '../packages/protocol/src/index.ts'),
+        '@forumline/central-services-client': path.resolve(__dirname, '../packages/central-services-client/src/index.ts'),
+        '@forumline/react': path.resolve(__dirname, '../packages/react/src/index.ts'),
+        '@forumline/server-sdk': path.resolve(__dirname, '../packages/server-sdk/src/index.ts'),
       },
     },
     clearScreen: false,

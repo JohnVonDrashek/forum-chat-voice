@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react'
-import type { ForumMembership } from '../lib/forum'
+import type { ForumMembership } from './ForumProvider'
 
 interface ForumWebviewProps {
   forum: ForumMembership

@@ -1,7 +1,7 @@
 {
   "name": "forumline",
   "private": true,
-  "workspaces": ["demo", "hub", "packages/*"],
+  "workspaces": ["demo", "central-services", "packages/*"],
   "scripts": {
     "tauri:dev": "TAURI_DIR=desktop tauri dev",
     "tauri:build": "TAURI_DIR=desktop tauri build"
