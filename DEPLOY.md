@@ -81,15 +81,27 @@ vercel --prod --token "$VERCEL_TOKEN"
 
 ## Supabase Setup
 
-1. Create a Supabase project at https://supabase.com
-2. Run the schema in `supabase/schema.sql`
-3. Enable Row Level Security (RLS)
-4. Configure authentication providers (Email, GitHub)
-5. Set the Site URL in Authentication → URL Configuration
+Supabase is provisioned through the Vercel integration.
+
+### Access Supabase Dashboard
+
+```bash
+# Open Supabase dashboard via Vercel SSO
+VERCEL_TOKEN=$(security find-generic-password -s "vercel-token" -a "vercel-cli" -w)
+vercel integration open supabase forum-chat-voice-db --token "$VERCEL_TOKEN"
+# Opens URL in browser for SSO access
+```
+
+### Pull Environment Variables
+
+```bash
+# Pull all Supabase env vars to local
+vercel env pull .env.local --token "$VERCEL_TOKEN"
+```
 
 ### Auth Redirect URLs
 
-In Supabase Dashboard → Authentication → URL Configuration:
+Configure in Supabase Dashboard → Authentication → URL Configuration:
 
 - **Site URL**: `https://forum-chat-voice.vercel.app`
 - **Redirect URLs**:
