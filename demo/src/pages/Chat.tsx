@@ -20,6 +20,7 @@ interface ChatMsg {
   authorName: string
   authorAvatar: string
   authorAvatarUrl?: string | null
+  authorForumlineId?: string | null
   content: string
   createdAt: string
 }
@@ -32,6 +33,7 @@ function toMsg(row: { id: string; channel_id: string; author_id: string; content
     authorName: row.author.display_name || row.author.username,
     authorAvatar: (row.author.display_name?.[0] || row.author.username[0]).toUpperCase(),
     authorAvatarUrl: row.author.avatar_url,
+    authorForumlineId: row.author.forumline_id,
     content: row.content,
     createdAt: row.created_at,
   }
@@ -158,6 +160,7 @@ export default function Chat() {
         bio: null,
         website: null,
         is_admin: false,
+        forumline_id: null,
         created_at: now,
         updated_at: now,
       }
@@ -308,7 +311,7 @@ export default function Chat() {
                       <span className="text-[10px] text-slate-500">{formatTime(message.createdAt)}</span>
                     </div>
                   ) : (
-                    <Avatar seed={message.authorId} type="user" avatarUrl={message.authorAvatarUrl} size={40} className="h-10 w-10 shrink-0" />
+                    <Avatar seed={message.authorId} type="user" avatarUrl={message.authorAvatarUrl} size={40} className="h-10 w-10 shrink-0" showGlobe={!!message.authorForumlineId} />
                   )}
 
                   {/* Content */}

@@ -162,6 +162,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Strip ?forumline_auth=success from URL after Supabase picks up session
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('forumline_auth')) {
+      params.delete('forumline_auth')
+      const newUrl = params.toString()
+        ? `${window.location.pathname}?${params}`
+        : window.location.pathname
+      window.history.replaceState({}, '', newUrl)
+    }
+  }, [])
+
   const signIn = async (email: string, password: string) => {
     return getAuthProvider().signIn(email, password)
   }

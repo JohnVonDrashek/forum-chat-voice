@@ -39,10 +39,10 @@ export function getForumlineServer(): ForumlineServer {
       return user.id
     },
 
-    async createOrLinkUser(identity: ForumlineIdentity): Promise<string> {
+    async createOrLinkUser(identity: ForumlineIdentity, hubAccessToken: string | null): Promise<string> {
       const supabase = createClient(supabaseUrl, serviceRoleKey)
 
-      // Check if a local profile already has this forumline_id
+      // 1. Check if a local profile already has this forumline_id
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('id')
@@ -60,7 +60,57 @@ export function getForumlineServer(): ForumlineServer {
         return existingProfile.id
       }
 
-      // Create a new local auth user
+      // 2. Try to get email from hub token and link by email
+      if (hubAccessToken) {
+        const hubSupabaseUrl = process.env.FORUMLINE_HUB_SUPABASE_URL
+        const hubServiceKey = process.env.FORUMLINE_HUB_SERVICE_ROLE_KEY
+        if (hubSupabaseUrl && hubServiceKey) {
+          const hubSb = createClient(hubSupabaseUrl, hubServiceKey)
+          const { data: { user: hubUser } } = await hubSb.auth.getUser(hubAccessToken)
+          if (hubUser?.email) {
+            // Look up local user by email
+            const { data: { users: localUsers } } = await supabase.auth.admin.listUsers({
+              perPage: 1,
+            })
+            // listUsers doesn't filter by email, so use a direct query
+            const { data: localUsersByEmail } = await supabase.auth.admin.listUsers()
+            const matchingUser = localUsersByEmail?.users?.find(u => u.email === hubUser.email)
+            if (matchingUser) {
+              await supabase
+                .from('profiles')
+                .update({ forumline_id: identity.forumline_id })
+                .eq('id', matchingUser.id)
+              return matchingUser.id
+            }
+
+            // 3. Create new user with real email
+            const tempPassword = crypto.randomUUID()
+            const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+              email: hubUser.email,
+              password: tempPassword,
+              email_confirm: true,
+              user_metadata: {
+                username: identity.username,
+                display_name: identity.display_name,
+                forumline_id: identity.forumline_id,
+              },
+            })
+
+            if (createError || !newUser.user) {
+              throw new Error(`Failed to create local user: ${createError?.message}`)
+            }
+
+            await supabase
+              .from('profiles')
+              .update({ forumline_id: identity.forumline_id })
+              .eq('id', newUser.user.id)
+
+            return newUser.user.id
+          }
+        }
+      }
+
+      // 4. Fallback: create user with forumline.local email
       const tempPassword = crypto.randomUUID()
       const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
         email: `${identity.username}@forumline.local`,
@@ -83,6 +133,50 @@ export function getForumlineServer(): ForumlineServer {
         .eq('id', newUser.user.id)
 
       return newUser.user.id
+    },
+
+    async afterAuth({ userId, identity, hubAccessToken, request }) {
+      const supabase = createClient(supabaseUrl, serviceRoleKey)
+
+      // Check if user has an existing Supabase session (connecting from Settings)
+      const cookies = request.cookies
+      const sbAccessToken = cookies['sb-access-token'] ||
+        cookies[`sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`]
+
+      if (sbAccessToken) {
+        // User is already logged in — they're connecting their account from Settings
+        return `${siteUrl}/settings?forumline_linked=true`
+      }
+
+      // Not logged in — generate a Supabase session via magic link
+      const { data: userData } = await supabase.auth.admin.getUserById(userId)
+      if (!userData?.user?.email) return undefined
+
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: userData.user.email,
+      })
+
+      if (linkError || !linkData?.properties?.hashed_token) {
+        console.error('[FLD:Forumline] Failed to generate magic link:', linkError)
+        return undefined
+      }
+
+      // Verify the magic link server-side to get session tokens
+      const anonSb = createClient(supabaseUrl, supabaseAnonKey)
+      const { data: otpData, error: otpError } = await anonSb.auth.verifyOtp({
+        token_hash: linkData.properties.hashed_token,
+        type: 'magiclink',
+      })
+
+      if (otpError || !otpData?.session) {
+        console.error('[FLD:Forumline] Failed to verify OTP:', otpError)
+        return undefined
+      }
+
+      // Redirect with session in URL hash — Supabase client auto-detects it
+      const { access_token, refresh_token } = otpData.session
+      return `${siteUrl}/#access_token=${access_token}&refresh_token=${refresh_token}&type=bearer`
     },
 
     async getNotifications(userId: string): Promise<ForumNotification[]> {
@@ -114,16 +208,10 @@ export function getForumlineServer(): ForumlineServer {
         .eq('read', false)
         .eq('type', 'chat_mention')
 
-      const { count: dmCount } = await supabase
-        .from('direct_messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('recipient_id', userId)
-        .eq('read', false)
-
       return {
         notifications: notifCount ?? 0,
         chat_mentions: chatMentionCount ?? 0,
-        dms: dmCount ?? 0,
+        dms: 0, // Hub DM counts are handled client-side
       }
     },
 

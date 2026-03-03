@@ -18,6 +18,7 @@ export type Database = {
           bio: string | null
           website: string | null
           is_admin: boolean
+          forumline_id: string | null
           created_at: string
           updated_at: string
         }
@@ -29,6 +30,7 @@ export type Database = {
           bio?: string | null
           website?: string | null
           is_admin?: boolean
+          forumline_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -39,6 +41,7 @@ export type Database = {
           bio?: string | null
           website?: string | null
           is_admin?: boolean
+          forumline_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -399,7 +402,6 @@ export type Thread = Database['public']['Tables']['threads']['Row']
 export type Post = Database['public']['Tables']['posts']['Row']
 export type ChatChannel = Database['public']['Tables']['chat_channels']['Row']
 export type ChatMessage = Database['public']['Tables']['chat_messages']['Row']
-export type DirectMessage = Database['public']['Tables']['direct_messages']['Row']
 export type VoiceRoom = Database['public']['Tables']['voice_rooms']['Row']
 export type Bookmark = Database['public']['Tables']['bookmarks']['Row']
 export type Notification = Database['public']['Tables']['notifications']['Row']
@@ -410,7 +412,6 @@ export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
 export type ThreadInsert = Database['public']['Tables']['threads']['Insert']
 export type PostInsert = Database['public']['Tables']['posts']['Insert']
 export type ChatMessageInsert = Database['public']['Tables']['chat_messages']['Insert']
-export type DirectMessageInsert = Database['public']['Tables']['direct_messages']['Insert']
 export type BookmarkInsert = Database['public']['Tables']['bookmarks']['Insert']
 
 // Extended types with joins

@@ -271,79 +271,6 @@ export class SupabaseForumDataProvider implements ForumDataProvider {
     return data || []
   }
 
-  async getDmMessages(userId: string, recipientId: string): Promise<Array<{
-    id: string
-    sender_id: string
-    recipient_id: string
-    content: string
-    created_at: string
-    read: boolean
-  }>> {
-    const { data, error } = await supabase
-      .from('direct_messages')
-      .select('*')
-      .or(`and(sender_id.eq.${userId},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${userId})`)
-      .order('created_at')
-    if (error) fetchError('getDmMessages', error)
-    return data || []
-  }
-
-  async getDmConversations(userId: string): Promise<Array<{
-    recipientId: string
-    recipientName: string
-    recipientAvatarUrl: string | null
-    lastMessage: string
-    lastMessageTime: string
-    unreadCount: number
-  }>> {
-    const { data, error } = await supabase
-      .from('direct_messages')
-      .select('*, sender:profiles!direct_messages_sender_id_fkey(*), recipient:profiles!direct_messages_recipient_id_fkey(*)')
-      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
-      .order('created_at', { ascending: false })
-
-    if (error) fetchError('getDmConversations', error)
-    if (!data) return []
-
-    const convMap = new Map<string, {
-      recipientId: string
-      recipientName: string
-      recipientAvatarUrl: string | null
-      lastMessage: string
-      lastMessageTime: string
-      unreadCount: number
-    }>()
-
-    for (const dm of data) {
-      const other: Profile = dm.sender_id === userId ? dm.recipient : dm.sender
-      if (!convMap.has(other.id)) {
-        convMap.set(other.id, {
-          recipientId: other.id,
-          recipientName: other.display_name || other.username,
-          recipientAvatarUrl: other.avatar_url,
-          lastMessage: dm.content,
-          lastMessageTime: dm.created_at,
-          unreadCount: 0,
-        })
-      }
-    }
-
-    const { data: unreads } = await supabase
-      .from('direct_messages')
-      .select('sender_id')
-      .eq('recipient_id', userId)
-      .eq('read', false)
-
-    if (unreads) {
-      for (const u of unreads) {
-        const conv = convMap.get(u.sender_id)
-        if (conv) conv.unreadCount++
-      }
-    }
-
-    return Array.from(convMap.values())
-  }
-
   // ========================================================================
   // Writes
   // ========================================================================
@@ -417,37 +344,6 @@ export class SupabaseForumDataProvider implements ForumDataProvider {
       .from('chat_messages')
       .insert(input)
     if (error) fetchError('sendChatMessage', error)
-  }
-
-  async sendDm(input: {
-    sender_id: string
-    recipient_id: string
-    content: string
-  }): Promise<{ id: string } | null> {
-    const { data, error } = await supabase
-      .from('direct_messages')
-      .insert(input)
-      .select('id')
-      .single()
-    if (error) fetchError('sendDm', error)
-    return data
-  }
-
-  async markDmRead(messageId: string): Promise<void> {
-    const { error } = await supabase
-      .from('direct_messages')
-      .update({ read: true })
-      .eq('id', messageId)
-    if (error) fetchError('markDmRead', error)
-  }
-
-  async markDmsReadFrom(senderId: string, recipientId: string): Promise<void> {
-    const { error } = await supabase
-      .from('direct_messages')
-      .update({ read: true })
-      .eq('sender_id', senderId)
-      .eq('recipient_id', recipientId)
-    if (error) fetchError('markDmsReadFrom', error)
   }
 
   async addBookmark(userId: string, threadId: string): Promise<void> {

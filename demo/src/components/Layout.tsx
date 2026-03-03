@@ -6,7 +6,7 @@ import Header from './Header'
 import Sidebar from './Sidebar'
 import MobileSidebar from './MobileSidebar'
 import ErrorBoundary from './ErrorBoundary'
-import { ForumRail, ForumWebview, useForum, useNativeNotifications } from '@forumline/react'
+import { ForumRail, ForumWebview, useForum, useNativeNotifications, useHub } from '@forumline/react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
@@ -15,7 +15,13 @@ export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user } = useAuth()
   const { activeForum } = useForum()
+  const { hubClient, hubSupabase, hubUserId, isHubConnected } = useHub()
   useNativeNotifications(user, supabase)
+  useNativeNotifications(
+    isHubConnected && hubUserId ? { id: hubUserId } : null,
+    hubSupabase || supabase,
+    { table: 'hub_direct_messages' }
+  )
   const [unreadDmCount, setUnreadDmCount] = useState(0)
   const queryClient = useQueryClient()
 
@@ -97,39 +103,39 @@ export default function Layout() {
     })
   }, [channels, queryClient])
 
+  // Hub-based unread DM count
   useEffect(() => {
-    if (!user) {
+    if (!isHubConnected || !hubClient) {
       setUnreadDmCount(0)
       return
     }
 
     const fetchUnread = async () => {
-      const { count, error } = await supabase
-        .from('direct_messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('recipient_id', user.id)
-        .eq('read', false)
-      if (error) {
-        console.error('[FLD:Layout] Failed to fetch unread DM count:', error)
-        return
+      try {
+        const conversations = await hubClient.getConversations()
+        const total = conversations.reduce((sum, c) => sum + c.unreadCount, 0)
+        setUnreadDmCount(total)
+      } catch (error) {
+        console.error('[FLD:Layout] Failed to fetch hub unread DM count:', error)
       }
-      setUnreadDmCount(count ?? 0)
     }
 
     fetchUnread()
 
-    // Subscribe to new DMs to update unread badge in real-time
-    const sub = supabase
-      .channel('layout-dm-unread')
+    if (!hubSupabase) return
+
+    // Subscribe to hub DMs to update unread badge in real-time
+    const sub = hubSupabase
+      .channel('layout-hub-dm-unread')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'direct_messages', filter: `recipient_id=eq.${user.id}` },
+        { event: 'INSERT', schema: 'public', table: 'hub_direct_messages' },
         () => fetchUnread()
       )
       .subscribe()
 
     return () => { sub.unsubscribe() }
-  }, [user])
+  }, [isHubConnected, hubClient, hubSupabase])
 
   const handleMenuClick = useCallback(() => {
     setMobileMenuOpen(true)

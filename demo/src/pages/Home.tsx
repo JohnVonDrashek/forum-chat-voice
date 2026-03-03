@@ -116,7 +116,7 @@ export default function Home() {
                   </h3>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-400 sm:gap-3 sm:text-sm">
                     <span className="flex items-center gap-1">
-                      <Avatar seed={thread.author_id} type="user" avatarUrl={thread.author.avatar_url} size={16} />
+                      <Avatar seed={thread.author_id} type="user" avatarUrl={thread.author.avatar_url} size={16} showGlobe={!!thread.author.forumline_id} />
                       {thread.author.display_name || thread.author.username}
                     </span>
                     <span className="hidden sm:inline">·</span>

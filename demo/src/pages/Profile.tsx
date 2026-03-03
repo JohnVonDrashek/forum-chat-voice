@@ -130,7 +130,7 @@ export default function ProfilePage() {
       <Card className="p-4 sm:p-6">
         <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left sm:gap-6">
           {/* Avatar */}
-          <Avatar seed={profile.id} type="user" avatarUrl={profile.avatar_url} className="h-20 w-20 shrink-0 sm:h-24 sm:w-24" />
+          <Avatar seed={profile.id} type="user" avatarUrl={profile.avatar_url} className="h-20 w-20 shrink-0 sm:h-24 sm:w-24" showGlobe={!!profile.forumline_id} />
 
           {/* Info */}
           <div className="mt-4 flex-1 sm:mt-0">

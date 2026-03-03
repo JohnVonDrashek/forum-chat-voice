@@ -70,24 +70,6 @@ export interface ForumDataProvider {
   // Notifications
   getNotifications(userId: string): Promise<Notification[]>
 
-  // DMs
-  getDmMessages(userId: string, recipientId: string): Promise<Array<{
-    id: string
-    sender_id: string
-    recipient_id: string
-    content: string
-    created_at: string
-    read: boolean
-  }>>
-  getDmConversations(userId: string): Promise<Array<{
-    recipientId: string
-    recipientName: string
-    recipientAvatarUrl: string | null
-    lastMessage: string
-    lastMessageTime: string
-    unreadCount: number
-  }>>
-
   // --- Writes ---
 
   // Threads
@@ -121,15 +103,6 @@ export interface ForumDataProvider {
     author_id: string
     content: string
   }): Promise<void>
-
-  // DMs
-  sendDm(input: {
-    sender_id: string
-    recipient_id: string
-    content: string
-  }): Promise<{ id: string } | null>
-  markDmRead(messageId: string): Promise<void>
-  markDmsReadFrom(senderId: string, recipientId: string): Promise<void>
 
   // Bookmarks
   addBookmark(userId: string, threadId: string): Promise<void>

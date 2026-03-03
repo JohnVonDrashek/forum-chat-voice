@@ -234,6 +234,7 @@ export default function Thread() {
         bio: null,
         website: null,
         is_admin: false,
+        forumline_id: null,
         created_at: now,
         updated_at: now,
       }
@@ -529,7 +530,7 @@ export default function Thread() {
               <div className="flex gap-4 p-4">
                 {/* Author */}
                 <div className="hidden shrink-0 sm:block">
-                  <Avatar seed={post.author.id} type="user" avatarUrl={post.author.avatar_url} size={48} />
+                  <Avatar seed={post.author.id} type="user" avatarUrl={post.author.avatar_url} size={48} showGlobe={!!post.author.forumline_id} />
                 </div>
 
                 {/* Content */}
@@ -537,7 +538,7 @@ export default function Thread() {
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Mobile avatar */}
                     <div className="sm:hidden">
-                      <Avatar seed={post.author.id} type="user" avatarUrl={post.author.avatar_url} size={24} />
+                      <Avatar seed={post.author.id} type="user" avatarUrl={post.author.avatar_url} size={24} showGlobe={!!post.author.forumline_id} />
                     </div>
                     <span className="font-medium text-white">
                       {post.author.display_name || post.author.username}

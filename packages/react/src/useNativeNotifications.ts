@@ -2,6 +2,11 @@ import { useEffect } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isTauri, getTauriNotification } from './tauri'
 
+interface NativeNotificationOptions {
+  table?: string
+  filterColumn?: string
+}
+
 /**
  * Listens to Supabase Realtime for new DMs and sends native notifications
  * when the window is not focused. Uses Tauri notifications in the desktop
@@ -10,7 +15,11 @@ import { isTauri, getTauriNotification } from './tauri'
 export function useNativeNotifications(
   user: { id: string } | null,
   supabaseClient: SupabaseClient,
+  options?: NativeNotificationOptions,
 ) {
+  const table = options?.table || 'direct_messages'
+  const filterColumn = options?.filterColumn || 'recipient_id'
+
   useEffect(() => {
     if (!user) return
 
@@ -18,14 +27,14 @@ export function useNativeNotifications(
     if (!enabled) return
 
     const sub = supabaseClient
-      .channel('native-notifications')
+      .channel(`native-notifications-${table}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'direct_messages',
-          filter: `recipient_id=eq.${user.id}`,
+          table,
+          filter: `${filterColumn}=eq.${user.id}`,
         },
         async (payload) => {
           // Only notify when the window is not focused
@@ -73,5 +82,5 @@ export function useNativeNotifications(
     return () => {
       sub.unsubscribe()
     }
-  }, [user, supabaseClient])
+  }, [user, supabaseClient, table, filterColumn])
 }

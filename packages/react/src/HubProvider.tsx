@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, useCallback, type ReactNode } from 'react'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { CentralServicesClient } from '@forumline/central-services-client'
 
@@ -7,6 +7,7 @@ interface HubContextType {
   hubSupabase: SupabaseClient | null
   hubUserId: string | null
   isHubConnected: boolean
+  reconnect: () => void
 }
 
 const HubContext = createContext<HubContextType>({
@@ -14,6 +15,7 @@ const HubContext = createContext<HubContextType>({
   hubSupabase: null,
   hubUserId: null,
   isHubConnected: false,
+  reconnect: () => {},
 })
 
 export function useHub() {
@@ -99,19 +101,23 @@ export function HubProvider({
     init()
   }, [user, hubSupabaseUrl, hubSupabaseAnonKey, hubUrl, hubTokenEndpoint])
 
+  const reconnect = useCallback(() => {
+    setHubClient(null)
+    setHubSupabase(null)
+    setHubUserId(null)
+    setIsHubConnected(false)
+    initRef.current = false
+  }, [])
+
   // Reset when user logs out
   useEffect(() => {
     if (!user) {
-      setHubClient(null)
-      setHubSupabase(null)
-      setHubUserId(null)
-      setIsHubConnected(false)
-      initRef.current = false
+      reconnect()
     }
-  }, [user])
+  }, [user, reconnect])
 
   return (
-    <HubContext.Provider value={{ hubClient, hubSupabase, hubUserId, isHubConnected }}>
+    <HubContext.Provider value={{ hubClient, hubSupabase, hubUserId, isHubConnected, reconnect }}>
       {children}
     </HubContext.Provider>
   )

@@ -58,7 +58,18 @@ export interface ForumlineServerConfig {
    * Returns the local user ID.
    * Required for authCallbackHandler.
    */
-  createOrLinkUser?: (identity: ForumlineIdentity) => Promise<string>
+  createOrLinkUser?: (identity: ForumlineIdentity, hubAccessToken: string | null) => Promise<string>
+
+  /**
+   * Called after auth completes (user created/linked, cookies set).
+   * Return a URL to override the default redirect.
+   */
+  afterAuth?: (params: {
+    userId: string
+    identity: ForumlineIdentity
+    hubAccessToken: string | null
+    request: GenericRequest
+  }) => Promise<string | undefined>
 
   /**
    * Authenticate a request using a Bearer token.
@@ -259,7 +270,7 @@ export class ForumlineServer {
       }
 
       // Create or link local user
-      const localUserId = await createOrLinkUser(identity)
+      const localUserId = await createOrLinkUser(identity, hub_access_token || null)
 
       // Set cookies
       const setCookies = [
@@ -271,6 +282,19 @@ export class ForumlineServer {
         setCookies.push(`hub_access_token=${hub_access_token}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=3600`)
       }
       res.setHeader('Set-Cookie', setCookies)
+
+      // Call afterAuth hook for custom redirect logic
+      if (this.config.afterAuth) {
+        const redirectUrl = await this.config.afterAuth({
+          userId: localUserId,
+          identity,
+          hubAccessToken: hub_access_token || null,
+          request: req,
+        })
+        if (redirectUrl) {
+          return res.redirect(302, redirectUrl)
+        }
+      }
 
       return res.redirect(302, `${siteUrl}/?forumline_auth=success`)
     }

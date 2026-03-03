@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../lib/auth'
+import { useHub } from '@forumline/react'
 import { supabase } from '../lib/supabase'
 import { getDataProvider } from '../lib/data-provider'
 import { uploadAvatar } from '../lib/avatars'
@@ -48,7 +49,24 @@ type AccountFormData = z.infer<typeof accountSchema>
 
 export default function Settings() {
   const { user, profile } = useAuth()
+  const { isHubConnected, reconnect } = useHub()
   const [activeTab, setActiveTab] = useState<Tab>('profile')
+
+  // Handle ?forumline_linked=true query param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('forumline_linked') === 'true') {
+      toast.success('Forumline account connected successfully!')
+      params.delete('forumline_linked')
+      const newUrl = params.toString()
+        ? `${window.location.pathname}?${params}`
+        : window.location.pathname
+      window.history.replaceState({}, '', newUrl)
+      setActiveTab('account')
+      // Re-initialize hub connection
+      reconnect?.()
+    }
+  }, [])
 
   // Avatar state
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -465,6 +483,33 @@ export default function Settings() {
                     )}
                   </div>
                 </div>
+              </div>
+
+              <div className="border-t border-slate-700 pt-6">
+                <h3 className="mb-4 font-medium text-white">Forumline Connection</h3>
+                {isHubConnected || profile?.forumline_id ? (
+                  <div className="flex items-center gap-2 text-sm">
+                    <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-green-400">Connected to Forumline</span>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="mb-3 text-sm text-slate-400">
+                      Connect your account to Forumline to enable cross-forum direct messages and a unified identity across forums.
+                    </p>
+                    <a
+                      href="/api/forumline/auth"
+                      className="inline-flex items-center gap-2 rounded-lg border border-indigo-500/30 bg-indigo-600/10 px-4 py-2 text-sm font-medium text-indigo-300 hover:bg-indigo-600/20"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                      </svg>
+                      Connect to Forumline
+                    </a>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-slate-700 pt-6">

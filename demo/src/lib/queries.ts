@@ -32,10 +32,6 @@ export const queryKeys = {
   // Chat
   chatMessages: (channelSlug: string) => ['chat', channelSlug] as const,
 
-  // DM
-  dmConversations: (userId: string) => ['dm', 'conversations', userId] as const,
-  dmMessages: (recipientId: string) => ['dm', 'messages', recipientId] as const,
-
   // Category
   category: (slug: string) => ['category', slug] as const,
 
@@ -51,9 +47,6 @@ export const queryKeys = {
   // Profile activity
   userThreads: (userId: string) => ['userThreads', userId] as const,
   userPosts: (userId: string) => ['userPosts', userId] as const,
-
-  // DM conversations
-  dmConversationsList: (userId: string) => ['dm', 'list', userId] as const,
 
   // Admin
   adminStats: ['admin', 'stats'] as const,
@@ -116,11 +109,6 @@ export const fetchers = {
   // Notifications
   notifications: (userId: string) => getDataProvider().getNotifications(userId),
 
-  // DM messages
-  dmMessages: (userId: string, recipientId: string) => getDataProvider().getDmMessages(userId, recipientId),
-
-  // DM conversations list
-  dmConversations: (userId: string) => getDataProvider().getDmConversations(userId),
 }
 
 // ============================================================================
