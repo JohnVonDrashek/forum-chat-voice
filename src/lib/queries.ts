@@ -75,28 +75,32 @@ export const queryKeys = {
 export const fetchers = {
   // Static data
   categories: async (): Promise<Category[]> => {
-    const { data } = await supabase.from('categories').select('*').order('sort_order')
+    const { data, error } = await supabase.from('categories').select('*').order('sort_order')
+    if (error) throw error
     return data || []
   },
 
   channels: async (): Promise<ChatChannel[]> => {
-    const { data } = await supabase.from('chat_channels').select('*').order('name')
+    const { data, error } = await supabase.from('chat_channels').select('*').order('name')
+    if (error) throw error
     return data || []
   },
 
   voiceRooms: async (): Promise<VoiceRoom[]> => {
-    const { data } = await supabase.from('voice_rooms').select('*').order('name')
+    const { data, error } = await supabase.from('voice_rooms').select('*').order('name')
+    if (error) throw error
     return data || []
   },
 
   // Threads
   threads: async (limit = 20): Promise<ThreadWithAuthor[]> => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('threads')
       .select(`*, author:profiles(*), category:categories(*)`)
       .order('is_pinned', { ascending: false })
       .order('last_post_at', { ascending: false })
       .limit(limit)
+    if (error) throw error
     return (data || []) as ThreadWithAuthor[]
   },
 
@@ -110,60 +114,66 @@ export const fetchers = {
 
     if (!category) return []
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('threads')
       .select(`*, author:profiles(*), category:categories(*)`)
       .eq('category_id', category.id)
       .order('is_pinned', { ascending: false })
       .order('last_post_at', { ascending: false })
+    if (error) throw error
     return (data || []) as ThreadWithAuthor[]
   },
 
   thread: async (threadId: string): Promise<ThreadWithAuthor | null> => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('threads')
       .select(`*, author:profiles(*), category:categories(*)`)
       .eq('id', threadId)
       .single()
+    if (error) throw error
     return data as ThreadWithAuthor | null
   },
 
   // Posts
   posts: async (threadId: string): Promise<PostWithAuthor[]> => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('posts')
       .select(`*, author:profiles(*)`)
       .eq('thread_id', threadId)
       .order('created_at', { ascending: true })
+    if (error) throw error
     return (data || []) as PostWithAuthor[]
   },
 
   // Category
   category: async (slug: string): Promise<Category | null> => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('categories')
       .select('*')
       .eq('slug', slug)
       .single()
+    if (error) throw error
     return data
   },
 
   // Profiles
   profile: async (userId: string): Promise<Profile | null> => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single()
+    if (error) throw error
     return data
   },
 
   profileByUsername: async (username: string): Promise<Profile | null> => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('username', username)
       .single()
+    if (error) throw error
     return data
   },
 
@@ -178,12 +188,13 @@ export const fetchers = {
 
     if (!channel) return []
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('chat_messages')
       .select(`*, author:profiles(*)`)
       .eq('channel_id', channel.id)
       .order('created_at', { ascending: true })
       .limit(100)
+    if (error) throw error
     return (data || []) as ChatMessageWithAuthor[]
   },
 
@@ -193,11 +204,12 @@ export const fetchers = {
     created_at: string
     thread: ThreadWithAuthor
   }>> => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('bookmarks')
       .select(`id, created_at, thread:threads(*, author:profiles(*), category:categories(*))`)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
+    if (error) throw error
     return (data?.map((b) => ({
       id: b.id,
       created_at: b.created_at,
@@ -207,11 +219,12 @@ export const fetchers = {
 
   // Legacy - just thread list
   bookmarks: async (userId: string): Promise<ThreadWithAuthor[]> => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('bookmarks')
       .select(`thread:threads(*, author:profiles(*), category:categories(*))`)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
+    if (error) throw error
     return (data?.map((b: { thread: ThreadWithAuthor }) => b.thread) || []) as ThreadWithAuthor[]
   },
 
@@ -227,22 +240,24 @@ export const fetchers = {
 
   // Profile activity
   userThreads: async (userId: string): Promise<ThreadWithAuthor[]> => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('threads')
       .select(`*, author:profiles(*), category:categories(*)`)
       .eq('author_id', userId)
       .order('created_at', { ascending: false })
       .limit(10)
+    if (error) throw error
     return (data || []) as ThreadWithAuthor[]
   },
 
   userPosts: async (userId: string): Promise<PostWithAuthor[]> => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('posts')
       .select(`*, author:profiles(*)`)
       .eq('author_id', userId)
       .order('created_at', { ascending: false })
       .limit(20)
+    if (error) throw error
     return (data || []) as PostWithAuthor[]
   },
 
@@ -250,24 +265,26 @@ export const fetchers = {
   searchThreads: async (query: string): Promise<ThreadWithAuthor[]> => {
     if (!query.trim()) return []
     const pattern = `%${query}%`
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('threads')
       .select('*, author:profiles(*), category:categories(*)')
       .ilike('title', pattern)
       .order('created_at', { ascending: false })
       .limit(20)
+    if (error) throw error
     return (data || []) as ThreadWithAuthor[]
   },
 
   searchPosts: async (query: string): Promise<PostWithAuthor[]> => {
     if (!query.trim()) return []
     const pattern = `%${query}%`
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('posts')
       .select('*, author:profiles(*)')
       .ilike('content', pattern)
       .order('created_at', { ascending: false })
       .limit(20)
+    if (error) throw error
     return (data || []) as PostWithAuthor[]
   },
 
@@ -281,12 +298,13 @@ export const fetchers = {
     unreadCount: number
   }>> => {
     // Get all DMs involving this user
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('direct_messages')
       .select('*, sender:profiles!direct_messages_sender_id_fkey(*), recipient:profiles!direct_messages_recipient_id_fkey(*)')
       .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
       .order('created_at', { ascending: false })
 
+    if (error) throw error
     if (!data) return []
 
     // Group by other user
