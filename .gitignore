@@ -26,9 +26,6 @@ npm-debug.log*
 # TypeScript cache
 *.tsbuildinfo
 
-# PocketBase (legacy, no longer used)
-pocketbase/
-
 # Supabase CLI temp
 supabase/.temp/
 .vercel

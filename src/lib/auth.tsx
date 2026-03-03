@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
 import { supabase } from './supabase'
 import { uploadDefaultAvatar } from './avatars'
 import type { Profile } from '../types/database'
@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const initialSessionHandled = useRef(false)
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
     const { data } = await supabase
@@ -121,6 +122,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('[FCV:Auth] Auth state changed:', event)
+
+        // INITIAL_SESSION is handled by getSession() above. When Supabase
+        // fires SIGNED_IN immediately after INITIAL_SESSION for the same
+        // user, skip it to avoid a redundant ensureProfile + re-render
+        // cascade that kills realtime subscriptions and hangs queries.
+        if (event === 'INITIAL_SESSION') {
+          initialSessionHandled.current = true
+          console.log('[FCV:Auth] INITIAL_SESSION handled by getSession, skipping')
+          return
+        }
+
+        if (event === 'SIGNED_IN' && initialSessionHandled.current) {
+          initialSessionHandled.current = false
+          console.log('[FCV:Auth] Skipping redundant SIGNED_IN after INITIAL_SESSION')
+          return
+        }
+
         if (session?.user) {
           try {
             const prof = await ensureProfile(session.user)
