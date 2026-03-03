@@ -7,7 +7,10 @@
 Do NOT use local dev server for testing. Use Playwright to interact with the production site.
 
 ## Deployment
-Do NOT deploy this project from vercel directly. Vercel has a workflow to auto-deploy from our Github project.
+
+**Forum app** (forum-chat-voice.vercel.app): Auto-deploys from GitHub on push to main. Do NOT deploy via Vercel CLI.
+
+**Forumline Hub** (forumline-hub.vercel.app): Auto-deploys via GitHub Action (`.github/workflows/deploy-hub.yml`) when files in `hub/` change on main. The action uses the `VERCEL_TOKEN` GitHub secret.
 
 ## Vercel
 The Vercel CLI token is stored in macOS Keychain under `vercel-token`.
