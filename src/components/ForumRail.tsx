@@ -3,93 +3,26 @@
  *
  * Displays joined forums as icons in a vertical rail (like Discord's server list).
  * Only rendered in the Tauri desktop app context.
+ * State is managed by ForumContext (src/lib/forum.tsx).
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { isTauri } from '../lib/tauri'
-
-interface ForumMembership {
-  domain: string
-  name: string
-  icon_url: string
-  web_base: string
-  api_base: string
-  capabilities: string[]
-  accent_color?: string
-  added_at: string
-}
-
-interface UnreadCounts {
-  notifications: number
-  chat_mentions: number
-  dms: number
-}
-
-async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  const { invoke } = await import('@tauri-apps/api/core')
-  return invoke<T>(cmd, args)
-}
-
-async function tauriListen<T>(event: string, handler: (event: { payload: T }) => void) {
-  const { listen } = await import('@tauri-apps/api/event')
-  return listen<T>(event, handler)
-}
+import { useForum } from '../lib/forum'
 
 export default function ForumRail() {
-  const [forums, setForums] = useState<ForumMembership[]>([])
-  const [activeForum, setActiveForum] = useState<string | null>(null)
-  const [unreadCounts, setUnreadCounts] = useState<Record<string, UnreadCounts>>({})
+  const { forums, activeForum, unreadCounts, switchForum, goHome, addForum } = useForum()
   const [showAddModal, setShowAddModal] = useState(false)
   const [addUrl, setAddUrl] = useState('')
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
-  const tauriActive = isTauri()
-
-  // Load forum list on mount
-  useEffect(() => {
-    if (!tauriActive) return
-    const load = async () => {
-      try {
-        const list = await tauriInvoke<ForumMembership[]>('get_forum_list')
-        setForums(list)
-        const active = await tauriInvoke<string | null>('get_active_forum')
-        setActiveForum(active)
-        const counts = await tauriInvoke<Record<string, UnreadCounts>>('get_unread_counts')
-        setUnreadCounts(counts)
-      } catch (err) {
-        console.error('[Forumline:Rail] Failed to load forum list:', err)
-      }
-    }
-    load()
-  }, [tauriActive])
-
-  // Listen for forum switch events
-  useEffect(() => {
-    if (!tauriActive) return
-    let unlisten: (() => void) | undefined
-    tauriListen<string>('forum-switched', (event) => {
-      setActiveForum(event.payload)
-    }).then(fn => { unlisten = fn })
-    return () => { unlisten?.() }
-  }, [tauriActive])
-
-  const handleSwitchForum = useCallback(async (domain: string) => {
-    try {
-      await tauriInvoke('switch_forum', { domain })
-      setActiveForum(domain)
-    } catch (err) {
-      console.error('[Forumline:Rail] Failed to switch forum:', err)
-    }
-  }, [])
 
   const handleAddForum = useCallback(async () => {
     if (!addUrl.trim()) return
     setAdding(true)
     setAddError(null)
     try {
-      await tauriInvoke('add_forum', { url: addUrl.trim() })
-      const list = await tauriInvoke<ForumMembership[]>('get_forum_list')
-      setForums(list)
+      await addForum(addUrl.trim())
       setShowAddModal(false)
       setAddUrl('')
     } catch (err) {
@@ -97,7 +30,7 @@ export default function ForumRail() {
     } finally {
       setAdding(false)
     }
-  }, [addUrl])
+  }, [addUrl, addForum])
 
   const totalUnread = (domain: string) => {
     const counts = unreadCounts[domain]
@@ -106,14 +39,14 @@ export default function ForumRail() {
   }
 
   // Only render in Tauri desktop app
-  if (!tauriActive) return null
+  if (!isTauri()) return null
 
   return (
     <>
       <div className="flex w-[72px] shrink-0 flex-col items-center gap-2 border-r border-slate-700 bg-slate-900 py-3">
         {/* Home / current app */}
         <button
-          onClick={() => setActiveForum(null)}
+          onClick={goHome}
           className={`group relative flex h-12 w-12 items-center justify-center rounded-2xl transition-all hover:rounded-xl ${
             activeForum === null
               ? 'rounded-xl bg-indigo-600 text-white'
@@ -134,11 +67,11 @@ export default function ForumRail() {
         {/* Forum icons */}
         {forums.map((forum) => {
           const unread = totalUnread(forum.domain)
-          const isActive = activeForum === forum.domain
+          const isActive = activeForum?.domain === forum.domain
           return (
             <button
               key={forum.domain}
-              onClick={() => handleSwitchForum(forum.domain)}
+              onClick={() => switchForum(forum.domain)}
               className={`group relative flex h-12 w-12 items-center justify-center rounded-2xl transition-all hover:rounded-xl ${
                 isActive
                   ? 'rounded-xl bg-indigo-600'
@@ -152,7 +85,6 @@ export default function ForumRail() {
                   alt={forum.name}
                   className="h-8 w-8 rounded-lg object-cover"
                   onError={(e) => {
-                    // Fallback to first letter
                     const target = e.target as HTMLImageElement
                     target.style.display = 'none'
                     target.parentElement!.textContent = forum.name[0].toUpperCase()
@@ -198,8 +130,7 @@ export default function ForumRail() {
           className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800 text-slate-400 transition-all hover:rounded-xl hover:bg-slate-700 hover:text-white"
           title="Settings"
           onClick={() => {
-            // Navigate to settings in the main app
-            setActiveForum(null)
+            goHome()
             window.location.hash = '/settings'
           }}
         >

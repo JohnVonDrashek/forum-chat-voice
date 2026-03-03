@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './lib/auth'
+import { ForumProvider } from './lib/forum'
 import { VoiceProvider } from './lib/voice'
 import ScrollToTop from './components/ScrollToTop'
 import Layout from './components/Layout'
@@ -40,6 +41,7 @@ function PageFallback() {
 export default function App() {
   return (
     <AuthProvider>
+      <ForumProvider>
       <VoiceProvider>
       <ScrollToTop />
       <Routes>
@@ -66,6 +68,7 @@ export default function App() {
         </Route>
       </Routes>
       </VoiceProvider>
+      </ForumProvider>
     </AuthProvider>
   )
 }

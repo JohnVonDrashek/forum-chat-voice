@@ -7,14 +7,17 @@ import Sidebar from './Sidebar'
 import MobileSidebar from './MobileSidebar'
 import ErrorBoundary from './ErrorBoundary'
 import ForumRail from './ForumRail'
+import ForumWebview from './ForumWebview'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { useForum } from '../lib/forum'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import { useNativeNotifications } from '../hooks/useNativeNotifications'
 
 export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user } = useAuth()
+  const { activeForum } = useForum()
   useNativeNotifications()
   const [unreadDmCount, setUnreadDmCount] = useState(0)
   const queryClient = useQueryClient()
@@ -158,29 +161,36 @@ export default function Layout() {
         }} />
         <Header onMenuClick={handleMenuClick} />
 
-        {/* Mobile sidebar */}
-        <MobileSidebar
-          isOpen={mobileMenuOpen}
-          onClose={handleMenuClose}
-          categories={categories}
-          channels={channels}
-          rooms={rooms}
-          unreadDmCount={unreadDmCount}
-        />
+        {activeForum ? (
+          /* External forum loaded in iframe */
+          <ForumWebview forum={activeForum} />
+        ) : (
+          <>
+            {/* Mobile sidebar */}
+            <MobileSidebar
+              isOpen={mobileMenuOpen}
+              onClose={handleMenuClose}
+              categories={categories}
+              channels={channels}
+              rooms={rooms}
+              unreadDmCount={unreadDmCount}
+            />
 
-        <div className="flex">
-          <Sidebar
-            categories={categories}
-            channels={channels}
-            rooms={rooms}
-            unreadDmCount={unreadDmCount}
-          />
-          <main id="main-content" role="main" className="flex-1 p-4 sm:p-6">
-            <ErrorBoundary>
-              <Outlet />
-            </ErrorBoundary>
-          </main>
-        </div>
+            <div className="flex">
+              <Sidebar
+                categories={categories}
+                channels={channels}
+                rooms={rooms}
+                unreadDmCount={unreadDmCount}
+              />
+              <main id="main-content" role="main" className="flex-1 p-4 sm:p-6">
+                <ErrorBoundary>
+                  <Outlet />
+                </ErrorBoundary>
+              </main>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
