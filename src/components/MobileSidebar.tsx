@@ -111,23 +111,32 @@ export default function MobileSidebar({ isOpen, onClose, categories, channels, r
             Categories
           </div>
           <div className="space-y-1">
-            {categories.map((category) => {
-              const isActive = location.pathname === `/c/${category.slug}`
-              return (
-                <Link
-                  key={category.id}
-                  to={`/c/${category.slug}`}
-                  className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                    isActive
-                      ? 'bg-slate-700 text-white'
-                      : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
-                  }`}
-                >
-                  <span className="h-2 w-2 rounded-full bg-indigo-400" />
-                  {category.name}
-                </Link>
-              )
-            })}
+            {categories.length === 0 ? (
+              [...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-lg px-3 py-2.5 animate-pulse">
+                  <div className="h-2 w-2 rounded-full bg-slate-700" />
+                  <div className="h-4 w-24 rounded bg-slate-700" />
+                </div>
+              ))
+            ) : (
+              categories.map((category) => {
+                const isActive = location.pathname === `/c/${category.slug}`
+                return (
+                  <Link
+                    key={category.id}
+                    to={`/c/${category.slug}`}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                      isActive
+                        ? 'bg-slate-700 text-white'
+                        : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="h-2 w-2 rounded-full bg-indigo-400" />
+                    {category.name}
+                  </Link>
+                )
+              })
+            )}
           </div>
 
           {/* Chat Channels */}
@@ -135,23 +144,32 @@ export default function MobileSidebar({ isOpen, onClose, categories, channels, r
             Chat Channels
           </div>
           <div className="space-y-1">
-            {channels.map((channel) => {
-              const isActive = location.pathname === `/chat/${channel.slug}`
-              return (
-                <Link
-                  key={channel.id}
-                  to={`/chat/${channel.slug}`}
-                  className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                    isActive
-                      ? 'bg-slate-700 text-white'
-                      : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
-                  }`}
-                >
-                  <span className="text-green-400">#</span>
-                  {channel.name}
-                </Link>
-              )
-            })}
+            {channels.length === 0 ? (
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-lg px-3 py-2.5 animate-pulse">
+                  <div className="h-4 w-3 rounded bg-slate-700" />
+                  <div className="h-4 w-20 rounded bg-slate-700" />
+                </div>
+              ))
+            ) : (
+              channels.map((channel) => {
+                const isActive = location.pathname === `/chat/${channel.slug}`
+                return (
+                  <Link
+                    key={channel.id}
+                    to={`/chat/${channel.slug}`}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                      isActive
+                        ? 'bg-slate-700 text-white'
+                        : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-green-400">#</span>
+                    {channel.name}
+                  </Link>
+                )
+              })
+            )}
           </div>
 
           {/* Voice Rooms */}
@@ -159,37 +177,46 @@ export default function MobileSidebar({ isOpen, onClose, categories, channels, r
             Voice Rooms
           </div>
           <div className="space-y-1">
-            {rooms.map((room) => {
-              const isActive = location.pathname === `/voice/${room.slug}`
-              const isConnectedRoom = voice.isConnected && voice.connectedRoomSlug === room.slug
-              const participantInfo = voice.roomParticipantCounts[room.slug]
-              const count = participantInfo?.count || 0
-              return (
-                <Link
-                  key={room.id}
-                  to={`/voice/${room.slug}`}
-                  className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                    isConnectedRoom
-                      ? 'border-l-2 border-green-400 bg-green-500/10 text-green-300'
-                      : isActive
-                      ? 'bg-slate-700 text-white'
-                      : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.414a5 5 0 001.414 1.414m2.828-9.9a9 9 0 0112.728 0" />
-                    </svg>
-                    {room.name}
-                  </div>
-                  {count > 0 && (
-                    <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-green-500/20 px-1.5 text-xs font-medium text-green-400">
-                      {count}
-                    </span>
-                  )}
-                </Link>
-              )
-            })}
+            {rooms.length === 0 ? (
+              [...Array(2)].map((_, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-lg px-3 py-2.5 animate-pulse">
+                  <div className="h-4 w-4 rounded bg-slate-700" />
+                  <div className="h-4 w-24 rounded bg-slate-700" />
+                </div>
+              ))
+            ) : (
+              rooms.map((room) => {
+                const isActive = location.pathname === `/voice/${room.slug}`
+                const isConnectedRoom = voice.isConnected && voice.connectedRoomSlug === room.slug
+                const participantInfo = voice.roomParticipantCounts[room.slug]
+                const count = participantInfo?.count || 0
+                return (
+                  <Link
+                    key={room.id}
+                    to={`/voice/${room.slug}`}
+                    className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                      isConnectedRoom
+                        ? 'border-l-2 border-green-400 bg-green-500/10 text-green-300'
+                        : isActive
+                        ? 'bg-slate-700 text-white'
+                        : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.414a5 5 0 001.414 1.414m2.828-9.9a9 9 0 0112.728 0" />
+                      </svg>
+                      {room.name}
+                    </div>
+                    {count > 0 && (
+                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-green-500/20 px-1.5 text-xs font-medium text-green-400">
+                        {count}
+                      </span>
+                    )}
+                  </Link>
+                )
+              })
+            )}
           </div>
 
           {/* Voice Controls — shown when connected */}

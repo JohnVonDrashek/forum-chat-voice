@@ -57,7 +57,28 @@ export default function Home() {
         </div>
 
         {loading ? (
-          <div className="p-8 text-center text-slate-400">Loading...</div>
+          <div className="divide-y divide-slate-700/50">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-start gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4 animate-pulse">
+                <div className="h-9 w-9 shrink-0 rounded-full bg-slate-700 sm:h-10 sm:w-10" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-16 rounded bg-slate-700" />
+                  </div>
+                  <div className="h-5 w-3/4 rounded bg-slate-700" />
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 rounded-full bg-slate-700" />
+                    <div className="h-3 w-20 rounded bg-slate-700" />
+                    <div className="h-3 w-12 rounded bg-slate-700" />
+                  </div>
+                </div>
+                <div className="hidden shrink-0 space-y-1 sm:block">
+                  <div className="h-3 w-16 rounded bg-slate-700" />
+                  <div className="h-4 w-12 rounded bg-slate-700" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : threads.length === 0 ? (
           <div className="p-8 text-center text-slate-400">
             No discussions yet. Be the first to start one!
