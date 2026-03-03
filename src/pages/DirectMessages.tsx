@@ -132,7 +132,7 @@ export default function DirectMessages() {
         const results = await hubClient.searchProfiles(searchQuery)
         setHubSearchResults(results)
       } catch (err) {
-        console.error('[FCV:DM] Hub profile search failed:', err)
+        console.error('[FLD:DM] Hub profile search failed:', err)
         setHubSearchResults([])
       }
       setSearching(false)
@@ -225,7 +225,7 @@ export default function DirectMessages() {
           queryClient.invalidateQueries({ queryKey: queryKeys.dmConversationsList(user.id) })
         }
       } catch (error) {
-        console.error('[FCV:DM] Failed to mark messages as read:', error)
+        console.error('[FLD:DM] Failed to mark messages as read:', error)
       }
     }
 
@@ -250,7 +250,7 @@ export default function DirectMessages() {
             queryClient.invalidateQueries({ queryKey: queryKeys.dmMessages(otherId) })
             if (dm.sender_id === otherId) {
               getDataProvider().markDmRead(dm.id).catch((error) => {
-                console.error('[FCV:DM] Failed to mark realtime DM as read:', error)
+                console.error('[FLD:DM] Failed to mark realtime DM as read:', error)
               })
             }
           }
@@ -313,7 +313,7 @@ export default function DirectMessages() {
     },
     onError: (error, _content, context) => {
       toast.error('Failed to send message')
-      console.error('[FCV:DM] Failed to send message:', error)
+      console.error('[FLD:DM] Failed to send message:', error)
       if (context?.previousMessages && context.queryKey) {
         queryClient.setQueryData(context.queryKey, context.previousMessages)
       }

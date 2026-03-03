@@ -1,5 +1,5 @@
 -- ============================================================================
--- Forumline Hub — Database Migration
+-- Forumline Central Services — Database Migration
 -- Run on the hub Supabase project (dptamxaerujopfzoazxq)
 -- ============================================================================
 

@@ -1,10 +1,10 @@
 #!/bin/bash
-# Setup script for Forum Chat Voice - Supabase integration
+# Setup script for Forumline Demo - Supabase integration
 # Run this after `supabase login` to create and configure everything
 
 set -e
 
-echo "🚀 Forum Chat Voice - Supabase Setup"
+echo "🚀 Forumline Demo - Supabase Setup"
 echo "======================================"
 
 # Check if logged in

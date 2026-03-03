@@ -1,8 +1,8 @@
 {
-  "name": "forumline-hub",
+  "name": "forumline-central-services",
   "version": "1.0.0",
   "private": true,
-  "description": "Forumline Identity Hub — neutral identity and forum registry service",
+  "description": "Forumline Central Services — neutral identity and forum registry service",
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
     "jsonwebtoken": "^9.0.2"

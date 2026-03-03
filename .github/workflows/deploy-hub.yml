@@ -1,4 +1,4 @@
-name: Deploy Forumline Hub
+name: Deploy Forumline Central Services
 
 on:
   push:

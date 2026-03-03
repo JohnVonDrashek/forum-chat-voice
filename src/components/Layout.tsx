@@ -43,9 +43,9 @@ export default function Layout() {
 
   // Log sidebar data errors to console for diagnostics
   useEffect(() => {
-    if (categoriesError) console.error('[FCV:Layout] Failed to load categories')
-    if (channelsError) console.error('[FCV:Layout] Failed to load chat channels')
-    if (roomsError) console.error('[FCV:Layout] Failed to load voice rooms')
+    if (categoriesError) console.error('[FLD:Layout] Failed to load categories')
+    if (channelsError) console.error('[FLD:Layout] Failed to load chat channels')
+    if (roomsError) console.error('[FLD:Layout] Failed to load voice rooms')
   }, [categoriesError, channelsError, roomsError])
 
   // Prefetch common data in background on app load
@@ -113,7 +113,7 @@ export default function Layout() {
         .eq('recipient_id', user.id)
         .eq('read', false)
       if (error) {
-        console.error('[FCV:Layout] Failed to fetch unread DM count:', error)
+        console.error('[FLD:Layout] Failed to fetch unread DM count:', error)
         return
       }
       setUnreadDmCount(count ?? 0)

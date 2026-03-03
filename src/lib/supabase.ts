@@ -4,9 +4,9 @@ import type { Database } from '../types/database'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
-if (!supabaseUrl) console.error('[FCV:Supabase] VITE_SUPABASE_URL is not set!')
-if (!supabaseAnonKey) console.error('[FCV:Supabase] VITE_SUPABASE_ANON_KEY is not set!')
-if (supabaseUrl && supabaseAnonKey) console.log('[FCV:Supabase] Client initialized for:', supabaseUrl)
+if (!supabaseUrl) console.error('[FLD:Supabase] VITE_SUPABASE_URL is not set!')
+if (!supabaseAnonKey) console.error('[FLD:Supabase] VITE_SUPABASE_ANON_KEY is not set!')
+if (supabaseUrl && supabaseAnonKey) console.log('[FLD:Supabase] Client initialized for:', supabaseUrl)
 
 // Simple in-memory mutex to replace navigator.locks (which deadlocks in
 // production bundles) while still serializing token refresh operations.

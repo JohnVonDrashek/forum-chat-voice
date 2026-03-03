@@ -2,7 +2,7 @@
 // Hub Direct Messages — Cross-forum DM types
 // ============================================================================
 
-/** A direct message stored on the Forumline Hub */
+/** A direct message stored on Forumline Central Services */
 export interface HubDirectMessage {
   id: string
   sender_id: string

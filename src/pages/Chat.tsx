@@ -81,7 +81,7 @@ export default function Chat() {
   useEffect(() => {
     if (!channel) return
 
-    console.log('[FCV:Chat] Subscribing to realtime for channel:', channel.slug)
+    console.log('[FLD:Chat] Subscribing to realtime for channel:', channel.slug)
     const sub = supabase
       .channel(`chat:${channel.id}`)
       .on(
@@ -94,7 +94,7 @@ export default function Chat() {
             .eq('id', payload.new.id)
             .single()
           if (error) {
-            console.error('[FCV:Chat] Failed to fetch new realtime message:', error)
+            console.error('[FLD:Chat] Failed to fetch new realtime message:', error)
             return
           }
           if (data) {
@@ -108,7 +108,7 @@ export default function Chat() {
         }
       )
       .subscribe((status) => {
-        console.log('[FCV:Chat] Subscription status:', status)
+        console.log('[FLD:Chat] Subscription status:', status)
       })
 
     return () => {
@@ -195,7 +195,7 @@ export default function Chat() {
     },
     onError: (error, _content, context) => {
       toast.error('Failed to send message')
-      console.error('[FCV:Chat] Failed to send message:', error)
+      console.error('[FLD:Chat] Failed to send message:', error)
       // Roll back React Query cache
       if (context?.previousMessages) {
         queryClient.setQueryData(queryKeys.chatMessages(channelSlug), context.previousMessages)

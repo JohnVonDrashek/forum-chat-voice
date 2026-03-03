@@ -1,6 +1,6 @@
 {
   "forumline_version": "1",
-  "name": "Forum Chat Voice",
+  "name": "Forumline Demo",
   "domain": "forum-chat-voice.vercel.app",
   "icon_url": "/forum.svg",
   "api_base": "https://forum-chat-voice.vercel.app/api/forumline",

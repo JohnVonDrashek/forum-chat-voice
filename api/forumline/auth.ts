@@ -3,7 +3,7 @@ import { randomBytes } from 'crypto'
 
 /**
  * GET /api/forumline/auth
- * Redirects the user to the Forumline Hub OAuth authorization endpoint.
+ * Redirects the user to the Forumline Central Services OAuth authorization endpoint.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -13,7 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const hubUrl = process.env.FORUMLINE_HUB_URL
   const clientId = process.env.FORUMLINE_CLIENT_ID
   if (!hubUrl || !clientId) {
-    return res.status(500).json({ error: 'Forumline Hub not configured' })
+    return res.status(500).json({ error: 'Forumline Central Services not configured' })
   }
 
   const state = randomBytes(16).toString('hex')

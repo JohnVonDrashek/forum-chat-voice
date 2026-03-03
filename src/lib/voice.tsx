@@ -127,7 +127,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         .in('id', uncached.map(p => p.id))
         .then(({ data, error }) => {
           if (error) {
-            console.error('[FCV:Voice] Failed to fetch participant avatars:', error)
+            console.error('[FLD:Voice] Failed to fetch participant avatars:', error)
             return
           }
           if (!data) return

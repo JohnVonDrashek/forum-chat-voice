@@ -20,7 +20,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('[FCV:Error] Uncaught error:', error, info.componentStack)
+    console.error('[FLD:Error] Uncaught error:', error, info.componentStack)
   }
 
   handleTryAgain = () => {

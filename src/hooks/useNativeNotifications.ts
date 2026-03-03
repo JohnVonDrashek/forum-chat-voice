@@ -53,7 +53,7 @@ export function useNativeNotifications() {
                 sendNotification({ title, body })
               }
             } catch (err) {
-              console.error('[FCV:Notifications] Tauri notification error:', err)
+              console.error('[FLD:Notifications] Tauri notification error:', err)
             }
           } else {
             // Browser fallback

@@ -9,7 +9,7 @@ import { setAuthProvider } from './lib/auth-provider'
 import { SupabaseAuthProvider } from './lib/supabase-auth-provider'
 import './index.css'
 
-console.log('[FCV:App] Starting Forum Chat Voice...')
+console.log('[FLD:App] Starting Forumline Demo...')
 
 // Initialize providers
 setDataProvider(new SupabaseForumDataProvider())
@@ -29,7 +29,7 @@ const queryClient = new QueryClient({
     },
     mutations: {
       onError: (error) => {
-        console.error('[FCV:Mutation] Mutation failed:', error)
+        console.error('[FLD:Mutation] Mutation failed:', error)
       },
     },
   },
@@ -38,7 +38,7 @@ const queryClient = new QueryClient({
 // Global query cache error logging
 queryClient.getQueryCache().subscribe((event) => {
   if (event.type === 'updated' && event.query.state.status === 'error') {
-    console.error('[FCV:QueryCache] Query failed:', event.query.queryKey, event.query.state.error)
+    console.error('[FLD:QueryCache] Query failed:', event.query.queryKey, event.query.state.error)
   }
 })
 

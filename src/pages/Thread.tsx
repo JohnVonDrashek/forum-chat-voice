@@ -77,7 +77,7 @@ export default function Thread() {
   useEffect(() => {
     if (!threadId) return
 
-    console.log('[FCV:Thread] Subscribing to realtime for thread:', threadId)
+    console.log('[FLD:Thread] Subscribing to realtime for thread:', threadId)
     const subscription = supabase
         .channel(`thread:${threadId}`)
         .on(
@@ -91,7 +91,7 @@ export default function Thread() {
               .eq('id', payload.new.id)
               .single()
             if (error) {
-              console.error('[FCV:Thread] Failed to fetch new realtime post:', error)
+              console.error('[FLD:Thread] Failed to fetch new realtime post:', error)
               return
             }
             if (data) {
@@ -118,7 +118,7 @@ export default function Thread() {
           }
         )
         .subscribe((status) => {
-          console.log('[FCV:Thread] Subscription status:', status)
+          console.log('[FLD:Thread] Subscription status:', status)
         })
 
     return () => {
@@ -161,7 +161,7 @@ export default function Thread() {
         queryClient.setQueryData(queryKeys.isBookmarked(user.id, thread.id), context.previous)
       }
       toast.error('Failed to update bookmark')
-      console.error('[FCV:Thread] Failed to toggle bookmark:', _error)
+      console.error('[FLD:Thread] Failed to toggle bookmark:', _error)
     },
     onSettled: () => {
       if (!thread || !user) return
@@ -271,7 +271,7 @@ export default function Thread() {
     },
     onError: (error, _variables, context) => {
       toast.error('Failed to post reply')
-      console.error('[FCV:Thread] Failed to post reply:', error)
+      console.error('[FLD:Thread] Failed to post reply:', error)
       if (!thread) return
       // Roll back to previous posts
       if (context?.previousPosts) {
@@ -292,7 +292,7 @@ export default function Thread() {
         last_post_at: new Date().toISOString(),
         post_count: thread.post_count + 1,
       }).catch((updateError) => {
-        console.error('[FCV:Thread] Failed to update thread after reply:', updateError)
+        console.error('[FLD:Thread] Failed to update thread after reply:', updateError)
       })
     },
     onSettled: () => {

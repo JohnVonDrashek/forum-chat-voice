@@ -45,7 +45,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
         const data = await res.json()
 
         if (!data.hub_access_token) {
-          console.log('[FCV:Hub] No hub access token available — hub DMs disabled')
+          console.log('[FLD:Hub] No hub access token available — hub DMs disabled')
           return
         }
 
@@ -74,9 +74,9 @@ export function HubProvider({ children }: { children: ReactNode }) {
         }
 
         setIsHubConnected(true)
-        console.log('[FCV:Hub] Connected to hub for cross-forum DMs')
+        console.log('[FLD:Hub] Connected to hub for cross-forum DMs')
       } catch (err) {
-        console.error('[FCV:Hub] Failed to initialize hub connection:', err)
+        console.error('[FLD:Hub] Failed to initialize hub connection:', err)
       }
     }
 

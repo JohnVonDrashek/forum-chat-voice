@@ -721,7 +721,7 @@ export default function Settings() {
               toast.success('Avatar updated')
             } else {
               toast.error('Failed to upload avatar')
-              console.error('[FCV:Settings] Failed to upload avatar')
+              console.error('[FLD:Settings] Failed to upload avatar')
             }
             setAvatarUploading(false)
           }}

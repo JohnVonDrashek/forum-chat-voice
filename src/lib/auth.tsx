@@ -81,39 +81,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const auth = getAuthProvider()
 
     // Check existing session
-    console.log('[FCV:Auth] Checking existing session...')
+    console.log('[FLD:Auth] Checking existing session...')
     auth.getRawUser().then(async (rawUser) => {
       if (rawUser) {
-        console.log('[FCV:Auth] Session found, ensuring profile for user:', rawUser.id)
+        console.log('[FLD:Auth] Session found, ensuring profile for user:', rawUser.id)
         try {
           const prof = await ensureProfile(rawUser)
           setUser(toAppUser(rawUser, prof))
           loadedUserIdRef.current = rawUser.id
-          console.log('[FCV:Auth] Profile loaded successfully:', prof?.username)
+          console.log('[FLD:Auth] Profile loaded successfully:', prof?.username)
         } catch (err) {
-          console.error('[FCV:Auth] Failed to ensure profile during init:', err)
+          console.error('[FLD:Auth] Failed to ensure profile during init:', err)
           // Still set user even if profile fails, so app doesn't hang
           setUser(toAppUser(rawUser, null))
           loadedUserIdRef.current = rawUser.id
         }
       } else {
-        console.log('[FCV:Auth] No existing session')
+        console.log('[FLD:Auth] No existing session')
       }
       setLoading(false)
-      console.log('[FCV:Auth] Auth init complete, loading=false')
+      console.log('[FLD:Auth] Auth init complete, loading=false')
     }).catch((err) => {
-      console.error('[FCV:Auth] getSession() failed:', err)
+      console.error('[FLD:Auth] getSession() failed:', err)
       setLoading(false)
     })
 
     // Listen for auth changes
     const unsubscribe = auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[FCV:Auth] Auth state changed:', event, session?.user?.id ?? '(no user)')
+        console.log('[FLD:Auth] Auth state changed:', event, session?.user?.id ?? '(no user)')
 
         // INITIAL_SESSION is fully handled by getRawUser() above — always skip.
         if (event === 'INITIAL_SESSION') {
-          console.log('[FCV:Auth] INITIAL_SESSION handled by getRawUser, skipping')
+          console.log('[FLD:Auth] INITIAL_SESSION handled by getRawUser, skipping')
           return
         }
 
@@ -124,12 +124,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           session?.user &&
           session.user.id === loadedUserIdRef.current
         ) {
-          console.log('[FCV:Auth] Skipping redundant', event, 'for already-loaded user:', session.user.id)
+          console.log('[FLD:Auth] Skipping redundant', event, 'for already-loaded user:', session.user.id)
           return
         }
 
         if (session?.user) {
-          console.log('[FCV:Auth] New/changed user, loading profile:', session.user.id)
+          console.log('[FLD:Auth] New/changed user, loading profile:', session.user.id)
           // Get the raw user with full metadata
           const rawUser = await auth.getRawUser()
           if (!rawUser) return
@@ -138,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(toAppUser(rawUser, prof))
             loadedUserIdRef.current = rawUser.id
           } catch (err) {
-            console.error('[FCV:Auth] Failed to ensure profile on auth change:', err)
+            console.error('[FLD:Auth] Failed to ensure profile on auth change:', err)
             setUser(toAppUser(rawUser, null))
             loadedUserIdRef.current = rawUser.id
           }
@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } else {
           // Signed out or session expired
-          console.log('[FCV:Auth] User signed out, clearing state')
+          console.log('[FLD:Auth] User signed out, clearing state')
           setUser(null)
           setProfile(null)
           loadedUserIdRef.current = null

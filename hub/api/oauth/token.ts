@@ -85,7 +85,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const identityToken = jwt.sign(
     { identity, forum_id: client.forum_id },
     jwtSecret,
-    { expiresIn: '1h', issuer: 'forumline-hub' }
+    { expiresIn: '1h', issuer: 'forumline-central-services' }
   )
 
   // Generate a hub Supabase access token for the user

@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 /**
  * GET /api/forumline/auth/callback
- * Handles the OAuth callback from the Forumline Hub.
+ * Handles the OAuth callback from Forumline Central Services.
  * Exchanges the authorization code for an identity token,
  * then creates or links a local user account.
  */
@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const clientId = process.env.FORUMLINE_CLIENT_ID
   const clientSecret = process.env.FORUMLINE_CLIENT_SECRET
   if (!hubUrl || !clientId || !clientSecret) {
-    return res.status(500).json({ error: 'Forumline Hub not configured' })
+    return res.status(500).json({ error: 'Forumline Central Services not configured' })
   }
 
   // Exchange code for identity token

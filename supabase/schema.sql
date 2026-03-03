@@ -1,4 +1,4 @@
--- Forum Chat Voice - Supabase Schema
+-- Forumline Demo - Supabase Schema
 -- Run this in your Supabase SQL Editor: https://supabase.com/dashboard/project/_/sql
 
 -- Enable required extensions
