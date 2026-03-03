@@ -1,32 +1,18 @@
 import { Link, useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import Avatar from '../components/Avatar'
 import type { Category as CategoryType, ThreadWithAuthor } from '../types'
 
-const demoCategories: Record<string, CategoryType> = {
-  general: { id: '1', name: 'General', slug: 'general', description: 'General discussion about anything and everything', sort_order: 0, created_at: '' },
-  announcements: { id: '2', name: 'Announcements', slug: 'announcements', description: 'Official announcements from the team', sort_order: 1, created_at: '' },
-  help: { id: '3', name: 'Help & Support', slug: 'help', description: 'Get help from the community', sort_order: 2, created_at: '' },
-  showcase: { id: '4', name: 'Showcase', slug: 'showcase', description: 'Show off your projects and creations', sort_order: 3, created_at: '' },
-}
-
 export default function Category() {
   const { categorySlug } = useParams()
   const { user } = useAuth()
-  const [category, setCategory] = useState<CategoryType | null>(demoCategories[categorySlug || ''] || null)
+  const [category, setCategory] = useState<CategoryType | null>(null)
   const [threads, setThreads] = useState<ThreadWithAuthor[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!isConfigured) {
-      setCategory(demoCategories[categorySlug || ''] || null)
-      setThreads([])
-      setLoading(false)
-      return
-    }
-
     const fetchData = async () => {
       setLoading(true)
 

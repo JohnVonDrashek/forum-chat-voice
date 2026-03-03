@@ -3,43 +3,19 @@ import { useState, useCallback, useEffect } from 'react'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import MobileSidebar from './MobileSidebar'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import type { Category, ChatChannel, VoiceRoom } from '../types'
-
-// Demo data shared between sidebars
-const demoCategories: Category[] = [
-  { id: '1', name: 'General', slug: 'general', description: 'General discussion', sort_order: 0, created_at: '' },
-  { id: '2', name: 'Announcements', slug: 'announcements', description: 'Official announcements', sort_order: 1, created_at: '' },
-  { id: '3', name: 'Help & Support', slug: 'help', description: 'Get help from the community', sort_order: 2, created_at: '' },
-  { id: '4', name: 'Showcase', slug: 'showcase', description: 'Show off your projects', sort_order: 3, created_at: '' },
-]
-
-const demoChannels: ChatChannel[] = [
-  { id: 'general', name: 'general', slug: 'general', description: null, created_at: '' },
-  { id: 'random', name: 'random', slug: 'random', description: null, created_at: '' },
-  { id: 'introductions', name: 'introductions', slug: 'introductions', description: null, created_at: '' },
-  { id: 'help', name: 'help', slug: 'help', description: null, created_at: '' },
-]
-
-const demoRooms: VoiceRoom[] = [
-  { id: 'lounge', name: 'Lounge', slug: 'lounge', created_at: '' },
-  { id: 'gaming', name: 'Gaming', slug: 'gaming', created_at: '' },
-  { id: 'music', name: 'Music', slug: 'music', created_at: '' },
-  { id: 'study', name: 'Study Room', slug: 'study', created_at: '' },
-]
 
 export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user } = useAuth()
-  const [categories, setCategories] = useState<Category[]>(demoCategories)
-  const [channels, setChannels] = useState<ChatChannel[]>(demoChannels)
-  const [rooms, setRooms] = useState<VoiceRoom[]>(demoRooms)
-  const [unreadDmCount, setUnreadDmCount] = useState(isConfigured ? 0 : 2)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [channels, setChannels] = useState<ChatChannel[]>([])
+  const [rooms, setRooms] = useState<VoiceRoom[]>([])
+  const [unreadDmCount, setUnreadDmCount] = useState(0)
 
   useEffect(() => {
-    if (!isConfigured) return
-
     const fetchData = async () => {
       const [catRes, chanRes, roomRes] = await Promise.all([
         supabase.from('categories').select('*').order('sort_order'),
@@ -55,8 +31,8 @@ export default function Layout() {
   }, [])
 
   useEffect(() => {
-    if (!isConfigured || !user) {
-      if (isConfigured) setUnreadDmCount(0)
+    if (!user) {
+      setUnreadDmCount(0)
       return
     }
 

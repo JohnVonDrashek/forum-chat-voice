@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import type { Profile } from '../types'
 
@@ -21,71 +21,6 @@ interface DM {
   senderId: string
   content: string
   timestamp: Date
-}
-
-// Demo conversations
-const demoConversations: Conversation[] = [
-  {
-    id: 'sarah',
-    recipientId: '2',
-    recipientName: 'Sarah',
-    recipientAvatar: 'S',
-    lastMessage: "That sounds great! Let me know when you're ready.",
-    lastMessageTime: new Date(Date.now() - 300000),
-    unreadCount: 2,
-  },
-  {
-    id: 'mike',
-    recipientId: '3',
-    recipientName: 'Mike',
-    recipientAvatar: 'M',
-    lastMessage: 'Thanks for the help with the voice rooms!',
-    lastMessageTime: new Date(Date.now() - 3600000),
-    unreadCount: 0,
-  },
-  {
-    id: 'alex',
-    recipientId: '4',
-    recipientName: 'Alex',
-    recipientAvatar: 'A',
-    lastMessage: 'Did you see the new update?',
-    lastMessageTime: new Date(Date.now() - 86400000),
-    unreadCount: 0,
-  },
-  {
-    id: 'emma',
-    recipientId: '6',
-    recipientName: 'Emma',
-    recipientAvatar: 'E',
-    lastMessage: "I'll send over the API docs tomorrow.",
-    lastMessageTime: new Date(Date.now() - 172800000),
-    unreadCount: 0,
-  },
-]
-
-const demoMessages: Record<string, DM[]> = {
-  sarah: [
-    { id: '1', senderId: '2', content: 'Hey! How are you doing?', timestamp: new Date(Date.now() - 600000) },
-    { id: '2', senderId: 'me', content: "I'm good! Working on the forum project.", timestamp: new Date(Date.now() - 540000) },
-    { id: '3', senderId: '2', content: "That's awesome! The voice rooms look really cool.", timestamp: new Date(Date.now() - 480000) },
-    { id: '4', senderId: 'me', content: 'Thanks! Want to test them out later?', timestamp: new Date(Date.now() - 420000) },
-    { id: '5', senderId: '2', content: "That sounds great! Let me know when you're ready.", timestamp: new Date(Date.now() - 300000) },
-  ],
-  mike: [
-    { id: '1', senderId: 'me', content: 'Hey Mike, the moderation tools are ready!', timestamp: new Date(Date.now() - 7200000) },
-    { id: '2', senderId: '3', content: 'Perfect timing! I was just about to ask.', timestamp: new Date(Date.now() - 7000000) },
-    { id: '3', senderId: 'me', content: 'You can mute, kick, and ban users now.', timestamp: new Date(Date.now() - 6800000) },
-    { id: '4', senderId: '3', content: 'Thanks for the help with the voice rooms!', timestamp: new Date(Date.now() - 3600000) },
-  ],
-  alex: [
-    { id: '1', senderId: '4', content: 'The dark mode looks great!', timestamp: new Date(Date.now() - 172800000) },
-    { id: '2', senderId: 'me', content: "Thanks! It's the default now.", timestamp: new Date(Date.now() - 172000000) },
-    { id: '3', senderId: '4', content: 'Did you see the new update?', timestamp: new Date(Date.now() - 86400000) },
-  ],
-  emma: [
-    { id: '1', senderId: 'me', content: 'Hey Emma! Any updates on the API?', timestamp: new Date(Date.now() - 259200000) },
-    { id: '2', senderId: '6', content: "I'll send over the API docs tomorrow.", timestamp: new Date(Date.now() - 172800000) },
-  ],
 }
 
 export default function DirectMessages() {
@@ -112,7 +47,7 @@ export default function DirectMessages() {
 
   // Fetch recipient profile when navigating to a new conversation
   useEffect(() => {
-    if (!recipientId || !isConfigured || !user || currentConversation) {
+    if (!recipientId || !user || currentConversation) {
       setRecipientProfile(null)
       return
     }
@@ -132,7 +67,7 @@ export default function DirectMessages() {
 
   // Debounced user search
   useEffect(() => {
-    if (!searchQuery.trim() || !isConfigured) {
+    if (!searchQuery.trim()) {
       setSearchResults([])
       return
     }
@@ -155,10 +90,6 @@ export default function DirectMessages() {
 
   // Fetch conversations
   useEffect(() => {
-    if (!isConfigured) {
-      setConversations(demoConversations)
-      return
-    }
     if (!user) return
 
     const fetchConversations = async () => {
@@ -225,14 +156,6 @@ export default function DirectMessages() {
   useEffect(() => {
     if (!recipientId) {
       setMessages([])
-      return
-    }
-
-    if (!isConfigured) {
-      setMessages(demoMessages[recipientId] || [])
-      setConversations(prev =>
-        prev.map(c => c.id === recipientId ? { ...c, unreadCount: 0 } : c)
-      )
       return
     }
 
@@ -308,35 +231,14 @@ export default function DirectMessages() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newMessage.trim() || !recipientId) return
+    if (!newMessage.trim() || !recipientId || !user) return
 
-    if (isConfigured) {
-      if (!user) return
-      const otherId = currentConversation?.recipientId || recipientId
-      await supabase.from('direct_messages').insert({
-        sender_id: user.id,
-        recipient_id: otherId,
-        content: newMessage.trim(),
-      })
-      setNewMessage('')
-      return
-    }
-
-    // Demo mode
-    const message: DM = {
-      id: Date.now().toString(),
-      senderId: 'me',
+    const otherId = currentConversation?.recipientId || recipientId
+    await supabase.from('direct_messages').insert({
+      sender_id: user.id,
+      recipient_id: otherId,
       content: newMessage.trim(),
-      timestamp: new Date(),
-    }
-    setMessages(prev => [...prev, message])
-    setConversations(prev =>
-      prev.map(c =>
-        c.id === recipientId
-          ? { ...c, lastMessage: newMessage.trim(), lastMessageTime: new Date() }
-          : c
-      )
-    )
+    })
     setNewMessage('')
   }
 
@@ -369,7 +271,7 @@ export default function DirectMessages() {
   }
 
   // Auth guard
-  if (isConfigured && !authLoading && !user) {
+  if (!authLoading && !user) {
     return (
       <div className="mx-auto max-w-4xl">
         <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
@@ -524,13 +426,7 @@ export default function DirectMessages() {
 
               {/* Input */}
               <div className="border-t border-slate-700 p-4">
-                {isConfigured && !user ? (
-                  <div className="flex items-center justify-center gap-2 rounded-lg bg-slate-700/50 px-4 py-3">
-                    <span className="text-slate-400">Sign in to send messages</span>
-                    <Link to="/login" className="font-medium text-indigo-400 hover:text-indigo-300">Sign In</Link>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSend} className="flex gap-2">
+                <form onSubmit={handleSend} className="flex gap-2">
                     <input
                       type="text"
                       value={newMessage}
@@ -548,7 +444,6 @@ export default function DirectMessages() {
                       </svg>
                     </button>
                   </form>
-                )}
               </div>
             </>
           ) : (
@@ -624,11 +519,6 @@ export default function DirectMessages() {
               ))}
             </div>
 
-            {!isConfigured && (
-              <div className="border-t border-slate-700 p-4 text-center text-sm text-slate-500">
-                User search requires Supabase connection
-              </div>
-            )}
           </div>
         </div>
       )}

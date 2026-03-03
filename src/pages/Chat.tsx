@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import type { ChatChannel, Profile } from '../types'
 
@@ -14,38 +14,6 @@ interface ChatMsg {
   authorAvatarUrl?: string | null
   content: string
   createdAt: string
-}
-
-// Demo channels
-const demoChannels: ChatChannel[] = [
-  { id: 'general', name: 'general', slug: 'general', description: 'General chat for everyone', created_at: '' },
-  { id: 'random', name: 'random', slug: 'random', description: 'Off-topic conversations', created_at: '' },
-  { id: 'introductions', name: 'introductions', slug: 'introductions', description: 'Say hello to the community', created_at: '' },
-  { id: 'help', name: 'help', slug: 'help', description: 'Get help from the community', created_at: '' },
-]
-
-// Demo messages
-const demoMessages: Record<string, ChatMsg[]> = {
-  general: [
-    { id: '1', channelId: 'general', authorId: '1', authorName: 'Admin', authorAvatar: 'A', content: 'Welcome to the general chat! 👋', createdAt: new Date(Date.now() - 3600000).toISOString() },
-    { id: '2', channelId: 'general', authorId: '2', authorName: 'Sarah', authorAvatar: 'S', content: 'Hey everyone! Excited to be here.', createdAt: new Date(Date.now() - 3000000).toISOString() },
-    { id: '3', channelId: 'general', authorId: '3', authorName: 'Mike', authorAvatar: 'M', content: 'This platform looks really cool. Love the forum + chat combo!', createdAt: new Date(Date.now() - 2400000).toISOString() },
-    { id: '4', channelId: 'general', authorId: '1', authorName: 'Admin', authorAvatar: 'A', content: 'Thanks Mike! We\'re working on voice rooms next 🎙️', createdAt: new Date(Date.now() - 1800000).toISOString() },
-    { id: '5', channelId: 'general', authorId: '4', authorName: 'Alex', authorAvatar: 'A', content: 'Voice rooms would be amazing. Any ETA?', createdAt: new Date(Date.now() - 1200000).toISOString() },
-    { id: '6', channelId: 'general', authorId: '2', authorName: 'Sarah', authorAvatar: 'S', content: 'Yeah I\'d love that feature too!', createdAt: new Date(Date.now() - 600000).toISOString() },
-  ],
-  random: [
-    { id: '1', channelId: 'random', authorId: '3', authorName: 'Mike', authorAvatar: 'M', content: 'Anyone else here a coffee addict? ☕', createdAt: new Date(Date.now() - 7200000).toISOString() },
-    { id: '2', channelId: 'random', authorId: '2', authorName: 'Sarah', authorAvatar: 'S', content: 'Guilty as charged 😅', createdAt: new Date(Date.now() - 6600000).toISOString() },
-    { id: '3', channelId: 'random', authorId: '4', authorName: 'Alex', authorAvatar: 'A', content: 'Tea person here, sorry not sorry', createdAt: new Date(Date.now() - 6000000).toISOString() },
-  ],
-  introductions: [
-    { id: '1', channelId: 'introductions', authorId: '1', authorName: 'Admin', authorAvatar: 'A', content: 'Welcome to introductions! Tell us about yourself 🙂', createdAt: new Date(Date.now() - 86400000).toISOString() },
-    { id: '2', channelId: 'introductions', authorId: '2', authorName: 'Sarah', authorAvatar: 'S', content: 'Hi! I\'m Sarah, a frontend developer from NYC. Love building UIs!', createdAt: new Date(Date.now() - 43200000).toISOString() },
-  ],
-  help: [
-    { id: '1', channelId: 'help', authorId: '1', authorName: 'Admin', authorAvatar: 'A', content: 'Need help? Ask here and someone will assist you!', createdAt: new Date(Date.now() - 172800000).toISOString() },
-  ],
 }
 
 function toMsg(row: { id: string; channel_id: string; author_id: string; content: string; created_at: string; author: Profile }): ChatMsg {
@@ -64,9 +32,9 @@ function toMsg(row: { id: string; channel_id: string; author_id: string; content
 export default function Chat() {
   const { channelId: channelSlug = 'general' } = useParams()
   const { user } = useAuth()
-  const [channels, setChannels] = useState<ChatChannel[]>(!isConfigured ? demoChannels : [])
+  const [channels, setChannels] = useState<ChatChannel[]>([])
   const [messages, setMessages] = useState<ChatMsg[]>([])
-  const [loading, setLoading] = useState(isConfigured)
+  const [loading, setLoading] = useState(true)
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -75,7 +43,6 @@ export default function Chat() {
 
   // Fetch channels
   useEffect(() => {
-    if (!isConfigured) return
     supabase.from('chat_channels').select('*').order('name').then(({ data }) => {
       if (data) setChannels(data)
     })
@@ -83,12 +50,6 @@ export default function Chat() {
 
   // Fetch messages & subscribe
   useEffect(() => {
-    if (!isConfigured) {
-      setMessages(demoMessages[channelSlug] || [])
-      setLoading(false)
-      return
-    }
-
     if (!channel) {
       // Channels haven't loaded yet — stay in loading state
       return
@@ -169,31 +130,13 @@ export default function Chat() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!inputValue.trim()) return
+    if (!inputValue.trim() || !user || !channel) return
 
-    if (isConfigured) {
-      if (!user || !channel) return
-      await supabase.from('chat_messages').insert({
-        channel_id: channel.id,
-        author_id: user.id,
-        content: inputValue.trim(),
-      })
-      setInputValue('')
-      return
-    }
-
-    // Demo mode
-    const newMessage: ChatMsg = {
-      id: Date.now().toString(),
-      channelId: channelSlug,
-      authorId: user?.id || 'demo',
-      authorName: user?.user_metadata?.username || 'You',
-      authorAvatar: (user?.user_metadata?.username?.[0] || 'Y').toUpperCase(),
+    await supabase.from('chat_messages').insert({
+      channel_id: channel.id,
+      author_id: user.id,
       content: inputValue.trim(),
-      createdAt: new Date().toISOString(),
-    }
-
-    setMessages(prev => [...prev, newMessage])
+    })
     setInputValue('')
   }
 
@@ -284,7 +227,7 @@ export default function Chat() {
 
       {/* Input Area */}
       <div className="border-t border-slate-700 px-4 py-4">
-        {isConfigured && !user ? (
+        {!user ? (
           <div className="flex items-center justify-center gap-2 rounded-lg bg-slate-700/50 px-4 py-3">
             <span className="text-slate-400">Sign in to chat</span>
             <Link to="/login" className="font-medium text-indigo-400 hover:text-indigo-300">
@@ -321,11 +264,6 @@ export default function Chat() {
               </button>
             </div>
           </form>
-        )}
-        {!isConfigured && (
-          <p className="mt-2 text-center text-xs text-slate-500">
-            Demo mode - messages are stored locally
-          </p>
         )}
       </div>
     </div>

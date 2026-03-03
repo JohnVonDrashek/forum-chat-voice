@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { useVoice } from '../lib/voice'
 import Avatar from '../components/Avatar'
@@ -13,65 +13,14 @@ interface RoomWithParticipants extends VoiceRoom {
   maxParticipants: number
 }
 
-// Demo voice rooms
-const demoRooms: RoomWithParticipants[] = [
-  {
-    id: 'lounge',
-    name: 'Lounge',
-    slug: 'lounge',
-    created_at: '',
-    description: 'Casual hangout space',
-    maxParticipants: 25,
-    participants: [
-      { id: '1', name: 'Admin', avatar: 'A', isSpeaking: true, isMuted: false },
-      { id: '2', name: 'Sarah', avatar: 'S', isSpeaking: false, isMuted: false },
-      { id: '3', name: 'Mike', avatar: 'M', isSpeaking: false, isMuted: true },
-    ],
-  },
-  {
-    id: 'gaming',
-    name: 'Gaming',
-    slug: 'gaming',
-    created_at: '',
-    description: 'Voice chat for gaming sessions',
-    maxParticipants: 10,
-    participants: [
-      { id: '4', name: 'Alex', avatar: 'A', isSpeaking: false, isMuted: false },
-    ],
-  },
-  {
-    id: 'music',
-    name: 'Music',
-    slug: 'music',
-    created_at: '',
-    description: 'Listen and share music together',
-    maxParticipants: 50,
-    participants: [],
-  },
-  {
-    id: 'study',
-    name: 'Study Room',
-    slug: 'study',
-    created_at: '',
-    description: 'Quiet focus time with others',
-    maxParticipants: 15,
-    participants: [
-      { id: '5', name: 'Jordan', avatar: 'J', isSpeaking: false, isMuted: true },
-      { id: '6', name: 'Taylor', avatar: 'T', isSpeaking: false, isMuted: true },
-    ],
-  },
-]
-
 export default function Voice() {
   const { roomId } = useParams()
   const { user } = useAuth()
   const voice = useVoice()
-  const [rooms, setRooms] = useState<RoomWithParticipants[]>(demoRooms)
+  const [rooms, setRooms] = useState<RoomWithParticipants[]>([])
 
   // Fetch rooms from Supabase
   useEffect(() => {
-    if (!isConfigured) return
-
     const fetchRooms = async () => {
       const { data } = await supabase
         .from('voice_rooms')
@@ -116,7 +65,7 @@ export default function Voice() {
     : getRoomParticipants(currentRoom?.slug || roomId || '')
 
   // Auth gate component
-  const authGate = isConfigured && !user ? (
+  const authGate = !user ? (
     <div className="mt-4 rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center">
       <p className="text-slate-400">
         <Link to="/login" className="font-medium text-indigo-400 hover:text-indigo-300">Sign in</Link> to join voice rooms
@@ -136,7 +85,7 @@ export default function Voice() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           {rooms.map((room) => {
-            const roomParticipants = isConfigured ? getRoomParticipants(room.slug) : room.participants
+            const roomParticipants = getRoomParticipants(room.slug)
             const isConnectedRoom = voice.isConnected && voice.connectedRoomSlug === room.slug
             return (
               <div
@@ -199,12 +148,6 @@ export default function Voice() {
             )
           })}
         </div>
-
-        {!isConfigured && (
-          <p className="mt-6 text-center text-xs text-slate-500">
-            Demo mode - voice functionality is simulated
-          </p>
-        )}
       </div>
     )
   }
@@ -308,7 +251,7 @@ export default function Voice() {
       </div>
 
       <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
-        {isConfigured && !user ? (
+        {!user ? (
           <div className="text-center">
             <p className="text-slate-400">
               <Link to="/login" className="font-medium text-indigo-400 hover:text-indigo-300">Sign in</Link> to join voice rooms
@@ -372,7 +315,7 @@ export default function Voice() {
             ) : (
               <button
                 onClick={() => currentRoom && voice.joinRoom(currentRoom.slug || currentRoom.id, currentRoom.name)}
-                disabled={voice.isConnecting || (isConfigured && !user)}
+                disabled={voice.isConnecting || !user}
                 className="rounded-lg bg-green-600 px-8 py-3 font-medium text-white hover:bg-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {voice.isConnecting ? 'Connecting...' : 'Join Voice'}
@@ -388,12 +331,6 @@ export default function Voice() {
           </p>
         )}
       </div>
-
-      {!isConfigured && (
-        <p className="mt-6 text-center text-xs text-slate-500">
-          Demo mode - voice functionality is simulated
-        </p>
-      )}
     </div>
   )
 }

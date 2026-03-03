@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import type { Profile } from '../types'
 
@@ -13,28 +13,15 @@ interface Stats {
   totalPosts: number
 }
 
-// Demo data
-const demoStats: Stats = {
-  totalUsers: 1247,
-  totalThreads: 856,
-  totalPosts: 4521,
-}
-
-const demoRecentUsers: (Profile & { email?: string })[] = [
-  { id: '1', username: 'newuser123', display_name: 'New User', avatar_url: null, bio: null, website: null, is_admin: false, created_at: new Date(Date.now() - 3600000).toISOString(), updated_at: '' },
-  { id: '2', username: 'techfan', display_name: 'Tech Fan', avatar_url: null, bio: null, website: null, is_admin: false, created_at: new Date(Date.now() - 7200000).toISOString(), updated_at: '' },
-  { id: '3', username: 'developer_joe', display_name: 'Joe', avatar_url: null, bio: null, website: null, is_admin: false, created_at: new Date(Date.now() - 14400000).toISOString(), updated_at: '' },
-]
-
 export default function Admin() {
   const { user, profile, loading: authLoading } = useAuth()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
-  const [stats, setStats] = useState<Stats>(demoStats)
-  const [users, setUsers] = useState<Profile[]>(demoRecentUsers)
+  const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalThreads: 0, totalPosts: 0 })
+  const [users, setUsers] = useState<Profile[]>([])
   const [userSearch, setUserSearch] = useState('')
 
   useEffect(() => {
-    if (!isConfigured || !user) return
+    if (!user) return
 
     const fetchStats = async () => {
       const [usersRes, threadsRes, postsRes] = await Promise.all([
@@ -74,7 +61,7 @@ export default function Admin() {
   }
 
   // Auth guard: must be logged in
-  if (isConfigured && !authLoading && !user) {
+  if (!authLoading && !user) {
     return (
       <div className="mx-auto max-w-4xl">
         <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
@@ -89,7 +76,7 @@ export default function Admin() {
   }
 
   // Admin guard: must be admin
-  if (isConfigured && !authLoading && profile && !profile.is_admin) {
+  if (!authLoading && profile && !profile.is_admin) {
     return (
       <div className="mx-auto max-w-4xl">
         <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">

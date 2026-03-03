@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode } from 'react'
 import { Room, RoomEvent, Track, Participant } from 'livekit-client'
-import { supabase, isConfigured } from './supabase'
+import { supabase } from './supabase'
 import { useAuth } from './auth'
 
 export interface VoiceParticipant {
@@ -157,7 +157,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const joinRoom = useCallback(async (slug: string, name: string) => {
-    if (!isConfigured || !user) return
+    if (!user) return
 
     // If already connected to this room, do nothing
     if (connectedRoomSlugRef.current === slug && livekitRoomRef.current) return
@@ -298,7 +298,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   // Fetch participant counts for all rooms
   const fetchParticipantCounts = useCallback(async () => {
-    if (!isConfigured) return
     try {
       const resp = await fetch('/api/livekit-participants-all')
       if (!resp.ok) return
@@ -347,7 +346,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   // Poll participant counts every 5 seconds
   useEffect(() => {
-    if (!isConfigured) return
     fetchParticipantCounts()
     const interval = setInterval(fetchParticipantCounts, 5000)
     return () => clearInterval(interval)

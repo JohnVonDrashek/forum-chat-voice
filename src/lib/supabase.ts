@@ -1,10 +1,8 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../types/database'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
-
-export const isConfigured = Boolean(supabaseUrl && supabaseAnonKey)
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
 // Simple in-memory mutex to replace navigator.locks (which deadlocks in
 // production bundles) while still serializing token refresh operations.
@@ -34,22 +32,8 @@ async function inMemoryLock(_name: string, acquireTimeout: number, fn: () => Pro
   }
 }
 
-let supabase: SupabaseClient<Database>
-
-if (isConfigured) {
-  supabase = createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
-    auth: {
-      lock: inMemoryLock as any,
-    },
-  } as any)
-} else {
-  console.warn(
-    'Supabase credentials not found. Running in demo mode.\n' +
-    'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local'
-  )
-  supabase = new Proxy({} as SupabaseClient<Database>, {
-    get: () => () => Promise.resolve({ data: null, error: null })
-  })
-}
-
-export { supabase }
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    lock: inMemoryLock as any,
+  },
+} as any)

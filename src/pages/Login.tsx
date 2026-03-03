@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { isConfigured } from '../lib/supabase'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -13,11 +12,6 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isConfigured) {
-      setError('Supabase is not configured. Please set up your environment variables.')
-      return
-    }
-
     setLoading(true)
     setError('')
 
@@ -31,10 +25,6 @@ export default function Login() {
   }
 
   const handleGitHubLogin = async () => {
-    if (!isConfigured) {
-      setError('Supabase is not configured. Please set up your environment variables.')
-      return
-    }
     await signInWithGitHub()
   }
 
@@ -43,12 +33,6 @@ export default function Login() {
       <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8">
         <h1 className="text-2xl font-bold text-white">Sign In</h1>
         <p className="mt-2 text-slate-400">Welcome back! Sign in to your account.</p>
-
-        {!isConfigured && (
-          <div className="mt-4 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-sm text-amber-400">
-            <strong>Demo Mode:</strong> Authentication requires Supabase configuration.
-          </div>
-        )}
 
         {error && (
           <div className="mt-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">

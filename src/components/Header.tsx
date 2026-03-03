@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../lib/auth'
 import Avatar from '../components/Avatar'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import type { Notification as DBNotification } from '../types'
 
 interface HeaderProps {
@@ -18,54 +18,6 @@ interface NotifItem {
   read: boolean
   timestamp: Date
 }
-
-const demoNotifications: NotifItem[] = [
-  {
-    id: '1',
-    type: 'reply',
-    title: 'New reply',
-    message: 'Sarah replied to your thread "Welcome to the Forum!"',
-    link: '/t/1',
-    read: false,
-    timestamp: new Date(Date.now() - 300000),
-  },
-  {
-    id: '2',
-    type: 'mention',
-    title: 'You were mentioned',
-    message: 'Mike mentioned you in #general',
-    link: '/chat/general',
-    read: false,
-    timestamp: new Date(Date.now() - 1800000),
-  },
-  {
-    id: '3',
-    type: 'dm',
-    title: 'New message',
-    message: 'Emma sent you a direct message',
-    link: '/dm/emma',
-    read: false,
-    timestamp: new Date(Date.now() - 3600000),
-  },
-  {
-    id: '4',
-    type: 'like',
-    title: 'Post liked',
-    message: 'Alex liked your post',
-    link: '/t/1',
-    read: true,
-    timestamp: new Date(Date.now() - 7200000),
-  },
-  {
-    id: '5',
-    type: 'follow',
-    title: 'New follower',
-    message: 'RetroFan started following you',
-    link: '/u/retro_fan',
-    read: true,
-    timestamp: new Date(Date.now() - 86400000),
-  },
-]
 
 function toNotifItem(n: DBNotification): NotifItem {
   return {
@@ -84,15 +36,15 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
-  const [notifications, setNotifications] = useState<NotifItem[]>(!isConfigured ? demoNotifications : [])
+  const [notifications, setNotifications] = useState<NotifItem[]>([])
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const unreadCount = notifications.filter(n => !n.read).length
 
   // Fetch notifications from Supabase
   useEffect(() => {
-    if (!isConfigured || !user) {
-      if (isConfigured) setNotifications([])
+    if (!user) {
+      setNotifications([])
       return
     }
 
@@ -144,9 +96,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   const handleNotificationClick = async (notification: NotifItem) => {
     if (!notification.read) {
-      if (isConfigured) {
-        await supabase.from('notifications').update({ read: true }).eq('id', notification.id)
-      }
+      await supabase.from('notifications').update({ read: true }).eq('id', notification.id)
       setNotifications(prev =>
         prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
       )
@@ -156,7 +106,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
   }
 
   const markAllAsRead = async () => {
-    if (isConfigured && user) {
+    if (user) {
       await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false)
     }
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))

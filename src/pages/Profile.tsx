@@ -1,199 +1,9 @@
 import { useParams, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/auth'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import type { Profile, ThreadWithAuthor, PostWithAuthor } from '../types'
-
-// Demo profiles
-const demoProfiles: Record<string, Profile & { threadCount: number; postCount: number }> = {
-  admin: {
-    id: '1',
-    username: 'admin',
-    display_name: 'Admin',
-    avatar_url: null,
-    bio: 'Welcome to the forum! I am the administrator. Building a hybrid platform that combines the best of forums, real-time chat, and voice rooms.',
-    website: null,
-    is_admin: false,
-    created_at: new Date(Date.now() - 90 * 86400000).toISOString(),
-    updated_at: '2025-01-01',
-    threadCount: 5,
-    postCount: 42,
-  },
-  sarah_dev: {
-    id: '2',
-    username: 'sarah_dev',
-    display_name: 'Sarah',
-    avatar_url: null,
-    bio: 'Frontend developer from NYC. Love building UIs and exploring new technologies!',
-    website: null,
-    is_admin: false,
-    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
-    updated_at: '2025-01-01',
-    threadCount: 2,
-    postCount: 15,
-  },
-  mike_m: {
-    id: '3',
-    username: 'mike_m',
-    display_name: 'Mike',
-    avatar_url: null,
-    bio: 'Long-time forum enthusiast. Excited about voice rooms!',
-    website: null,
-    is_admin: false,
-    created_at: new Date(Date.now() - 14 * 86400000).toISOString(),
-    updated_at: '2025-01-01',
-    threadCount: 1,
-    postCount: 8,
-  },
-  alex_tech: {
-    id: '4',
-    username: 'alex_tech',
-    display_name: 'Alex',
-    avatar_url: null,
-    bio: 'Tech enthusiast. Always asking the important questions.',
-    website: null,
-    is_admin: false,
-    created_at: new Date(Date.now() - 7 * 86400000).toISOString(),
-    updated_at: '2025-01-01',
-    threadCount: 0,
-    postCount: 3,
-  },
-}
-
-// Demo threads by user
-const demoThreadsByUser: Record<string, ThreadWithAuthor[]> = {
-  admin: [
-    {
-      id: '1',
-      category_id: '1',
-      author_id: '1',
-      title: 'Welcome to the Forum! Introduce yourself here',
-      slug: 'welcome',
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      updated_at: new Date().toISOString(),
-      is_pinned: true,
-      is_locked: false,
-      post_count: 42,
-      last_post_at: new Date().toISOString(),
-      content: '',
-      image_url: null,
-      view_count: 0,
-      author: demoProfiles.admin,
-      category: { id: '1', name: 'General', slug: 'general', description: '', sort_order: 0, created_at: '' },
-    },
-    {
-      id: '2',
-      category_id: '2',
-      author_id: '1',
-      title: 'Roadmap: Chat and Voice features coming soon!',
-      slug: 'roadmap-chat-voice',
-      created_at: new Date(Date.now() - 172800000).toISOString(),
-      updated_at: new Date(Date.now() - 3600000).toISOString(),
-      is_pinned: true,
-      is_locked: false,
-      post_count: 15,
-      last_post_at: new Date(Date.now() - 3600000).toISOString(),
-      content: '',
-      image_url: null,
-      view_count: 0,
-      author: demoProfiles.admin,
-      category: { id: '2', name: 'Announcements', slug: 'announcements', description: '', sort_order: 1, created_at: '' },
-    },
-  ],
-  sarah_dev: [
-    {
-      id: '3',
-      category_id: '1',
-      author_id: '2',
-      title: 'What features would you like to see?',
-      slug: 'feature-requests',
-      created_at: new Date(Date.now() - 259200000).toISOString(),
-      updated_at: new Date(Date.now() - 7200000).toISOString(),
-      is_pinned: false,
-      is_locked: false,
-      post_count: 28,
-      last_post_at: new Date(Date.now() - 7200000).toISOString(),
-      content: '',
-      image_url: null,
-      view_count: 0,
-      author: demoProfiles.sarah_dev,
-      category: { id: '1', name: 'General', slug: 'general', description: '', sort_order: 0, created_at: '' },
-    },
-  ],
-}
-
-// Demo posts by user
-const demoPostsByUser: Record<string, PostWithAuthor[]> = {
-  admin: [
-    {
-      id: '1',
-      thread_id: '1',
-      author_id: '1',
-      content: "Welcome to our new forum! This is a hybrid platform combining the best of traditional forums with real-time chat and voice rooms.",
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      updated_at: new Date(Date.now() - 86400000).toISOString(),
-      reply_to_id: null,
-      author: demoProfiles.admin,
-    },
-    {
-      id: '4',
-      thread_id: '1',
-      author_id: '1',
-      content: "Great question! Yes, voice rooms will have full moderation support including mute/unmute, kick, and temporary bans.",
-      created_at: new Date(Date.now() - 21600000).toISOString(),
-      updated_at: new Date(Date.now() - 21600000).toISOString(),
-      reply_to_id: '3',
-      author: demoProfiles.admin,
-    },
-  ],
-  sarah_dev: [
-    {
-      id: '2',
-      thread_id: '1',
-      author_id: '2',
-      content: "This looks amazing! I've been looking for something like this - forums + Discord features in one place.",
-      created_at: new Date(Date.now() - 43200000).toISOString(),
-      updated_at: new Date(Date.now() - 43200000).toISOString(),
-      reply_to_id: null,
-      author: demoProfiles.sarah_dev,
-    },
-    {
-      id: '6',
-      thread_id: '1',
-      author_id: '2',
-      content: "You're already looking at it! The whole thing is dark mode by default. Love it.",
-      created_at: new Date(Date.now() - 3600000).toISOString(),
-      updated_at: new Date(Date.now() - 3600000).toISOString(),
-      reply_to_id: '5',
-      author: demoProfiles.sarah_dev,
-    },
-  ],
-  mike_m: [
-    {
-      id: '3',
-      thread_id: '1',
-      author_id: '3',
-      content: "Hey everyone! Long-time forum enthusiast here. Really excited about the voice rooms feature.",
-      created_at: new Date(Date.now() - 28800000).toISOString(),
-      updated_at: new Date(Date.now() - 28800000).toISOString(),
-      reply_to_id: null,
-      author: demoProfiles.mike_m,
-    },
-  ],
-  alex_tech: [
-    {
-      id: '5',
-      thread_id: '1',
-      author_id: '4',
-      content: "Just signed up! The UI looks really clean. Is there a dark mode?",
-      created_at: new Date(Date.now() - 7200000).toISOString(),
-      updated_at: new Date(Date.now() - 7200000).toISOString(),
-      reply_to_id: null,
-      author: demoProfiles.alex_tech,
-    },
-  ],
-}
 
 type ActivityTab = 'threads' | 'posts'
 
@@ -207,15 +17,6 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<ActivityTab>('threads')
 
   useEffect(() => {
-    if (!isConfigured) {
-      const demoProfile = username ? demoProfiles[username] : null
-      setProfile(demoProfile || null)
-      setThreads(username && demoThreadsByUser[username] ? demoThreadsByUser[username] : [])
-      setPosts(username && demoPostsByUser[username] ? demoPostsByUser[username] : [])
-      setLoading(false)
-      return
-    }
-
     const fetchProfile = async () => {
       setLoading(true)
 
@@ -483,9 +284,6 @@ export default function ProfilePage() {
         )}
       </div>
 
-      <p className="mt-6 text-center text-xs text-slate-500">
-        Demo mode - viewing local profile data
-      </p>
     </div>
   )
 }

@@ -1,89 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import type { ThreadWithAuthor, PostWithAuthor } from '../types'
-
-// Demo data for search results
-const demoThreads: ThreadWithAuthor[] = [
-  {
-    id: '1',
-    category_id: '1',
-    author_id: '1',
-    title: 'Welcome to the Forum! Introduce yourself here',
-    slug: 'welcome',
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-    is_pinned: true,
-    is_locked: false,
-    post_count: 42,
-    last_post_at: new Date().toISOString(),
-    content: '',
-    image_url: null,
-    view_count: 0,
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-    category: { id: '1', name: 'General', slug: 'general', description: '', sort_order: 0, created_at: '' },
-  },
-  {
-    id: '2',
-    category_id: '2',
-    author_id: '1',
-    title: 'Roadmap: Chat and Voice features coming soon!',
-    slug: 'roadmap-chat-voice',
-    created_at: new Date(Date.now() - 172800000).toISOString(),
-    updated_at: new Date(Date.now() - 3600000).toISOString(),
-    is_pinned: true,
-    is_locked: false,
-    post_count: 15,
-    last_post_at: new Date(Date.now() - 3600000).toISOString(),
-    content: '',
-    image_url: null,
-    view_count: 0,
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-    category: { id: '2', name: 'Announcements', slug: 'announcements', description: '', sort_order: 1, created_at: '' },
-  },
-  {
-    id: '3',
-    category_id: '1',
-    author_id: '2',
-    title: 'What features would you like to see?',
-    slug: 'feature-requests',
-    created_at: new Date(Date.now() - 259200000).toISOString(),
-    updated_at: new Date(Date.now() - 7200000).toISOString(),
-    is_pinned: false,
-    is_locked: false,
-    post_count: 28,
-    last_post_at: new Date(Date.now() - 7200000).toISOString(),
-    content: '',
-    image_url: null,
-    view_count: 0,
-    author: { id: '2', username: 'user1', display_name: 'Forum User', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-    category: { id: '1', name: 'General', slug: 'general', description: '', sort_order: 0, created_at: '' },
-  },
-]
-
-const demoPosts: PostWithAuthor[] = [
-  {
-    id: '1',
-    thread_id: '1',
-    author_id: '1',
-    content: "Welcome to our new forum! This is a hybrid platform combining the best of traditional forums with real-time chat and voice rooms.",
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    updated_at: new Date(Date.now() - 86400000).toISOString(),
-    reply_to_id: null,
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-  {
-    id: '2',
-    thread_id: '1',
-    author_id: '2',
-    content: "This looks amazing! I've been looking for something like this - forums + Discord features in one place.",
-    created_at: new Date(Date.now() - 43200000).toISOString(),
-    updated_at: new Date(Date.now() - 43200000).toISOString(),
-    reply_to_id: null,
-    author: { id: '2', username: 'sarah_dev', display_name: 'Sarah', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-]
 
 type SearchFilter = 'all' | 'threads' | 'posts'
 
@@ -116,19 +35,6 @@ export default function Search() {
     if (!query.trim()) {
       setThreadResults([])
       setPostResults([])
-      return
-    }
-
-    if (!isConfigured) {
-      const lowerQuery = query.toLowerCase()
-      setThreadResults(demoThreads.filter(t =>
-        t.title.toLowerCase().includes(lowerQuery) ||
-        t.author.username.toLowerCase().includes(lowerQuery)
-      ))
-      setPostResults(demoPosts.filter(p =>
-        p.content.toLowerCase().includes(lowerQuery) ||
-        p.author.username.toLowerCase().includes(lowerQuery)
-      ))
       return
     }
 

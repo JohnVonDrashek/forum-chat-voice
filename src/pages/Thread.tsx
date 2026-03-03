@@ -1,6 +1,6 @@
 import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { uploadAvatar } from '../lib/avatars'
 import Avatar from '../components/Avatar'
@@ -8,149 +8,6 @@ import ImageCropModal from '../components/ImageCropModal'
 import type { ThreadWithAuthor, PostWithAuthor } from '../types'
 
 const POSTS_PER_PAGE = 5
-
-// Demo data
-const demoThread: ThreadWithAuthor = {
-  id: '1',
-  category_id: '1',
-  author_id: '1',
-  title: 'Welcome to the Forum! Introduce yourself here',
-  slug: 'welcome',
-  created_at: new Date(Date.now() - 86400000).toISOString(),
-  updated_at: new Date().toISOString(),
-  is_pinned: true,
-  is_locked: false,
-  post_count: 12,
-  last_post_at: new Date().toISOString(),
-  content: '',
-  image_url: null,
-  view_count: 0,
-  author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  category: { id: '1', name: 'General', slug: 'general', description: '', sort_order: 0, created_at: '' },
-}
-
-const demoPosts: PostWithAuthor[] = [
-  {
-    id: '1',
-    thread_id: '1',
-    author_id: '1',
-    content: "Welcome to our new forum! This is a hybrid platform combining the best of traditional forums with real-time chat and voice rooms.\n\n**What's coming:**\n- Real-time chat channels\n- Voice rooms for hanging out\n- Full customization options\n- Federation with other instances\n\nFeel free to introduce yourself below!",
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    updated_at: new Date(Date.now() - 86400000).toISOString(),
-    reply_to_id: null,
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-  {
-    id: '2',
-    thread_id: '1',
-    author_id: '2',
-    content: "This looks amazing! I've been looking for something like this - forums + Discord features in one place. Can't wait to see how this develops!",
-    created_at: new Date(Date.now() - 82800000).toISOString(),
-    updated_at: new Date(Date.now() - 82800000).toISOString(),
-    reply_to_id: null,
-    author: { id: '2', username: 'sarah_dev', display_name: 'Sarah', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-  {
-    id: '3',
-    thread_id: '1',
-    author_id: '3',
-    content: "Hey everyone! Long-time forum enthusiast here. Really excited about the voice rooms feature - that's something I've wanted in a forum platform for ages.\n\nQuick question: will there be moderation tools for voice rooms?",
-    created_at: new Date(Date.now() - 79200000).toISOString(),
-    updated_at: new Date(Date.now() - 79200000).toISOString(),
-    reply_to_id: null,
-    author: { id: '3', username: 'mike_m', display_name: 'Mike', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-  {
-    id: '4',
-    thread_id: '1',
-    author_id: '1',
-    content: "Great question! Yes, voice rooms will have full moderation support:\n\n- Mute/unmute participants\n- Kick from room\n- Temporary bans\n- Priority speaker mode for announcements\n\nWe're also planning stage-style rooms for larger events.",
-    created_at: new Date(Date.now() - 75600000).toISOString(),
-    updated_at: new Date(Date.now() - 75600000).toISOString(),
-    reply_to_id: '3',
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-  {
-    id: '5',
-    thread_id: '1',
-    author_id: '4',
-    content: "Just signed up! The UI looks really clean. Is there a dark mode? (asking the important questions here)",
-    created_at: new Date(Date.now() - 72000000).toISOString(),
-    updated_at: new Date(Date.now() - 72000000).toISOString(),
-    reply_to_id: null,
-    author: { id: '4', username: 'alex_tech', display_name: 'Alex', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-  {
-    id: '6',
-    thread_id: '1',
-    author_id: '2',
-    content: "You're already looking at it! The whole thing is dark mode by default. Love it.",
-    created_at: new Date(Date.now() - 68400000).toISOString(),
-    updated_at: new Date(Date.now() - 68400000).toISOString(),
-    reply_to_id: '5',
-    author: { id: '2', username: 'sarah_dev', display_name: 'Sarah', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-  {
-    id: '7',
-    thread_id: '1',
-    author_id: '5',
-    content: "Hello from Australia! Just discovered this platform through a friend. The combination of forums and real-time features is exactly what our gaming community needs.",
-    created_at: new Date(Date.now() - 64800000).toISOString(),
-    updated_at: new Date(Date.now() - 64800000).toISOString(),
-    reply_to_id: null,
-    author: { id: '5', username: 'gamer_oz', display_name: 'OzGamer', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-  {
-    id: '8',
-    thread_id: '1',
-    author_id: '6',
-    content: "Software developer here. Would love to see an API for building integrations. Any plans for that?",
-    created_at: new Date(Date.now() - 57600000).toISOString(),
-    updated_at: new Date(Date.now() - 57600000).toISOString(),
-    reply_to_id: null,
-    author: { id: '6', username: 'dev_emma', display_name: 'Emma', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-  {
-    id: '9',
-    thread_id: '1',
-    author_id: '1',
-    content: "Absolutely! We're planning a full REST API and webhook support. Stay tuned for the developer documentation.",
-    created_at: new Date(Date.now() - 50400000).toISOString(),
-    updated_at: new Date(Date.now() - 50400000).toISOString(),
-    reply_to_id: '8',
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-  {
-    id: '10',
-    thread_id: '1',
-    author_id: '7',
-    content: "This is giving me old-school forum vibes but with modern features. Nostalgic and fresh at the same time!",
-    created_at: new Date(Date.now() - 43200000).toISOString(),
-    updated_at: new Date(Date.now() - 43200000).toISOString(),
-    reply_to_id: null,
-    author: { id: '7', username: 'retro_fan', display_name: 'RetroFan', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-  {
-    id: '11',
-    thread_id: '1',
-    author_id: '3',
-    content: "Thanks for the info about moderation tools! That's exactly what we need. Looking forward to trying out the voice rooms once they're fully ready.",
-    created_at: new Date(Date.now() - 28800000).toISOString(),
-    updated_at: new Date(Date.now() - 28800000).toISOString(),
-    reply_to_id: '4',
-    author: { id: '3', username: 'mike_m', display_name: 'Mike', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-  {
-    id: '12',
-    thread_id: '1',
-    author_id: '4',
-    content: "Just tried the chat feature - super smooth! The real-time updates are instant. Great work on the performance.",
-    created_at: new Date(Date.now() - 14400000).toISOString(),
-    updated_at: new Date(Date.now() - 14400000).toISOString(),
-    reply_to_id: null,
-    author: { id: '4', username: 'alex_tech', display_name: 'Alex', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-  },
-]
 
 export default function Thread() {
   const { threadId } = useParams()
@@ -195,13 +52,6 @@ export default function Thread() {
   }
 
   useEffect(() => {
-    if (!isConfigured) {
-      setThread(demoThread)
-      setAllPosts(demoPosts)
-      setLoading(false)
-      return
-    }
-
     const fetchData = async () => {
       setLoading(true)
 
@@ -238,8 +88,7 @@ export default function Thread() {
     fetchData()
 
     // Set up real-time subscription
-    if (isConfigured) {
-      const subscription = supabase
+    const subscription = supabase
         .channel(`thread:${threadId}`)
         .on(
           'postgres_changes',
@@ -273,33 +122,27 @@ export default function Thread() {
         )
         .subscribe()
 
-      return () => {
-        subscription.unsubscribe()
-      }
+    return () => {
+      subscription.unsubscribe()
     }
   }, [threadId])
 
   // Check bookmark status
   useEffect(() => {
-    if (!thread) return
+    if (!thread || !user) return
 
-    if (isConfigured && user) {
-      supabase
-        .from('bookmarks')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('thread_id', thread.id)
-        .maybeSingle()
-        .then(({ data }) => setIsBookmarked(!!data))
-    } else if (!isConfigured) {
-      const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]')
-      setIsBookmarked(bookmarks.some((b: { id: string }) => b.id === thread.id))
-    }
+    supabase
+      .from('bookmarks')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('thread_id', thread.id)
+      .maybeSingle()
+      .then(({ data }) => setIsBookmarked(!!data))
   }, [thread?.id, user])
 
   // Poll for new replies every 10 seconds
   useEffect(() => {
-    if (!isConfigured || !threadId) return
+    if (!threadId) return
 
     const poll = async () => {
       const current = allPostsRef.current
@@ -361,81 +204,22 @@ export default function Thread() {
   }, [loadPendingPosts])
 
   const toggleBookmark = async () => {
-    if (!thread) return
+    if (!thread || !user) return
 
-    if (isConfigured) {
-      if (!user) return
-      if (isBookmarked) {
-        await supabase.from('bookmarks').delete().eq('user_id', user.id).eq('thread_id', thread.id)
-        setIsBookmarked(false)
-      } else {
-        await supabase.from('bookmarks').insert({ user_id: user.id, thread_id: thread.id })
-        setIsBookmarked(true)
-      }
+    if (isBookmarked) {
+      await supabase.from('bookmarks').delete().eq('user_id', user.id).eq('thread_id', thread.id)
+      setIsBookmarked(false)
     } else {
-      const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]')
-      if (isBookmarked) {
-        const updated = bookmarks.filter((b: { id: string }) => b.id !== thread.id)
-        localStorage.setItem('bookmarks', JSON.stringify(updated))
-        setIsBookmarked(false)
-      } else {
-        bookmarks.push({
-          id: thread.id,
-          title: thread.title,
-          category: thread.category.name,
-          categorySlug: thread.category.slug,
-          author: thread.author.display_name || thread.author.username,
-          createdAt: thread.created_at,
-          bookmarkedAt: new Date().toISOString(),
-        })
-        localStorage.setItem('bookmarks', JSON.stringify(bookmarks))
-        setIsBookmarked(true)
-      }
+      await supabase.from('bookmarks').insert({ user_id: user.id, thread_id: thread.id })
+      setIsBookmarked(true)
     }
   }
 
   const handleReply = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!thread || !replyContent.trim()) return
+    if (!thread || !replyContent.trim() || !user) return
 
     setSubmitting(true)
-
-    // Demo mode - add post locally
-    if (!isConfigured) {
-      const newPost: PostWithAuthor = {
-        id: Date.now().toString(),
-        thread_id: thread.id,
-        author_id: user?.id || 'demo',
-        content: replyContent.trim(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        reply_to_id: replyingTo?.id || null,
-        author: {
-          id: user?.id || 'demo',
-          username: user?.user_metadata?.username || 'you',
-          display_name: user?.user_metadata?.username || 'You',
-          avatar_url: null,
-          bio: null,
-          website: null,
-          is_admin: false,
-          created_at: '',
-          updated_at: '2025-01-01',
-        },
-      }
-      setAllPosts(prev => [...prev, newPost])
-      setReplyContent('')
-      setReplyingTo(null)
-      setSubmitting(false)
-      // Go to last page to see the new post
-      const newTotalPages = Math.ceil((allPosts.length + 1) / POSTS_PER_PAGE)
-      if (newTotalPages > currentPage) {
-        goToPage(newTotalPages)
-      }
-      return
-    }
-
-    // Supabase mode
-    if (!user) return
 
     const { error } = await supabase.from('posts').insert({
       thread_id: thread.id,
@@ -744,8 +528,7 @@ export default function Thread() {
       )}
 
       {/* Live updates bar */}
-      {isConfigured && (
-        <div className={`mt-4 flex items-center justify-between rounded-lg border px-4 py-2.5 ${
+      <div className={`mt-4 flex items-center justify-between rounded-lg border px-4 py-2.5 ${
           pendingPosts.length > 0
             ? 'border-indigo-500/30 bg-indigo-500/10'
             : 'border-slate-700 bg-slate-800/50'
@@ -782,14 +565,13 @@ export default function Thread() {
             Auto-update
           </label>
         </div>
-      )}
 
       {/* Reply Form */}
       {thread.is_locked ? (
         <div className="mt-6 rounded-lg border border-slate-700 bg-slate-800/50 p-4 text-center text-slate-400">
           This thread is locked. No new replies can be posted.
         </div>
-      ) : isConfigured && !user ? (
+      ) : !user ? (
         <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center">
           <p className="text-slate-400">
             <Link to="/login" className="font-medium text-indigo-400 hover:text-indigo-300">Sign in</Link> to reply to this thread
@@ -828,10 +610,7 @@ export default function Thread() {
                 rows={4}
                 className="block w-full resize-none rounded-lg border border-slate-600 bg-slate-700 px-4 py-3 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
-              <div className="mt-3 flex items-center justify-between">
-                <p className="text-xs text-slate-500">
-                  {!isConfigured && "Demo mode - replies are stored locally"}
-                </p>
+              <div className="mt-3 flex justify-end">
                 <button
                   type="submit"
                   disabled={submitting || !replyContent.trim()}

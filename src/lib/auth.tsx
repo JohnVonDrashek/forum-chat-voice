@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { supabase, isConfigured } from './supabase'
+import { supabase } from './supabase'
 import { uploadDefaultAvatar } from './avatars'
 import type { Profile } from '../types/database'
 import type { User } from '@supabase/supabase-js'
@@ -88,11 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    if (!isConfigured) {
-      setLoading(false)
-      return
-    }
-
     // Check existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
@@ -121,15 +116,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    if (!isConfigured) return { error: new Error('Supabase not configured') }
-
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error: error ? new Error(error.message) : null }
   }
 
   const signUp = async (email: string, password: string, username: string) => {
-    if (!isConfigured) return { error: new Error('Supabase not configured') }
-
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -162,8 +153,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signInWithGitHub = async () => {
-    if (!isConfigured) return
-
     await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: { redirectTo: window.location.origin },

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import type { ThreadWithAuthor } from '../types'
 
@@ -17,39 +17,6 @@ export default function Bookmarks() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!isConfigured) {
-      // Legacy localStorage fallback for demo mode
-      const stored = localStorage.getItem('bookmarks')
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored)
-          setBookmarks(parsed.map((b: { id: string; title: string; category: string; categorySlug: string; author: string; createdAt: string; bookmarkedAt: string }) => ({
-            id: b.id,
-            thread: {
-              id: b.id,
-              title: b.title,
-              slug: '',
-              category_id: '',
-              author_id: '',
-              created_at: b.createdAt,
-              updated_at: b.createdAt,
-              is_pinned: false,
-              is_locked: false,
-              post_count: 0,
-              last_post_at: null,
-              content: null,
-              view_count: 0,
-              author: { id: '', username: b.author, display_name: b.author, avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '' },
-              category: { id: '', name: b.category, slug: b.categorySlug, description: null, sort_order: 0, created_at: '' },
-            },
-            created_at: b.bookmarkedAt,
-          })))
-        } catch { /* ignore parse errors */ }
-      }
-      setLoading(false)
-      return
-    }
-
     if (!user) {
       setLoading(false)
       return
@@ -75,12 +42,9 @@ export default function Bookmarks() {
     fetchBookmarks()
   }, [user])
 
-  const removeBookmark = async (bookmarkId: string, threadId: string) => {
-    if (isConfigured && user) {
+  const removeBookmark = async (bookmarkId: string) => {
+    if (user) {
       await supabase.from('bookmarks').delete().eq('id', bookmarkId)
-    } else {
-      const stored = JSON.parse(localStorage.getItem('bookmarks') || '[]')
-      localStorage.setItem('bookmarks', JSON.stringify(stored.filter((b: { id: string }) => b.id !== threadId)))
     }
     setBookmarks(prev => prev.filter(b => b.id !== bookmarkId))
   }
@@ -106,8 +70,8 @@ export default function Bookmarks() {
     return `${days}d ago`
   }
 
-  // Auth guard for Supabase mode
-  if (isConfigured && !authLoading && !user) {
+  // Auth guard
+  if (!authLoading && !user) {
     return (
       <div className="mx-auto max-w-4xl">
         <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
@@ -200,7 +164,7 @@ export default function Bookmarks() {
                 </div>
 
                 <button
-                  onClick={() => removeBookmark(bookmark.id, bookmark.thread.id)}
+                  onClick={() => removeBookmark(bookmark.id)}
                   className="shrink-0 rounded-lg p-2 text-slate-400 hover:bg-slate-700 hover:text-red-400"
                   title="Remove bookmark"
                 >

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { uploadAvatar } from '../lib/avatars'
 import Avatar from '../components/Avatar'
 import ImageCropModal from '../components/ImageCropModal'
@@ -37,11 +37,9 @@ export default function Settings() {
       setWebsite(profile.website || '')
       setAvatarUrl(profile.avatar_url || null)
     } else if (user) {
-      setDisplayName(user.user_metadata?.username || 'Demo User')
-    } else if (!isConfigured) {
-      setDisplayName('Demo User')
+      setDisplayName(user.user_metadata?.username || '')
     }
-    setEmail(user?.email || (isConfigured ? '' : 'demo@example.com'))
+    setEmail(user?.email || '')
   }, [profile, user])
 
   // Notification state
@@ -68,7 +66,7 @@ export default function Settings() {
   const handleSave = async () => {
     setError('')
 
-    if (isConfigured && user) {
+    if (user) {
       if (activeTab === 'profile') {
         const { error: updateError } = await supabase
           .from('profiles')
@@ -107,7 +105,7 @@ export default function Settings() {
   }
 
   // Auth guard
-  if (isConfigured && !authLoading && !user) {
+  if (!authLoading && !user) {
     return (
       <div className="mx-auto max-w-4xl">
         <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">

@@ -1,74 +1,14 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import type { ThreadWithAuthor } from '../types'
 
-// Demo threads for when Supabase is not configured
-const demoThreads: ThreadWithAuthor[] = [
-  {
-    id: '1',
-    category_id: '1',
-    author_id: '1',
-    title: 'Welcome to the Forum! Introduce yourself here',
-    slug: 'welcome',
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-    is_pinned: true,
-    is_locked: false,
-    post_count: 42,
-    last_post_at: new Date().toISOString(),
-    content: '',
-    image_url: null,
-    view_count: 0,
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-    category: { id: '1', name: 'General', slug: 'general', description: '', sort_order: 0, created_at: '' },
-  },
-  {
-    id: '2',
-    category_id: '2',
-    author_id: '1',
-    title: 'Roadmap: Chat and Voice features coming soon!',
-    slug: 'roadmap-chat-voice',
-    created_at: new Date(Date.now() - 172800000).toISOString(),
-    updated_at: new Date(Date.now() - 3600000).toISOString(),
-    is_pinned: true,
-    is_locked: false,
-    post_count: 15,
-    last_post_at: new Date(Date.now() - 3600000).toISOString(),
-    content: '',
-    image_url: null,
-    view_count: 0,
-    author: { id: '1', username: 'admin', display_name: 'Admin', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-    category: { id: '2', name: 'Announcements', slug: 'announcements', description: '', sort_order: 1, created_at: '' },
-  },
-  {
-    id: '3',
-    category_id: '1',
-    author_id: '2',
-    title: 'What features would you like to see?',
-    slug: 'feature-requests',
-    created_at: new Date(Date.now() - 259200000).toISOString(),
-    updated_at: new Date(Date.now() - 7200000).toISOString(),
-    is_pinned: false,
-    is_locked: false,
-    post_count: 28,
-    last_post_at: new Date(Date.now() - 7200000).toISOString(),
-    content: '',
-    image_url: null,
-    view_count: 0,
-    author: { id: '2', username: 'user1', display_name: 'Forum User', avatar_url: null, bio: null, website: null, is_admin: false, created_at: '', updated_at: '2025-01-01' },
-    category: { id: '1', name: 'General', slug: 'general', description: '', sort_order: 0, created_at: '' },
-  },
-]
-
 export default function Home() {
-  const [threads, setThreads] = useState<ThreadWithAuthor[]>(demoThreads)
-  const [loading, setLoading] = useState(false)
+  const [threads, setThreads] = useState<ThreadWithAuthor[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!isConfigured) return
-
     const fetchThreads = async () => {
       setLoading(true)
       const { data } = await supabase
@@ -108,11 +48,6 @@ export default function Home() {
         <p className="mt-2 text-sm text-indigo-100 sm:text-base">
           A modern community platform combining forums, real-time chat, and voice rooms.
         </p>
-        {!isConfigured && (
-          <div className="mt-4 rounded-lg bg-white/10 p-3 text-xs sm:text-sm">
-            <strong>Demo Mode:</strong> Connect to Supabase to enable full functionality.
-          </div>
-        )}
       </div>
 
       {/* Recent Threads */}

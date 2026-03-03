@@ -1,24 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { supabase, isConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { uploadAvatar, uploadDefaultAvatar } from '../lib/avatars'
 import Avatar from '../components/Avatar'
 import ImageCropModal from '../components/ImageCropModal'
 import type { Category } from '../types'
 
-const demoCategories: Record<string, Category> = {
-  general: { id: '1', name: 'General', slug: 'general', description: 'General discussion', sort_order: 0, created_at: '' },
-  announcements: { id: '2', name: 'Announcements', slug: 'announcements', description: 'Official announcements', sort_order: 1, created_at: '' },
-  help: { id: '3', name: 'Help & Support', slug: 'help', description: 'Get help from the community', sort_order: 2, created_at: '' },
-  showcase: { id: '4', name: 'Showcase', slug: 'showcase', description: 'Show off your projects', sort_order: 3, created_at: '' },
-}
-
 export default function NewThread() {
   const { categorySlug } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [category, setCategory] = useState<Category | null>(demoCategories[categorySlug || ''] || null)
+  const [category, setCategory] = useState<Category | null>(null)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [error, setError] = useState('')
@@ -31,11 +24,6 @@ export default function NewThread() {
   useEffect(() => {
     if (!user) {
       navigate('/login')
-      return
-    }
-
-    if (!isConfigured) {
-      setCategory(demoCategories[categorySlug || ''] || null)
       return
     }
 
@@ -53,11 +41,6 @@ export default function NewThread() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!isConfigured) {
-      setError('Supabase is not configured. Please set up your environment variables.')
-      return
-    }
 
     if (!user || !category) return
 
@@ -205,12 +188,6 @@ export default function NewThread() {
           />
         </div>
 
-        {!isConfigured && (
-          <div className="mt-4 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-sm text-amber-400">
-            <strong>Demo Mode:</strong> Creating threads requires Supabase configuration.
-          </div>
-        )}
-
         {error && (
           <div className="mt-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
             {error}
@@ -258,7 +235,7 @@ export default function NewThread() {
             </button>
             <button
               type="submit"
-              disabled={submitting || !isConfigured}
+              disabled={submitting}
               className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
             >
               {submitting ? 'Creating...' : 'Create Thread'}
