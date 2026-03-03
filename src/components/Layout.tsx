@@ -15,23 +15,30 @@ export default function Layout() {
   const queryClient = useQueryClient()
 
   // Use React Query for sidebar data - cached globally, instant on tab switch!
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [], isError: categoriesError } = useQuery({
     queryKey: queryKeys.categories,
     queryFn: fetchers.categories,
     ...queryOptions.static,
   })
 
-  const { data: channels = [] } = useQuery({
+  const { data: channels = [], isError: channelsError } = useQuery({
     queryKey: queryKeys.channels,
     queryFn: fetchers.channels,
     ...queryOptions.static,
   })
 
-  const { data: rooms = [] } = useQuery({
+  const { data: rooms = [], isError: roomsError } = useQuery({
     queryKey: queryKeys.voiceRooms,
     queryFn: fetchers.voiceRooms,
     ...queryOptions.static,
   })
+
+  // Log sidebar data errors to console for diagnostics
+  useEffect(() => {
+    if (categoriesError) console.error('[FCV:Layout] Failed to load categories')
+    if (channelsError) console.error('[FCV:Layout] Failed to load chat channels')
+    if (roomsError) console.error('[FCV:Layout] Failed to load voice rooms')
+  }, [categoriesError, channelsError, roomsError])
 
   // Prefetch common data in background on app load
   useEffect(() => {
@@ -82,11 +89,15 @@ export default function Layout() {
     }
 
     const fetchUnread = async () => {
-      const { count } = await supabase
+      const { count, error } = await supabase
         .from('direct_messages')
         .select('*', { count: 'exact', head: true })
         .eq('recipient_id', user.id)
         .eq('read', false)
+      if (error) {
+        console.error('[FCV:Layout] Failed to fetch unread DM count:', error)
+        return
+      }
       setUnreadDmCount(count ?? 0)
     }
 

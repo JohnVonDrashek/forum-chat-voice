@@ -76,17 +76,22 @@ export default function Chat() {
   useEffect(() => {
     if (!channel) return
 
+    console.log('[FCV:Chat] Subscribing to realtime for channel:', channel.slug)
     const sub = supabase
       .channel(`chat:${channel.id}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `channel_id=eq.${channel.id}` },
         async (payload) => {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('chat_messages')
             .select('*, author:profiles(*)')
             .eq('id', payload.new.id)
             .single()
+          if (error) {
+            console.error('[FCV:Chat] Failed to fetch new realtime message:', error)
+            return
+          }
           if (data) {
             setMessages(prev => {
               if (prev.some(m => m.id === data.id)) return prev
@@ -97,7 +102,9 @@ export default function Chat() {
           }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('[FCV:Chat] Subscription status:', status)
+      })
 
     return () => {
       sub.unsubscribe()
@@ -114,15 +121,23 @@ export default function Chat() {
     inputRef.current?.focus()
   }, [channelSlug])
 
+  const [sendError, setSendError] = useState<string | null>(null)
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!inputValue.trim() || !user || !channel) return
+    setSendError(null)
 
-    await supabase.from('chat_messages').insert({
+    const { error } = await supabase.from('chat_messages').insert({
       channel_id: channel.id,
       author_id: user.id,
       content: inputValue.trim(),
     })
+    if (error) {
+      console.error('[FCV:Chat] Failed to send message:', error)
+      setSendError('Failed to send message')
+      return
+    }
     setInputValue('')
   }
 
@@ -228,6 +243,14 @@ export default function Chat() {
       </div>
 
       {/* Input Area */}
+      {sendError && (
+        <div className="shrink-0 px-3 sm:px-4">
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+            {sendError}
+            <button onClick={() => setSendError(null)} className="ml-2 text-red-300 hover:text-red-200">dismiss</button>
+          </div>
+        </div>
+      )}
       <div className="shrink-0 border-t border-slate-700 px-3 py-3 sm:px-4 sm:py-4">
         {!user ? (
           <div className="flex items-center justify-center gap-2 rounded-lg bg-slate-700/50 px-4 py-3">

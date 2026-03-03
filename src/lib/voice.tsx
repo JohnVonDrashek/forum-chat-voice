@@ -114,7 +114,11 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         .from('profiles')
         .select('id, avatar_url')
         .in('id', uncached.map(p => p.id))
-        .then(({ data }) => {
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('[FCV:Voice] Failed to fetch participant avatars:', error)
+            return
+          }
           if (!data) return
           let changed = false
           for (const profile of data) {

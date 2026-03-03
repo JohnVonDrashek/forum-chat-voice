@@ -12,7 +12,7 @@ export default function Category() {
   const queryClient = useQueryClient()
 
   // Use React Query for category data - cached!
-  const { data: category, isLoading: categoryLoading } = useQuery({
+  const { data: category, isLoading: categoryLoading, isError: categoryError } = useQuery({
     queryKey: queryKeys.category(categorySlug!),
     queryFn: () => fetchers.category(categorySlug!),
     ...queryOptions.static,
@@ -20,7 +20,7 @@ export default function Category() {
   })
 
   // Use React Query for threads - cached!
-  const { data: threads = [], isLoading: threadsLoading } = useQuery({
+  const { data: threads = [], isLoading: threadsLoading, isError: threadsError } = useQuery({
     queryKey: queryKeys.threadsByCategory(categorySlug!),
     queryFn: () => fetchers.threadsByCategory(categorySlug!),
     ...queryOptions.threads,
@@ -28,6 +28,7 @@ export default function Category() {
   })
 
   const loading = categoryLoading || threadsLoading
+  const hasError = categoryError || threadsError
 
   // Prefetch all visible threads once they load
   useEffect(() => {
@@ -53,6 +54,26 @@ export default function Category() {
         <div className="animate-pulse">
           <div className="h-8 w-48 rounded bg-slate-700" />
           <div className="mt-2 h-4 w-96 rounded bg-slate-700" />
+        </div>
+      </div>
+    )
+  }
+
+  if (hasError) {
+    return (
+      <div className="mx-auto max-w-4xl text-center">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-8">
+          <h1 className="text-xl font-bold text-white">Error loading category</h1>
+          <p className="mt-2 text-slate-400">Something went wrong. Check browser console for details.</p>
+          <button
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: queryKeys.category(categorySlug!) })
+              queryClient.invalidateQueries({ queryKey: queryKeys.threadsByCategory(categorySlug!) })
+            }}
+            className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500"
+          >
+            Retry
+          </button>
         </div>
       </div>
     )

@@ -94,20 +94,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check existing session
+    console.log('[FCV:Auth] Checking existing session...')
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const prof = await ensureProfile(session.user)
-        setUser(toAppUser(session.user, prof))
+        console.log('[FCV:Auth] Session found, ensuring profile for user:', session.user.id)
+        try {
+          const prof = await ensureProfile(session.user)
+          setUser(toAppUser(session.user, prof))
+          console.log('[FCV:Auth] Profile loaded successfully:', prof?.username)
+        } catch (err) {
+          console.error('[FCV:Auth] Failed to ensure profile during init:', err)
+          // Still set user even if profile fails, so app doesn't hang
+          setUser(toAppUser(session.user, null))
+        }
+      } else {
+        console.log('[FCV:Auth] No existing session')
       }
+      setLoading(false)
+      console.log('[FCV:Auth] Auth init complete, loading=false')
+    }).catch((err) => {
+      console.error('[FCV:Auth] getSession() failed:', err)
       setLoading(false)
     })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('[FCV:Auth] Auth state changed:', event)
         if (session?.user) {
-          const prof = await ensureProfile(session.user)
-          setUser(toAppUser(session.user, prof))
+          try {
+            const prof = await ensureProfile(session.user)
+            setUser(toAppUser(session.user, prof))
+          } catch (err) {
+            console.error('[FCV:Auth] Failed to ensure profile on auth change:', err)
+            setUser(toAppUser(session.user, null))
+          }
 
           // Redirect to reset-password page on PASSWORD_RECOVERY event
           if (event === 'PASSWORD_RECOVERY') {
@@ -157,16 +178,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      await supabase.auth.signOut()
+    } catch (err) {
+      console.error('[FCV:Auth] signOut failed:', err)
+    }
     setUser(null)
     setProfile(null)
   }
 
   const signInWithGitHub = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: { redirectTo: siteUrl },
-    })
+    try {
+      await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: { redirectTo: siteUrl },
+      })
+    } catch (err) {
+      console.error('[FCV:Auth] GitHub OAuth failed:', err)
+    }
   }
 
   const resetPassword = async (email: string) => {

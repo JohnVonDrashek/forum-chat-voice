@@ -104,11 +104,17 @@ export default function DirectMessages() {
     const otherId = currentConversation?.recipientId || recipientId
 
     const fetchMessages = async () => {
-      const { data } = await supabase
+      console.log('[FCV:DM] Fetching messages for conversation:', otherId)
+      const { data, error } = await supabase
         .from('direct_messages')
         .select('*')
         .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${user.id})`)
         .order('created_at')
+
+      if (error) {
+        console.error('[FCV:DM] Failed to fetch messages:', error)
+        return
+      }
 
       if (data) {
         setMessages(data.map(dm => ({
@@ -117,15 +123,20 @@ export default function DirectMessages() {
           content: dm.content,
           timestamp: new Date(dm.created_at),
         })))
+        console.log('[FCV:DM] Loaded', data.length, 'messages')
       }
 
       // Mark as read
-      await supabase
+      const { error: readError } = await supabase
         .from('direct_messages')
         .update({ read: true })
         .eq('sender_id', otherId)
         .eq('recipient_id', user.id)
         .eq('read', false)
+
+      if (readError) {
+        console.error('[FCV:DM] Failed to mark messages as read:', readError)
+      }
 
       // Invalidate conversations to update unread count
       queryClient.invalidateQueries({ queryKey: queryKeys.dmConversationsList(user.id) })
@@ -153,7 +164,9 @@ export default function DirectMessages() {
             }])
             // Mark incoming as read
             if (dm.sender_id === otherId) {
-              supabase.from('direct_messages').update({ read: true }).eq('id', dm.id).then(() => {})
+              supabase.from('direct_messages').update({ read: true }).eq('id', dm.id).then(({ error }) => {
+                if (error) console.error('[FCV:DM] Failed to mark realtime DM as read:', error)
+              })
             }
           }
         }
@@ -167,16 +180,24 @@ export default function DirectMessages() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const [sendError, setSendError] = useState<string | null>(null)
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim() || !recipientId || !user) return
+    setSendError(null)
 
     const otherId = currentConversation?.recipientId || recipientId
-    await supabase.from('direct_messages').insert({
+    const { error } = await supabase.from('direct_messages').insert({
       sender_id: user.id,
       recipient_id: otherId,
       content: newMessage.trim(),
     })
+    if (error) {
+      console.error('[FCV:DM] Failed to send message:', error)
+      setSendError('Failed to send message')
+      return
+    }
     setNewMessage('')
   }
 
@@ -350,6 +371,12 @@ export default function DirectMessages() {
               </div>
 
               {/* Input */}
+              {sendError && (
+                <div className="mx-4 mb-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                  {sendError}
+                  <button onClick={() => setSendError(null)} className="ml-2 text-red-300 hover:text-red-200">dismiss</button>
+                </div>
+              )}
               <div className="border-t border-slate-700 p-4">
                 <form onSubmit={handleSend} className="flex gap-2">
                     <input

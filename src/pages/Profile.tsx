@@ -14,7 +14,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<ActivityTab>('threads')
 
   // Use React Query for profile - cached globally!
-  const { data: profile, isLoading: profileLoading } = useQuery({
+  const { data: profile, isLoading: profileLoading, isError: profileError } = useQuery({
     queryKey: queryKeys.profileByUsername(username!),
     queryFn: () => fetchers.profileByUsername(username!),
     enabled: !!username,
@@ -60,6 +60,20 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (profileError) {
+    return (
+      <div className="mx-auto max-w-4xl text-center">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-8">
+          <h1 className="text-xl font-bold text-white">Error loading profile</h1>
+          <p className="mt-2 text-slate-400">Something went wrong. Check browser console for details.</p>
+          <Link to="/" className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500">
+            Go back home
+          </Link>
         </div>
       </div>
     )

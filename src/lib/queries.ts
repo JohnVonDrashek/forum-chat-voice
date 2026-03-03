@@ -72,46 +72,64 @@ export const queryKeys = {
 // Fetchers - reusable across components
 // ============================================================================
 
+// Helper to log and rethrow fetcher errors
+function fetchError(label: string, error: unknown): never {
+  console.error(`[FCV:Query] ${label} failed:`, error)
+  throw error
+}
+
 export const fetchers = {
   // Static data
   categories: async (): Promise<Category[]> => {
+    console.log('[FCV:Query] Fetching categories...')
     const { data, error } = await supabase.from('categories').select('*').order('sort_order')
-    if (error) throw error
+    if (error) fetchError('categories', error)
+    console.log('[FCV:Query] Categories loaded:', data?.length)
     return data || []
   },
 
   channels: async (): Promise<ChatChannel[]> => {
+    console.log('[FCV:Query] Fetching channels...')
     const { data, error } = await supabase.from('chat_channels').select('*').order('name')
-    if (error) throw error
+    if (error) fetchError('channels', error)
+    console.log('[FCV:Query] Channels loaded:', data?.length)
     return data || []
   },
 
   voiceRooms: async (): Promise<VoiceRoom[]> => {
+    console.log('[FCV:Query] Fetching voice rooms...')
     const { data, error } = await supabase.from('voice_rooms').select('*').order('name')
-    if (error) throw error
+    if (error) fetchError('voiceRooms', error)
+    console.log('[FCV:Query] Voice rooms loaded:', data?.length)
     return data || []
   },
 
   // Threads
   threads: async (limit = 20): Promise<ThreadWithAuthor[]> => {
+    console.log('[FCV:Query] Fetching threads, limit:', limit)
     const { data, error } = await supabase
       .from('threads')
       .select(`*, author:profiles(*), category:categories(*)`)
       .order('is_pinned', { ascending: false })
       .order('last_post_at', { ascending: false })
       .limit(limit)
-    if (error) throw error
+    if (error) fetchError('threads', error)
+    console.log('[FCV:Query] Threads loaded:', data?.length)
     return (data || []) as ThreadWithAuthor[]
   },
 
   threadsByCategory: async (categorySlug: string): Promise<ThreadWithAuthor[]> => {
+    console.log('[FCV:Query] Fetching threads for category:', categorySlug)
     // First get the category by slug
-    const { data: category } = await supabase
+    const { data: category, error: catError } = await supabase
       .from('categories')
       .select('id')
       .eq('slug', categorySlug)
       .single()
 
+    if (catError) {
+      console.error('[FCV:Query] Failed to find category:', categorySlug, catError)
+    }
     if (!category) return []
 
     const { data, error } = await supabase
@@ -120,7 +138,7 @@ export const fetchers = {
       .eq('category_id', category.id)
       .order('is_pinned', { ascending: false })
       .order('last_post_at', { ascending: false })
-    if (error) throw error
+    if (error) fetchError('threadsByCategory', error)
     return (data || []) as ThreadWithAuthor[]
   },
 
@@ -130,7 +148,7 @@ export const fetchers = {
       .select(`*, author:profiles(*), category:categories(*)`)
       .eq('id', threadId)
       .single()
-    if (error) throw error
+    if (error) fetchError(`thread(${threadId})`, error)
     return data as ThreadWithAuthor | null
   },
 
@@ -141,7 +159,7 @@ export const fetchers = {
       .select(`*, author:profiles(*)`)
       .eq('thread_id', threadId)
       .order('created_at', { ascending: true })
-    if (error) throw error
+    if (error) fetchError(`posts(${threadId})`, error)
     return (data || []) as PostWithAuthor[]
   },
 
@@ -152,7 +170,7 @@ export const fetchers = {
       .select('*')
       .eq('slug', slug)
       .single()
-    if (error) throw error
+    if (error) fetchError(`category(${slug})`, error)
     return data
   },
 
@@ -163,7 +181,7 @@ export const fetchers = {
       .select('*')
       .eq('id', userId)
       .single()
-    if (error) throw error
+    if (error) fetchError(`profile(${userId})`, error)
     return data
   },
 
@@ -173,19 +191,23 @@ export const fetchers = {
       .select('*')
       .eq('username', username)
       .single()
-    if (error) throw error
+    if (error) fetchError(`profileByUsername(${username})`, error)
     return data
   },
 
   // Chat messages - fetch by channel slug
   chatMessagesBySlug: async (channelSlug: string): Promise<ChatMessageWithAuthor[]> => {
+    console.log('[FCV:Query] Fetching chat messages for:', channelSlug)
     // First get the channel by slug
-    const { data: channel } = await supabase
+    const { data: channel, error: chanError } = await supabase
       .from('chat_channels')
       .select('id')
       .eq('slug', channelSlug)
       .single()
 
+    if (chanError) {
+      console.error('[FCV:Query] Failed to find channel:', channelSlug, chanError)
+    }
     if (!channel) return []
 
     const { data, error } = await supabase
@@ -194,7 +216,8 @@ export const fetchers = {
       .eq('channel_id', channel.id)
       .order('created_at', { ascending: true })
       .limit(100)
-    if (error) throw error
+    if (error) fetchError('chatMessagesBySlug', error)
+    console.log('[FCV:Query] Chat messages loaded:', data?.length)
     return (data || []) as ChatMessageWithAuthor[]
   },
 
@@ -204,12 +227,13 @@ export const fetchers = {
     created_at: string
     thread: ThreadWithAuthor
   }>> => {
+    console.log('[FCV:Query] Fetching bookmarks for user:', userId)
     const { data, error } = await supabase
       .from('bookmarks')
       .select(`id, created_at, thread:threads(*, author:profiles(*), category:categories(*))`)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-    if (error) throw error
+    if (error) fetchError('bookmarksWithMeta', error)
     return (data?.map((b) => ({
       id: b.id,
       created_at: b.created_at,
@@ -224,7 +248,7 @@ export const fetchers = {
       .select(`thread:threads(*, author:profiles(*), category:categories(*))`)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-    if (error) throw error
+    if (error) fetchError('bookmarks', error)
     return (data?.map((b: { thread: ThreadWithAuthor }) => b.thread) || []) as ThreadWithAuthor[]
   },
 
@@ -246,7 +270,7 @@ export const fetchers = {
       .eq('author_id', userId)
       .order('created_at', { ascending: false })
       .limit(10)
-    if (error) throw error
+    if (error) fetchError('userThreads', error)
     return (data || []) as ThreadWithAuthor[]
   },
 
@@ -257,7 +281,7 @@ export const fetchers = {
       .eq('author_id', userId)
       .order('created_at', { ascending: false })
       .limit(20)
-    if (error) throw error
+    if (error) fetchError('userPosts', error)
     return (data || []) as PostWithAuthor[]
   },
 
@@ -271,7 +295,7 @@ export const fetchers = {
       .ilike('title', pattern)
       .order('created_at', { ascending: false })
       .limit(20)
-    if (error) throw error
+    if (error) fetchError('searchThreads', error)
     return (data || []) as ThreadWithAuthor[]
   },
 
@@ -284,7 +308,7 @@ export const fetchers = {
       .ilike('content', pattern)
       .order('created_at', { ascending: false })
       .limit(20)
-    if (error) throw error
+    if (error) fetchError('searchPosts', error)
     return (data || []) as PostWithAuthor[]
   },
 
@@ -297,6 +321,7 @@ export const fetchers = {
     lastMessageTime: string
     unreadCount: number
   }>> => {
+    console.log('[FCV:Query] Fetching DM conversations for:', userId)
     // Get all DMs involving this user
     const { data, error } = await supabase
       .from('direct_messages')
@@ -304,7 +329,7 @@ export const fetchers = {
       .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
       .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) fetchError('dmConversations', error)
     if (!data) return []
 
     // Group by other user

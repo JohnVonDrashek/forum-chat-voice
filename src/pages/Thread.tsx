@@ -74,6 +74,7 @@ export default function Thread() {
   useEffect(() => {
     if (!threadId) return
 
+    console.log('[FCV:Thread] Subscribing to realtime for thread:', threadId)
     const subscription = supabase
         .channel(`thread:${threadId}`)
         .on(
@@ -81,11 +82,15 @@ export default function Thread() {
           { event: 'INSERT', schema: 'public', table: 'posts', filter: `thread_id=eq.${threadId}` },
           async (payload) => {
             // Fetch the new post with author
-            const { data } = await supabase
+            const { data, error } = await supabase
               .from('posts')
               .select('*, author:profiles(*)')
               .eq('id', payload.new.id)
               .single()
+            if (error) {
+              console.error('[FCV:Thread] Failed to fetch new realtime post:', error)
+              return
+            }
             if (data) {
               const post = data as PostWithAuthor
               const currentPosts = queryClient.getQueryData<PostWithAuthor[]>(queryKeys.posts(threadId)) ?? []
@@ -109,7 +114,9 @@ export default function Thread() {
             }
           }
         )
-        .subscribe()
+        .subscribe((status) => {
+          console.log('[FCV:Thread] Subscription status:', status)
+        })
 
     return () => {
       subscription.unsubscribe()
@@ -126,7 +133,13 @@ export default function Thread() {
       .eq('user_id', user.id)
       .eq('thread_id', thread.id)
       .maybeSingle()
-      .then(({ data }) => setIsBookmarked(!!data))
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('[FCV:Thread] Failed to check bookmark status:', error)
+          return
+        }
+        setIsBookmarked(!!data)
+      })
   }, [thread?.id, user])
 
   const loadPendingPosts = useCallback(() => {
@@ -154,10 +167,18 @@ export default function Thread() {
     if (!thread || !user) return
 
     if (isBookmarked) {
-      await supabase.from('bookmarks').delete().eq('user_id', user.id).eq('thread_id', thread.id)
+      const { error } = await supabase.from('bookmarks').delete().eq('user_id', user.id).eq('thread_id', thread.id)
+      if (error) {
+        console.error('[FCV:Thread] Failed to remove bookmark:', error)
+        return
+      }
       setIsBookmarked(false)
     } else {
-      await supabase.from('bookmarks').insert({ user_id: user.id, thread_id: thread.id })
+      const { error } = await supabase.from('bookmarks').insert({ user_id: user.id, thread_id: thread.id })
+      if (error) {
+        console.error('[FCV:Thread] Failed to add bookmark:', error)
+        return
+      }
       setIsBookmarked(true)
     }
     // Invalidate bookmarks cache
@@ -200,13 +221,18 @@ export default function Thread() {
       setReplyContent('')
       setReplyingTo(null)
       // Update thread's last_post_at
-      await supabase
+      const { error: updateError } = await supabase
         .from('threads')
         .update({ last_post_at: new Date().toISOString(), post_count: thread.post_count + 1 })
         .eq('id', thread.id)
+      if (updateError) {
+        console.error('[FCV:Thread] Failed to update thread after reply:', updateError)
+      }
 
       // Invalidate caches so home page shows updated post count/last activity
       queryClient.invalidateQueries({ queryKey: queryKeys.threads(20) })
+    } else if (error) {
+      console.error('[FCV:Thread] Failed to post reply:', error)
     }
 
     setSubmitting(false)

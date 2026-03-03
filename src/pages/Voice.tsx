@@ -19,7 +19,7 @@ export default function Voice() {
   const voice = useVoice()
 
   // Use React Query for rooms - cached globally, instant navigation!
-  const { data: rawRooms = [] } = useQuery({
+  const { data: rawRooms = [], isLoading: roomsLoading, isError: roomsError } = useQuery({
     queryKey: queryKeys.voiceRooms,
     queryFn: fetchers.voiceRooms,
     ...queryOptions.static,
@@ -75,6 +75,24 @@ export default function Voice() {
         </div>
 
         {authGate}
+
+        {roomsLoading && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="animate-pulse rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+                <div className="h-5 w-32 rounded bg-slate-700" />
+                <div className="mt-4 h-10 w-full rounded bg-slate-700" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {roomsError && (
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-center">
+            <p className="text-red-400">Failed to load voice rooms</p>
+            <p className="mt-1 text-sm text-slate-400">Check browser console for details</p>
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           {rooms.map((room) => {
