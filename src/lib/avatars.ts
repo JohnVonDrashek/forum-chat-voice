@@ -1,6 +1,6 @@
 import { createAvatar } from '@dicebear/core'
-import { avataaars } from '@dicebear/collection'
-import { shapes } from '@dicebear/collection'
+import * as avataaars from '@dicebear/avataaars'
+import * as shapes from '@dicebear/shapes'
 import { supabase } from './supabase'
 
 const BUCKET = 'avatars'

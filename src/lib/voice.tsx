@@ -1,7 +1,16 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode } from 'react'
-import { Room, RoomEvent, Track, Participant } from 'livekit-client'
+import type { Room as RoomType, Participant } from 'livekit-client'
 import { supabase } from './supabase'
 import { useAuth } from './auth'
+
+// Lazily loaded livekit module — only fetched when joinRoom() is called
+let livekitModule: typeof import('livekit-client') | null = null
+async function getLivekit() {
+  if (!livekitModule) {
+    livekitModule = await import('livekit-client')
+  }
+  return livekitModule
+}
 
 export interface VoiceParticipant {
   id: string
@@ -58,9 +67,9 @@ interface VoiceContextType {
 
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined)
 
-function participantToVoice(p: Participant): VoiceParticipant {
+function participantToVoice(p: Participant, lk: typeof import('livekit-client')): VoiceParticipant {
   const audioTrack = p.getTrackPublications().find(
-    t => t.track?.source === Track.Source.Microphone,
+    t => t.track?.source === lk.Track.Source.Microphone,
   )
   return {
     id: p.identity,
@@ -73,7 +82,7 @@ function participantToVoice(p: Participant): VoiceParticipant {
 
 export function VoiceProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
-  const livekitRoomRef = useRef<Room | null>(null)
+  const livekitRoomRef = useRef<RoomType | null>(null)
 
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
@@ -95,9 +104,10 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   const updateParticipants = useCallback(() => {
     const room = livekitRoomRef.current
-    if (!room) return
+    if (!room || !livekitModule) return
+    const lk = livekitModule
     const remotes = Array.from(room.remoteParticipants.values()).map(p => {
-      const vp = participantToVoice(p)
+      const vp = participantToVoice(p, lk)
       // Apply cached avatar URL if available
       if (avatarCacheRef.current[vp.id] !== undefined) {
         vp.avatarUrl = avatarCacheRef.current[vp.id]
@@ -316,28 +326,31 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      const room = new Room()
+      // Dynamically load livekit-client only when actually joining a room
+      const lk = await getLivekit()
+
+      const room = new lk.Room()
       livekitRoomRef.current = room
 
-      room.on(RoomEvent.ParticipantConnected, updateParticipants)
-      room.on(RoomEvent.ParticipantDisconnected, updateParticipants)
-      room.on(RoomEvent.TrackMuted, updateParticipants)
-      room.on(RoomEvent.TrackUnmuted, updateParticipants)
-      room.on(RoomEvent.ActiveSpeakersChanged, updateParticipants)
+      room.on(lk.RoomEvent.ParticipantConnected, updateParticipants)
+      room.on(lk.RoomEvent.ParticipantDisconnected, updateParticipants)
+      room.on(lk.RoomEvent.TrackMuted, updateParticipants)
+      room.on(lk.RoomEvent.TrackUnmuted, updateParticipants)
+      room.on(lk.RoomEvent.ActiveSpeakersChanged, updateParticipants)
 
       // Attach remote audio tracks to DOM for playback
-      room.on(RoomEvent.TrackSubscribed, (track) => {
-        if (track.kind === Track.Kind.Audio) {
+      room.on(lk.RoomEvent.TrackSubscribed, (track) => {
+        if (track.kind === lk.Track.Kind.Audio) {
           const el = track.attach()
           el.id = `lk-audio-${track.sid}`
           document.body.appendChild(el)
         }
       })
-      room.on(RoomEvent.TrackUnsubscribed, (track) => {
+      room.on(lk.RoomEvent.TrackUnsubscribed, (track) => {
         track.detach().forEach(el => el.remove())
       })
 
-      room.on(RoomEvent.Disconnected, () => {
+      room.on(lk.RoomEvent.Disconnected, () => {
         setIsConnected(false)
         setParticipants([])
         setConnectedRoomSlug(null)
@@ -381,11 +394,12 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   const toggleDeafen = useCallback(() => {
     const room = livekitRoomRef.current
-    if (!room) return
+    if (!room || !livekitModule) return
+    const lk = livekitModule
     const newDeafened = !isDeafened
     room.remoteParticipants.forEach(p => {
       p.getTrackPublications().forEach(pub => {
-        if (pub.track && pub.track.source === Track.Source.Microphone) {
+        if (pub.track && pub.track.source === lk.Track.Source.Microphone) {
           if (newDeafened) {
             pub.track.detach()
           } else {
