@@ -46,20 +46,6 @@ export default function Category() {
     })
   }, [threads, queryClient])
 
-  // Prefetch thread data on hover (backup for stale data)
-  const prefetchThread = (threadId: string) => {
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.thread(threadId),
-      queryFn: () => fetchers.thread(threadId),
-      ...queryOptions.threads,
-    })
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.posts(threadId),
-      queryFn: () => fetchers.posts(threadId),
-      ...queryOptions.posts,
-    })
-  }
-
   const formatTimeAgo = (date: string) => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
     if (seconds < 60) return 'just now'
@@ -142,7 +128,6 @@ export default function Category() {
                 key={thread.id}
                 to={`/t/${thread.id}`}
                 className="flex items-start gap-4 px-4 py-4 transition-colors hover:bg-slate-700/30"
-                onMouseEnter={() => prefetchThread(thread.id)}
               >
                 <Avatar seed={thread.id} type="thread" avatarUrl={thread.image_url} className="h-10 w-10 shrink-0" />
 

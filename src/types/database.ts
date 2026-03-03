@@ -394,3 +394,7 @@ export interface ThreadWithAuthor extends Thread {
 export interface PostWithAuthor extends Post {
   author: Profile
 }
+
+export interface ChatMessageWithAuthor extends ChatMessage {
+  author: Profile
+}

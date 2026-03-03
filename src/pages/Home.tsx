@@ -32,20 +32,6 @@ export default function Home() {
     })
   }, [threads, queryClient])
 
-  // Prefetch thread data on hover (backup for stale data)
-  const prefetchThread = (threadId: string) => {
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.thread(threadId),
-      queryFn: () => fetchers.thread(threadId),
-      ...queryOptions.threads,
-    })
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.posts(threadId),
-      queryFn: () => fetchers.posts(threadId),
-      ...queryOptions.posts,
-    })
-  }
-
   const formatTimeAgo = (date: string) => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
     if (seconds < 60) return 'just now'
@@ -107,7 +93,6 @@ export default function Home() {
                 key={thread.id}
                 to={`/t/${thread.id}`}
                 className="flex items-start gap-3 px-3 py-3 transition-colors hover:bg-slate-700/30 sm:gap-4 sm:px-4 sm:py-4"
-                onMouseEnter={() => prefetchThread(thread.id)}
               >
                 {/* Thread Avatar */}
                 <Avatar seed={thread.id} type="thread" avatarUrl={thread.image_url} className="h-9 w-9 shrink-0 sm:h-10 sm:w-10" />

@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
-import type { Profile } from '../types'
+import type { Profile, ChatMessageWithAuthor } from '../types'
 
 interface ChatMsg {
   id: string
@@ -34,8 +34,8 @@ function toMsg(row: { id: string; channel_id: string; author_id: string; content
 export default function Chat() {
   const { channelId: channelSlug = 'general' } = useParams()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [messages, setMessages] = useState<ChatMsg[]>([])
-  const [loading, setLoading] = useState(true)
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -49,30 +49,31 @@ export default function Chat() {
 
   const channel = channels.find(c => c.slug === channelSlug || c.id === channelSlug)
 
-  // Fetch messages & subscribe
+  // Use React Query for messages - instant on channel switch!
+  const { data: cachedMessages = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.chatMessages(channelSlug),
+    queryFn: () => fetchers.chatMessagesBySlug(channelSlug),
+    ...queryOptions.realtime,
+    enabled: !!channel,
+  })
+
+  // Sync cached messages to local state
   useEffect(() => {
-    if (!channel) {
-      // Channels haven't loaded yet — stay in loading state
-      return
+    if (cachedMessages.length > 0) {
+      setMessages(cachedMessages.map((m: ChatMessageWithAuthor) => toMsg({
+        id: m.id,
+        channel_id: m.channel_id,
+        author_id: m.author_id,
+        content: m.content,
+        created_at: m.created_at,
+        author: m.author,
+      })))
     }
+  }, [cachedMessages])
 
-    let cancelled = false
-    setLoading(true)
-
-    const fetchMessages = async () => {
-      const { data } = await supabase
-        .from('chat_messages')
-        .select('*, author:profiles(*)')
-        .eq('channel_id', channel.id)
-        .order('created_at')
-        .limit(100)
-      if (!cancelled) {
-        setMessages(data ? data.map(toMsg) : [])
-        setLoading(false)
-      }
-    }
-
-    fetchMessages()
+  // Subscribe to real-time updates
+  useEffect(() => {
+    if (!channel) return
 
     const sub = supabase
       .channel(`chat:${channel.id}`)
@@ -85,18 +86,22 @@ export default function Chat() {
             .select('*, author:profiles(*)')
             .eq('id', payload.new.id)
             .single()
-          if (data && !cancelled) {
-            setMessages(prev => [...prev, toMsg(data)])
+          if (data) {
+            setMessages(prev => {
+              if (prev.some(m => m.id === data.id)) return prev
+              return [...prev, toMsg(data)]
+            })
+            // Invalidate cache so next visit has fresh data
+            queryClient.invalidateQueries({ queryKey: queryKeys.chatMessages(channelSlug) })
           }
         }
       )
       .subscribe()
 
     return () => {
-      cancelled = true
       sub.unsubscribe()
     }
-  }, [channelSlug, channel?.id])
+  }, [channel?.id, channelSlug, queryClient])
 
   // Scroll to bottom on new messages
   useEffect(() => {

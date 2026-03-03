@@ -16,7 +16,7 @@ import type {
   ThreadWithAuthor,
   PostWithAuthor,
   Profile,
-  ChatMessage,
+  ChatMessageWithAuthor,
 } from '../types'
 
 // ============================================================================
@@ -159,7 +159,7 @@ export const fetchers = {
   },
 
   // Chat messages - fetch by channel slug
-  chatMessagesBySlug: async (channelSlug: string): Promise<ChatMessage[]> => {
+  chatMessagesBySlug: async (channelSlug: string): Promise<ChatMessageWithAuthor[]> => {
     // First get the channel by slug
     const { data: channel } = await supabase
       .from('chat_channels')
@@ -175,7 +175,7 @@ export const fetchers = {
       .eq('channel_id', channel.id)
       .order('created_at', { ascending: true })
       .limit(100)
-    return (data || []) as ChatMessage[]
+    return (data || []) as ChatMessageWithAuthor[]
   },
 
   // Bookmarks
