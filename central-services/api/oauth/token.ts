@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createHash } from 'crypto'
 import jwt from 'jsonwebtoken'
-import { getHubSupabase, getHubSupabaseAnon, handleCors } from '../_lib/supabase'
+import { getHubSupabase, getHubSupabaseAnon, handleCors } from '../_lib/supabase.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return

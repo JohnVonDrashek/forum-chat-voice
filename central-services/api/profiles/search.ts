@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getHubSupabase, getAuthenticatedUser, handleCors } from '../_lib/supabase'
+import { getHubSupabase, getAuthenticatedUser, handleCors } from '../_lib/supabase.js'
 
 /**
  * GET /api/profiles/search?q=alice
