@@ -35,7 +35,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
-  const initialSessionHandled = useRef(false)
+  // Track which user ID getSession() already loaded so onAuthStateChange
+  // can skip redundant ensureProfile calls for the same user.
+  const loadedUserIdRef = useRef<string | null>(null)
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
     const { data } = await supabase
@@ -102,11 +104,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const prof = await ensureProfile(session.user)
           setUser(toAppUser(session.user, prof))
+          loadedUserIdRef.current = session.user.id
           console.log('[FCV:Auth] Profile loaded successfully:', prof?.username)
         } catch (err) {
           console.error('[FCV:Auth] Failed to ensure profile during init:', err)
           // Still set user even if profile fails, so app doesn't hang
           setUser(toAppUser(session.user, null))
+          loadedUserIdRef.current = session.user.id
         }
       } else {
         console.log('[FCV:Auth] No existing session')
@@ -121,31 +125,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[FCV:Auth] Auth state changed:', event)
+        console.log('[FCV:Auth] Auth state changed:', event, session?.user?.id ?? '(no user)')
 
-        // INITIAL_SESSION is handled by getSession() above. When Supabase
-        // fires SIGNED_IN immediately after INITIAL_SESSION for the same
-        // user, skip it to avoid a redundant ensureProfile + re-render
-        // cascade that kills realtime subscriptions and hangs queries.
+        // INITIAL_SESSION is fully handled by getSession() above — always skip.
         if (event === 'INITIAL_SESSION') {
-          initialSessionHandled.current = true
           console.log('[FCV:Auth] INITIAL_SESSION handled by getSession, skipping')
           return
         }
 
-        if (event === 'SIGNED_IN' && initialSessionHandled.current) {
-          initialSessionHandled.current = false
-          console.log('[FCV:Auth] Skipping redundant SIGNED_IN after INITIAL_SESSION')
+        // For SIGNED_IN and TOKEN_REFRESHED: if we already loaded this exact
+        // user (via getSession or a previous auth event), skip the redundant
+        // ensureProfile + setUser that would trigger a re-render cascade,
+        // killing realtime subscriptions and hanging in-flight queries.
+        if (
+          (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') &&
+          session?.user &&
+          session.user.id === loadedUserIdRef.current
+        ) {
+          console.log('[FCV:Auth] Skipping redundant', event, 'for already-loaded user:', session.user.id)
           return
         }
 
         if (session?.user) {
+          console.log('[FCV:Auth] New/changed user, loading profile:', session.user.id)
           try {
             const prof = await ensureProfile(session.user)
             setUser(toAppUser(session.user, prof))
+            loadedUserIdRef.current = session.user.id
           } catch (err) {
             console.error('[FCV:Auth] Failed to ensure profile on auth change:', err)
             setUser(toAppUser(session.user, null))
+            loadedUserIdRef.current = session.user.id
           }
 
           // Redirect to reset-password page on PASSWORD_RECOVERY event
@@ -153,8 +163,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             window.location.href = '/reset-password'
           }
         } else {
+          // Signed out or session expired
+          console.log('[FCV:Auth] User signed out, clearing state')
           setUser(null)
           setProfile(null)
+          loadedUserIdRef.current = null
         }
       }
     )
@@ -203,6 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(null)
     setProfile(null)
+    loadedUserIdRef.current = null
   }
 
   const signInWithGitHub = async () => {
