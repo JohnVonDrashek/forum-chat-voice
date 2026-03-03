@@ -9,6 +9,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_v8Ej4FlhSEJtk4zdtTWiwTPE
+      VERCEL_PROJECT_ID: prj_bIR1T3sDDe3bhKQjLHH7WGlXuKCu
     steps:
       - uses: actions/checkout@v4
 

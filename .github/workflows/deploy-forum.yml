@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: read
+    env:
+      VERCEL_ORG_ID: team_v8Ej4FlhSEJtk4zdtTWiwTPE
+      VERCEL_PROJECT_ID: prj_Q6NCsZIw3eRbYLQFMTkLon3wZ3Nk
     steps:
       - uses: actions/checkout@v4
 
