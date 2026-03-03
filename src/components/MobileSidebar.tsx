@@ -65,7 +65,7 @@ export default function MobileSidebar({ isOpen, onClose, categories, channels, r
       />
 
       {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 z-50 w-72 bg-slate-800 shadow-xl lg:hidden">
+      <div className="fixed inset-y-0 left-0 z-50 w-[85vw] max-w-72 bg-slate-800 shadow-xl lg:hidden">
         <div className="flex h-14 items-center justify-between border-b border-slate-700 px-4">
           <Link to="/" className="flex items-center gap-2 text-xl font-bold text-white" onClick={onClose}>
             <svg className="h-8 w-8 text-indigo-500" viewBox="0 0 24 24" fill="currentColor">

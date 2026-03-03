@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import MobileSidebar from './MobileSidebar'
+import MobileNav from './MobileNav'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
@@ -134,10 +135,13 @@ export default function Layout() {
           rooms={rooms}
           unreadDmCount={unreadDmCount}
         />
-        <main className="flex-1 p-4 sm:p-6">
+        <main className="main-content flex-1 p-4 sm:p-6">
           <Outlet />
         </main>
       </div>
+
+      {/* Mobile bottom navigation */}
+      <MobileNav unreadDmCount={unreadDmCount} />
     </div>
   )
 }

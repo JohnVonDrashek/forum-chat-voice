@@ -139,7 +139,7 @@ export default function Chat() {
   })
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
+    <div className="chat-container flex flex-col">
       {/* Channel Header */}
       <div className="flex items-center gap-3 border-b border-slate-700 px-4 py-3">
         <div className="flex items-center gap-2">
@@ -212,7 +212,7 @@ export default function Chat() {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-slate-700 px-4 py-4">
+      <div className="border-t border-slate-700 px-3 py-3 sm:px-4 sm:py-4">
         {!user ? (
           <div className="flex items-center justify-center gap-2 rounded-lg bg-slate-700/50 px-4 py-3">
             <span className="text-slate-400">Sign in to chat</span>
