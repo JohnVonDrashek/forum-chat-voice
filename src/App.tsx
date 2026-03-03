@@ -5,6 +5,8 @@ import Layout from './components/Layout'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import Category from './pages/Category'
 import Thread from './pages/Thread'
 import NewThread from './pages/NewThread'
@@ -26,6 +28,8 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password" element={<ResetPassword />} />
           <Route path="c/:categorySlug" element={<Category />} />
           <Route path="c/:categorySlug/new" element={<NewThread />} />
           <Route path="t/:threadId" element={<Thread />} />
