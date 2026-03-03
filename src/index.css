@@ -37,34 +37,20 @@ body {
   background-color: #64748b;
 }
 
-/* Safe area utilities for notched devices */
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0);
+/* Chat page layout - remove padding and fill available space */
+.chat-page-wrapper {
+  margin: -1rem;
+  height: calc(100vh - 3.5rem);
 }
 
-.mb-safe {
-  margin-bottom: env(safe-area-inset-bottom, 0);
-}
-
-/* Add padding to main content on mobile to account for bottom nav */
-@media (max-width: 1023px) {
-  .main-content {
-    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0));
-  }
-
-  /* Chat container needs special handling */
-  .main-content:has(.chat-container) {
-    padding-bottom: 0;
-  }
-
-  .chat-container {
-    height: calc(100vh - 3.5rem - 4rem - env(safe-area-inset-bottom, 0));
+@media (min-width: 640px) {
+  .chat-page-wrapper {
+    margin: -1.5rem;
   }
 }
 
-/* Desktop chat height */
 @media (min-width: 1024px) {
-  .chat-container {
+  .chat-page-wrapper {
     height: calc(100vh - 3.5rem);
   }
 }

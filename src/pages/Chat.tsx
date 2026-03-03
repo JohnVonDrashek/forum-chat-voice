@@ -139,7 +139,7 @@ export default function Chat() {
   })
 
   return (
-    <div className="chat-container flex flex-col">
+    <div className="chat-page-wrapper flex flex-col overflow-hidden">
       {/* Channel Header */}
       <div className="flex items-center gap-3 border-b border-slate-700 px-4 py-3">
         <div className="flex items-center gap-2">

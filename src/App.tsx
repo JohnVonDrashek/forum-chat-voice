@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './lib/auth'
 import { VoiceProvider } from './lib/voice'
+import ScrollToTop from './components/ScrollToTop'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import Login from './pages/Login'
@@ -23,6 +24,7 @@ export default function App() {
   return (
     <AuthProvider>
       <VoiceProvider>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
