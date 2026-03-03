@@ -114,7 +114,7 @@ export default function Layout() {
   }, [])
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-slate-900">
+    <div className="min-h-screen bg-slate-900">
       <Header onMenuClick={handleMenuClick} />
 
       {/* Mobile sidebar */}
@@ -127,14 +127,14 @@ export default function Layout() {
         unreadDmCount={unreadDmCount}
       />
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex">
         <Sidebar
           categories={categories}
           channels={channels}
           rooms={rooms}
           unreadDmCount={unreadDmCount}
         />
-        <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className="flex-1 p-4 sm:p-6">
           <Outlet />
         </main>
       </div>
