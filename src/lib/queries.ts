@@ -17,6 +17,7 @@ import type {
   PostWithAuthor,
   Profile,
   ChatMessageWithAuthor,
+  Notification,
 } from '../types'
 
 // ============================================================================
@@ -66,6 +67,13 @@ export const queryKeys = {
 
   // DM conversations
   dmConversationsList: (userId: string) => ['dm', 'list', userId] as const,
+
+  // Admin
+  adminStats: ['admin', 'stats'] as const,
+  adminUsers: ['admin', 'users'] as const,
+
+  // Notifications
+  notifications: (userId: string) => ['notifications', userId] as const,
 }
 
 // ============================================================================
@@ -310,6 +318,60 @@ export const fetchers = {
       .limit(20)
     if (error) fetchError('searchPosts', error)
     return (data || []) as PostWithAuthor[]
+  },
+
+  // Admin
+  adminStats: async (): Promise<{ totalUsers: number; totalThreads: number; totalPosts: number }> => {
+    const [usersRes, threadsRes, postsRes] = await Promise.all([
+      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      supabase.from('threads').select('*', { count: 'exact', head: true }),
+      supabase.from('posts').select('*', { count: 'exact', head: true }),
+    ])
+    return {
+      totalUsers: usersRes.count ?? 0,
+      totalThreads: threadsRes.count ?? 0,
+      totalPosts: postsRes.count ?? 0,
+    }
+  },
+
+  adminUsers: async (): Promise<Profile[]> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (error) fetchError('adminUsers', error)
+    return data || []
+  },
+
+  // Notifications
+  notifications: async (userId: string): Promise<Notification[]> => {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    if (error) fetchError('notifications', error)
+    return data || []
+  },
+
+  // DM messages
+  dmMessages: async (userId: string, recipientId: string): Promise<Array<{
+    id: string
+    sender_id: string
+    recipient_id: string
+    content: string
+    created_at: string
+    read: boolean
+  }>> => {
+    const { data, error } = await supabase
+      .from('direct_messages')
+      .select('*')
+      .or(`and(sender_id.eq.${userId},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${userId})`)
+      .order('created_at')
+    if (error) fetchError('dmMessages', error)
+    return data || []
   },
 
   // DM conversations list
