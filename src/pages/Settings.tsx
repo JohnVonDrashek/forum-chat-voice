@@ -5,11 +5,13 @@ import { supabase } from '../lib/supabase'
 import { uploadAvatar } from '../lib/avatars'
 import Avatar from '../components/Avatar'
 import ImageCropModal from '../components/ImageCropModal'
+import Input from '../components/ui/Input'
+import Card from '../components/ui/Card'
 
 type Tab = 'profile' | 'account' | 'notifications' | 'appearance'
 
 export default function Settings() {
-  const { user, profile, loading: authLoading } = useAuth()
+  const { user, profile } = useAuth()
   const [activeTab, setActiveTab] = useState<Tab>('profile')
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -126,21 +128,6 @@ export default function Settings() {
     setTimeout(() => setSaved(false), 2000)
   }
 
-  // Auth guard
-  if (!authLoading && !user) {
-    return (
-      <div className="mx-auto max-w-4xl">
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
-          <h3 className="font-medium text-white">Sign in to access settings</h3>
-          <p className="mt-1 text-sm text-slate-400">You need to be logged in to manage your account.</p>
-          <Link to="/login" className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
-            Sign In
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
   const tabs: { id: Tab; label: string; icon: ReactNode }[] = [
     {
       id: 'profile',
@@ -210,7 +197,7 @@ export default function Settings() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 rounded-xl border border-slate-700 bg-slate-800/50 p-6">
+        <Card className="flex-1 p-6">
           {/* Profile Tab */}
           {activeTab === 'profile' && (
             <div className="space-y-6">
@@ -250,11 +237,11 @@ export default function Settings() {
               <div className="space-y-4">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-300">Display Name</label>
-                  <input
+                  <Input
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full"
                   />
                 </div>
 
@@ -271,12 +258,12 @@ export default function Settings() {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-300">Website</label>
-                  <input
+                  <Input
                     type="url"
                     value={website}
                     onChange={(e) => setWebsite(e.target.value)}
                     placeholder="https://example.com"
-                    className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full"
                   />
                 </div>
               </div>
@@ -294,11 +281,11 @@ export default function Settings() {
               <div className="space-y-4">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-300">Email Address</label>
-                  <input
+                  <Input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full"
                   />
                 </div>
               </div>
@@ -308,29 +295,29 @@ export default function Settings() {
                 <div className="space-y-4">
                   <div>
                     <label className="mb-1 block text-sm font-medium text-slate-300">Current Password</label>
-                    <input
+                    <Input
                       type="password"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full"
                     />
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-slate-300">New Password</label>
-                    <input
+                    <Input
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full"
                     />
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-slate-300">Confirm New Password</label>
-                    <input
+                    <Input
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full"
                     />
                   </div>
                 </div>
@@ -490,7 +477,7 @@ export default function Settings() {
               Save Changes
             </button>
           </div>
-        </div>
+        </Card>
       </div>
 
       {cropImageSrc && (

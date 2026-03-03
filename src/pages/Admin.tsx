@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
+import Card from '../components/ui/Card'
 import { formatTimeAgo } from '../lib/dateFormatters'
 import type { Profile } from '../types'
 
@@ -15,7 +16,7 @@ interface Stats {
 }
 
 export default function Admin() {
-  const { user, profile, loading: authLoading } = useAuth()
+  const { user, profile } = useAuth()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalThreads: 0, totalPosts: 0 })
   const [users, setUsers] = useState<Profile[]>([])
@@ -50,36 +51,6 @@ export default function Admin() {
     fetchStats()
     fetchUsers()
   }, [user])
-
-  // Auth guard: must be logged in
-  if (!authLoading && !user) {
-    return (
-      <div className="mx-auto max-w-4xl">
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
-          <h3 className="font-medium text-white">Sign in required</h3>
-          <p className="mt-1 text-sm text-slate-400">You need to be logged in to access the admin dashboard.</p>
-          <Link to="/login" className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
-            Sign In
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  // Admin guard: must be admin
-  if (!authLoading && profile && !profile.is_admin) {
-    return (
-      <div className="mx-auto max-w-4xl">
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
-          <h3 className="font-medium text-white">Access denied</h3>
-          <p className="mt-1 text-sm text-slate-400">You do not have admin privileges.</p>
-          <Link to="/" className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
-            Go Home
-          </Link>
-        </div>
-      </div>
-    )
-  }
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     {
@@ -158,7 +129,7 @@ export default function Admin() {
           {activeTab === 'overview' && (
             <>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+                <Card className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/20">
                       <svg className="h-5 w-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -170,9 +141,9 @@ export default function Admin() {
                       <p className="text-2xl font-bold text-white">{stats.totalUsers.toLocaleString()}</p>
                     </div>
                   </div>
-                </div>
+                </Card>
 
-                <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+                <Card className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/20">
                       <svg className="h-5 w-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -184,9 +155,9 @@ export default function Admin() {
                       <p className="text-2xl font-bold text-white">{stats.totalThreads.toLocaleString()}</p>
                     </div>
                   </div>
-                </div>
+                </Card>
 
-                <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+                <Card className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/20">
                       <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -198,7 +169,7 @@ export default function Admin() {
                       <p className="text-2xl font-bold text-white">{stats.totalPosts.toLocaleString()}</p>
                     </div>
                   </div>
-                </div>
+                </Card>
               </div>
             </>
           )}
@@ -218,7 +189,7 @@ export default function Admin() {
                 />
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-800/50">
+              <Card className="overflow-hidden">
                 <table className="w-full">
                   <thead className="border-b border-slate-700 bg-slate-800">
                     <tr>
@@ -251,23 +222,23 @@ export default function Admin() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </Card>
             </div>
           )}
 
           {activeTab === 'content' && (
-            <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 text-center">
+            <Card className="p-6 text-center">
               <p className="text-slate-400">Content moderation tools coming soon.</p>
               <Link to="/" className="mt-3 inline-block text-sm text-indigo-400 hover:text-indigo-300">
                 View all threads
               </Link>
-            </div>
+            </Card>
           )}
 
           {activeTab === 'reports' && (
-            <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 text-center">
+            <Card className="p-6 text-center">
               <p className="text-slate-400">No reports to review.</p>
-            </div>
+            </Card>
           )}
         </div>
       </div>

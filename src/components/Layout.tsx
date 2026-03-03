@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import MobileSidebar from './MobileSidebar'
+import ErrorBoundary from './ErrorBoundary'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
@@ -156,7 +157,9 @@ export default function Layout() {
           unreadDmCount={unreadDmCount}
         />
         <main className="flex-1 p-4 sm:p-6">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

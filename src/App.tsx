@@ -4,6 +4,7 @@ import { AuthProvider } from './lib/auth'
 import { VoiceProvider } from './lib/voice'
 import ScrollToTop from './components/ScrollToTop'
 import Layout from './components/Layout'
+import { RequireAuth, RequireAdmin } from './components/RequireAuth'
 
 // Lazy-load all pages for code splitting
 const Home = lazy(() => import('./pages/Home'))
@@ -48,7 +49,7 @@ export default function App() {
           <Route path="forgot-password" element={<Suspense fallback={<PageFallback />}><ForgotPassword /></Suspense>} />
           <Route path="reset-password" element={<Suspense fallback={<PageFallback />}><ResetPassword /></Suspense>} />
           <Route path="c/:categorySlug" element={<Suspense fallback={<PageFallback />}><Category /></Suspense>} />
-          <Route path="c/:categorySlug/new" element={<Suspense fallback={<PageFallback />}><NewThread /></Suspense>} />
+          <Route path="c/:categorySlug/new" element={<RequireAuth><Suspense fallback={<PageFallback />}><NewThread /></Suspense></RequireAuth>} />
           <Route path="t/:threadId" element={<Suspense fallback={<PageFallback />}><Thread /></Suspense>} />
           <Route path="u/:username" element={<Suspense fallback={<PageFallback />}><Profile /></Suspense>} />
           <Route path="chat" element={<Suspense fallback={<PageFallback />}><Chat /></Suspense>} />
@@ -56,11 +57,11 @@ export default function App() {
           <Route path="search" element={<Suspense fallback={<PageFallback />}><Search /></Suspense>} />
           <Route path="voice" element={<Suspense fallback={<PageFallback />}><Voice /></Suspense>} />
           <Route path="voice/:roomId" element={<Suspense fallback={<PageFallback />}><Voice /></Suspense>} />
-          <Route path="dm" element={<Suspense fallback={<PageFallback />}><DirectMessages /></Suspense>} />
-          <Route path="dm/:recipientId" element={<Suspense fallback={<PageFallback />}><DirectMessages /></Suspense>} />
-          <Route path="bookmarks" element={<Suspense fallback={<PageFallback />}><Bookmarks /></Suspense>} />
-          <Route path="settings" element={<Suspense fallback={<PageFallback />}><Settings /></Suspense>} />
-          <Route path="admin" element={<Suspense fallback={<PageFallback />}><Admin /></Suspense>} />
+          <Route path="dm" element={<RequireAuth><Suspense fallback={<PageFallback />}><DirectMessages /></Suspense></RequireAuth>} />
+          <Route path="dm/:recipientId" element={<RequireAuth><Suspense fallback={<PageFallback />}><DirectMessages /></Suspense></RequireAuth>} />
+          <Route path="bookmarks" element={<RequireAuth><Suspense fallback={<PageFallback />}><Bookmarks /></Suspense></RequireAuth>} />
+          <Route path="settings" element={<RequireAuth><Suspense fallback={<PageFallback />}><Settings /></Suspense></RequireAuth>} />
+          <Route path="admin" element={<RequireAdmin><Suspense fallback={<PageFallback />}><Admin /></Suspense></RequireAdmin>} />
         </Route>
       </Routes>
       </VoiceProvider>

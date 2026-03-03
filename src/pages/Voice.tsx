@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import { useVoice } from '../lib/voice'
 import Avatar from '../components/Avatar'
+import Card from '../components/ui/Card'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import type { VoiceRoom } from '../types'
 import type { VoiceParticipant } from '../lib/voice'
@@ -59,11 +60,11 @@ export default function Voice() {
 
   // Auth gate component
   const authGate = !user ? (
-    <div className="mt-4 rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center">
+    <Card className="mt-4 p-4 text-center">
       <p className="text-slate-400">
         <Link to="/login" className="font-medium text-indigo-400 hover:text-indigo-300">Sign in</Link> to join voice rooms
       </p>
-    </div>
+    </Card>
   ) : null
 
   if (!currentRoom) {
@@ -79,10 +80,10 @@ export default function Voice() {
         {roomsLoading && (
           <div className="grid gap-4 sm:grid-cols-2">
             {[...Array(2)].map((_, i) => (
-              <div key={i} className="animate-pulse rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+              <Card key={i} className="animate-pulse p-4">
                 <div className="h-5 w-32 rounded bg-slate-700" />
                 <div className="mt-4 h-10 w-full rounded bg-slate-700" />
-              </div>
+              </Card>
             ))}
           </div>
         )}
@@ -165,7 +166,7 @@ export default function Voice() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <div className="mb-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+      <Card className="mb-6 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-green-500/20 p-2">
@@ -184,7 +185,7 @@ export default function Voice() {
             {displayParticipants.length + (isConnectedToThisRoom ? 1 : 0)}/{currentRoom.maxParticipants}
           </span>
         </div>
-      </div>
+      </Card>
 
       {voice.connectError && (
         <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-center text-sm text-red-400">
@@ -199,7 +200,7 @@ export default function Voice() {
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6">
+      <Card className="p-6">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
           In This Room
         </h2>
@@ -259,9 +260,9 @@ export default function Voice() {
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
-      <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+      <Card className="mt-6 p-4">
         {!user ? (
           <div className="text-center">
             <p className="text-slate-400">
@@ -341,7 +342,7 @@ export default function Voice() {
             {voice.isDeafened && ' · You are deafened'}
           </p>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

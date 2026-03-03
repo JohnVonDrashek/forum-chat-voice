@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
+import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Card from '../components/ui/Card'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -27,7 +30,7 @@ export default function ForgotPassword() {
   if (success) {
     return (
       <div className="mx-auto max-w-md">
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8">
+        <Card className="p-8">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-500/20">
             <svg className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -52,14 +55,14 @@ export default function ForgotPassword() {
           >
             Back to Sign In
           </Link>
-        </div>
+        </Card>
       </div>
     )
   }
 
   return (
     <div className="mx-auto max-w-md">
-      <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8">
+      <Card className="p-8">
         <h1 className="text-2xl font-bold text-white">Reset Password</h1>
         <p className="mt-2 text-slate-400">
           Enter your email address and we'll send you a link to reset your password.
@@ -76,24 +79,24 @@ export default function ForgotPassword() {
             <label htmlFor="email" className="block text-sm font-medium text-slate-300">
               Email
             </label>
-            <input
+            <Input
               type="email"
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="mt-1 block w-full"
               placeholder="you@example.com"
               required
             />
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+            className="w-full"
           >
             {loading ? 'Sending...' : 'Send Reset Link'}
-          </button>
+          </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-400">
@@ -102,7 +105,7 @@ export default function ForgotPassword() {
             Sign in
           </Link>
         </p>
-      </div>
+      </Card>
     </div>
   )
 }

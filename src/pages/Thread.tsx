@@ -6,6 +6,8 @@ import { useAuth } from '../lib/auth'
 import { uploadAvatar } from '../lib/avatars'
 import Avatar from '../components/Avatar'
 import ImageCropModal from '../components/ImageCropModal'
+import Button from '../components/ui/Button'
+import Card from '../components/ui/Card'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import { formatDate } from '../lib/dateFormatters'
 import type { PostWithAuthor } from '../types'
@@ -258,15 +260,15 @@ export default function Thread() {
           </svg>
           <h1 className="mt-4 text-xl font-bold text-white">Error loading thread</h1>
           <p className="mt-2 text-slate-400">Something went wrong. Please try again.</p>
-          <button
+          <Button
             onClick={() => {
               queryClient.invalidateQueries({ queryKey: queryKeys.thread(threadId!) })
               queryClient.invalidateQueries({ queryKey: queryKeys.posts(threadId!) })
             }}
-            className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500"
+            className="mt-4 inline-block"
           >
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -404,7 +406,7 @@ export default function Thread() {
           const isOP = post.author_id === thread.author_id
 
           return (
-            <div key={post.id} className="rounded-xl border border-slate-700 bg-slate-800/50">
+            <Card key={post.id}>
               {/* Reply-to indicator */}
               {replyToPost && (
                 <div className="flex items-center gap-2 border-b border-slate-700/50 px-4 py-2 text-sm">
@@ -463,7 +465,7 @@ export default function Thread() {
                   )}
                 </div>
               </div>
-            </div>
+            </Card>
           )
         })}
       </div>
@@ -559,14 +561,14 @@ export default function Thread() {
           This thread is locked. No new replies can be posted.
         </div>
       ) : !user ? (
-        <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center">
+        <Card className="mt-6 p-4 text-center">
           <p className="text-slate-400">
             <Link to="/login" className="font-medium text-indigo-400 hover:text-indigo-300">Sign in</Link> to reply to this thread
           </p>
-        </div>
+        </Card>
       ) : (
         <form onSubmit={handleReply} className="mt-6">
-          <div className="rounded-xl border border-slate-700 bg-slate-800/50">
+          <Card>
             {/* Reply-to indicator */}
             {replyingTo && (
               <div className="flex items-center justify-between border-b border-slate-700 px-4 py-2">
@@ -598,16 +600,15 @@ export default function Thread() {
                 className="block w-full resize-none rounded-lg border border-slate-600 bg-slate-700 px-4 py-3 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
               <div className="mt-3 flex justify-end">
-                <button
+                <Button
                   type="submit"
                   disabled={submitting || !replyContent.trim()}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
                 >
                   {submitting ? 'Posting...' : 'Post Reply'}
-                </button>
+                </Button>
               </div>
             </div>
-          </div>
+          </Card>
         </form>
       )}
 

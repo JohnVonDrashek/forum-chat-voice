@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
+import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Card from '../components/ui/Card'
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('')
@@ -61,7 +64,7 @@ export default function ResetPassword() {
   if (success) {
     return (
       <div className="mx-auto max-w-md">
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8">
+        <Card className="p-8">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-500/20">
             <svg className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -71,7 +74,7 @@ export default function ResetPassword() {
           <p className="mt-2 text-slate-400">
             Your password has been successfully reset. Redirecting you to the home page...
           </p>
-        </div>
+        </Card>
       </div>
     )
   }
@@ -79,7 +82,7 @@ export default function ResetPassword() {
   if (!isValidSession && !user) {
     return (
       <div className="mx-auto max-w-md">
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8">
+        <Card className="p-8">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/20">
             <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -95,14 +98,14 @@ export default function ResetPassword() {
           >
             Request New Link
           </Link>
-        </div>
+        </Card>
       </div>
     )
   }
 
   return (
     <div className="mx-auto max-w-md">
-      <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8">
+      <Card className="p-8">
         <h1 className="text-2xl font-bold text-white">Set New Password</h1>
         <p className="mt-2 text-slate-400">
           Enter your new password below.
@@ -119,12 +122,12 @@ export default function ResetPassword() {
             <label htmlFor="password" className="block text-sm font-medium text-slate-300">
               New Password
             </label>
-            <input
+            <Input
               type="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="mt-1 block w-full"
               placeholder="Enter new password"
               required
             />
@@ -135,26 +138,26 @@ export default function ResetPassword() {
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-300">
               Confirm Password
             </label>
-            <input
+            <Input
               type="password"
               id="confirmPassword"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="mt-1 block w-full"
               placeholder="Confirm new password"
               required
             />
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+            className="w-full"
           >
             {loading ? 'Updating...' : 'Update Password'}
-          </button>
+          </Button>
         </form>
-      </div>
+      </Card>
     </div>
   )
 }

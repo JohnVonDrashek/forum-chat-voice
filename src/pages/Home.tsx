@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Avatar from '../components/Avatar'
+import Card from '../components/ui/Card'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import { formatTimeAgo } from '../lib/dateFormatters'
 
@@ -44,7 +45,7 @@ export default function Home() {
       </div>
 
       {/* Recent Threads */}
-      <div className="rounded-xl border border-slate-700 bg-slate-800/50">
+      <Card>
         <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
           <h2 className="text-lg font-semibold text-white">Recent Discussions</h2>
         </div>
@@ -133,7 +134,7 @@ export default function Home() {
             ))}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

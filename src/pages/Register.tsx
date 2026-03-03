@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
+import Input from '../components/ui/Input'
+import Button from '../components/ui/Button'
+import Card from '../components/ui/Card'
 
 export default function Register() {
   const [username, setUsername] = useState('')
@@ -38,7 +41,7 @@ export default function Register() {
 
   return (
     <div className="mx-auto max-w-md">
-      <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8">
+      <Card className="p-8">
         <h1 className="text-2xl font-bold text-white">Create Account</h1>
         <p className="mt-2 text-slate-400">Join the community today!</p>
 
@@ -53,12 +56,12 @@ export default function Register() {
             <label htmlFor="username" className="block text-sm font-medium text-slate-300">
               Username
             </label>
-            <input
+            <Input
               type="text"
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="mt-1 block w-full"
               placeholder="cooluser123"
               required
             />
@@ -68,12 +71,12 @@ export default function Register() {
             <label htmlFor="email" className="block text-sm font-medium text-slate-300">
               Email
             </label>
-            <input
+            <Input
               type="email"
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="mt-1 block w-full"
               placeholder="you@example.com"
               required
             />
@@ -83,25 +86,25 @@ export default function Register() {
             <label htmlFor="password" className="block text-sm font-medium text-slate-300">
               Password
             </label>
-            <input
+            <Input
               type="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="mt-1 block w-full"
               placeholder="••••••••"
               required
             />
             <p className="mt-1 text-xs text-slate-500">At least 6 characters</p>
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+            className="w-full"
           >
             {loading ? 'Creating account...' : 'Create Account'}
-          </button>
+          </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-400">
@@ -110,7 +113,7 @@ export default function Register() {
             Sign in
           </Link>
         </p>
-      </div>
+      </Card>
     </div>
   )
 }

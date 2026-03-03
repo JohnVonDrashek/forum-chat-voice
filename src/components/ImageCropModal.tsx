@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import Cropper, { type Area } from 'react-easy-crop'
+import Button from './ui/Button'
 
 interface ImageCropModalProps {
   imageSrc: string
@@ -88,13 +89,13 @@ export default function ImageCropModal({ imageSrc, onCrop, onCancel }: ImageCrop
           >
             Cancel
           </button>
-          <button
+          <Button
             type="button"
             onClick={handleSave}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+            className="text-sm"
           >
             Save
-          </button>
+          </Button>
         </div>
       </div>
     </div>

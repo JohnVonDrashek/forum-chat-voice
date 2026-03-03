@@ -3,6 +3,8 @@ import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import Avatar from '../components/Avatar'
+import Button from '../components/ui/Button'
+import Card from '../components/ui/Card'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import { formatTimeAgo } from '../lib/dateFormatters'
 
@@ -65,15 +67,15 @@ export default function Category() {
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-8">
           <h1 className="text-xl font-bold text-white">Error loading category</h1>
           <p className="mt-2 text-slate-400">Something went wrong. Check browser console for details.</p>
-          <button
+          <Button
             onClick={() => {
               queryClient.invalidateQueries({ queryKey: queryKeys.category(categorySlug!) })
               queryClient.invalidateQueries({ queryKey: queryKeys.threadsByCategory(categorySlug!) })
             }}
-            className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500"
+            className="mt-4 inline-block"
           >
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -112,7 +114,7 @@ export default function Category() {
       </div>
 
       {/* Threads */}
-      <div className="rounded-xl border border-slate-700 bg-slate-800/50">
+      <Card>
         {threads.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-slate-400">No threads yet.</p>
@@ -175,7 +177,7 @@ export default function Category() {
             ))}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

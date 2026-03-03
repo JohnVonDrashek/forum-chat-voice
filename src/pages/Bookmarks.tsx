@@ -3,11 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
+import Button from '../components/ui/Button'
+import Card from '../components/ui/Card'
 import { formatTimeAgo, formatDate } from '../lib/dateFormatters'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 
 export default function Bookmarks() {
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   // Use React Query for bookmarks - cached globally!
@@ -52,25 +54,7 @@ export default function Bookmarks() {
     removeBookmarkMutation.mutate(bookmarkId)
   }
 
-  // Auth guard
-  if (!authLoading && !user) {
-    return (
-      <div className="mx-auto max-w-4xl">
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
-          <svg className="mx-auto h-12 w-12 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-          </svg>
-          <h3 className="mt-4 font-medium text-white">Sign in to view bookmarks</h3>
-          <p className="mt-1 text-sm text-slate-400">You need to be logged in to save and view bookmarks.</p>
-          <Link to="/login" className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
-            Sign In
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="mx-auto max-w-4xl">
         <div className="animate-pulse space-y-4">
@@ -84,19 +68,19 @@ export default function Bookmarks() {
   if (isError) {
     return (
       <div className="mx-auto max-w-4xl">
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
+        <Card className="p-8 text-center">
           <svg className="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
           <h3 className="mt-4 font-medium text-white">Failed to load bookmarks</h3>
           <p className="mt-1 text-sm text-slate-400">Something went wrong. Please try again.</p>
-          <button
+          <Button
             onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.bookmarks(user!.id) })}
-            className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+            className="mt-4 inline-block text-sm"
           >
             Try again
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     )
   }
@@ -111,7 +95,7 @@ export default function Bookmarks() {
       </div>
 
       {bookmarks.length === 0 ? (
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
+        <Card className="p-8 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-700">
             <svg className="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -127,9 +111,9 @@ export default function Bookmarks() {
           >
             Browse threads
           </Link>
-        </div>
+        </Card>
       ) : (
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50">
+        <Card>
           <div className="border-b border-slate-700 px-4 py-3">
             <span className="text-sm text-slate-400">
               {bookmarks.length} {bookmarks.length === 1 ? 'bookmark' : 'bookmarks'}
@@ -177,7 +161,7 @@ export default function Bookmarks() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   )

@@ -4,6 +4,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
+import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Card from '../components/ui/Card'
 import { formatShortTimeAgo, formatMessageTime } from '../lib/dateFormatters'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import type { Profile } from '../types'
@@ -18,7 +21,7 @@ interface DM {
 export default function DirectMessages() {
   const { recipientId } = useParams()
   const navigate = useNavigate()
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [messages, setMessages] = useState<DM[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -208,24 +211,6 @@ export default function DirectMessages() {
     navigate(`/dm/${profile.id}`)
   }, [navigate])
 
-  // Auth guard
-  if (!authLoading && !user) {
-    return (
-      <div className="mx-auto max-w-4xl">
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
-          <svg className="mx-auto h-12 w-12 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
-          <h3 className="mt-4 font-medium text-white">Sign in to view messages</h3>
-          <p className="mt-1 text-sm text-slate-400">You need to be logged in to send and receive direct messages.</p>
-          <Link to="/login" className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
-            Sign In
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
   const showConversationList = !recipientId
   const showMessages = !!recipientId
 
@@ -241,7 +226,7 @@ export default function DirectMessages() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="flex h-[calc(100vh-7rem)] overflow-hidden rounded-xl border border-slate-700 bg-slate-800/50">
+      <Card className="flex h-[calc(100vh-7rem)] overflow-hidden">
         {/* Conversation List */}
         <div className={`${showConversationList ? 'flex' : 'hidden'} w-full flex-col border-r border-slate-700 md:flex md:w-80`}>
           <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
@@ -379,22 +364,21 @@ export default function DirectMessages() {
               )}
               <div className="border-t border-slate-700 p-4">
                 <form onSubmit={handleSend} className="flex gap-2">
-                    <input
+                    <Input
                       type="text"
                       value={newMessage}
                       onChange={e => setNewMessage(e.target.value)}
                       placeholder={`Message ${activeConversation.recipientName}...`}
-                      className="flex-1 rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="flex-1"
                     />
-                    <button
+                    <Button
                       type="submit"
                       disabled={!newMessage.trim()}
-                      className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
                     >
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                       </svg>
-                    </button>
+                    </Button>
                   </form>
               </div>
             </>
@@ -414,7 +398,7 @@ export default function DirectMessages() {
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* New Message Modal */}
       {showNewMessage && (
@@ -437,12 +421,12 @@ export default function DirectMessages() {
             </div>
 
             <div className="p-4">
-              <input
+              <Input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search by username or display name..."
-                className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full"
                 autoFocus
               />
             </div>

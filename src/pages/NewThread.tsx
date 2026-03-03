@@ -5,6 +5,9 @@ import { useAuth } from '../lib/auth'
 import { uploadAvatar, uploadDefaultAvatar } from '../lib/avatars'
 import Avatar from '../components/Avatar'
 import ImageCropModal from '../components/ImageCropModal'
+import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Card from '../components/ui/Card'
 import type { Category } from '../types'
 
 export default function NewThread() {
@@ -22,11 +25,6 @@ export default function NewThread() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login')
-      return
-    }
-
     const fetchCategory = async () => {
       const { data } = await supabase
         .from('categories')
@@ -37,7 +35,7 @@ export default function NewThread() {
     }
 
     fetchCategory()
-  }, [categorySlug, user, navigate])
+  }, [categorySlug])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -137,7 +135,7 @@ export default function NewThread() {
         <span className="text-white">New Thread</span>
       </div>
 
-      <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6">
+      <Card className="p-6">
         <h1 className="text-2xl font-bold text-white">Start a new discussion</h1>
         <p className="mt-1 text-slate-400">in {category.name}</p>
 
@@ -199,12 +197,12 @@ export default function NewThread() {
             <label htmlFor="title" className="block text-sm font-medium text-slate-300">
               Title
             </label>
-            <input
+            <Input
               type="text"
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="mt-1 block w-full"
               placeholder="What's on your mind?"
               required
             />
@@ -233,16 +231,15 @@ export default function NewThread() {
             >
               Cancel
             </button>
-            <button
+            <Button
               type="submit"
               disabled={submitting}
-              className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
             >
               {submitting ? 'Creating...' : 'Create Thread'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
 
       {cropImageSrc && (
         <ImageCropModal

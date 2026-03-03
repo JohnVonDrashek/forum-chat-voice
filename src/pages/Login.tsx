@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
+import Input from '../components/ui/Input'
+import Button from '../components/ui/Button'
+import Card from '../components/ui/Card'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -30,7 +33,7 @@ export default function Login() {
 
   return (
     <div className="mx-auto max-w-md">
-      <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8">
+      <Card className="p-8">
         <h1 className="text-2xl font-bold text-white">Sign In</h1>
         <p className="mt-2 text-slate-400">Welcome back! Sign in to your account.</p>
 
@@ -45,12 +48,12 @@ export default function Login() {
             <label htmlFor="email" className="block text-sm font-medium text-slate-300">
               Email
             </label>
-            <input
+            <Input
               type="email"
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="mt-1 block w-full"
               placeholder="you@example.com"
               required
             />
@@ -65,24 +68,24 @@ export default function Login() {
                 Forgot password?
               </Link>
             </div>
-            <input
+            <Input
               type="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="mt-1 block w-full"
               placeholder="••••••••"
               required
             />
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+            className="w-full"
           >
             {loading ? 'Signing in...' : 'Sign In'}
-          </button>
+          </Button>
         </form>
 
         <div className="mt-6">
@@ -112,7 +115,7 @@ export default function Login() {
             Sign up
           </Link>
         </p>
-      </div>
+      </Card>
     </div>
   )
 }

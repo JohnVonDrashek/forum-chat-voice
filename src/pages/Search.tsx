@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import Avatar from '../components/Avatar'
+import Card from '../components/ui/Card'
 import { formatTimeAgo } from '../lib/dateFormatters'
 import { useDebounce } from '../lib/hooks'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
@@ -224,17 +225,17 @@ export default function Search() {
           )}
 
           {totalResults === 0 && !isLoading && (
-            <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
+            <Card className="p-8 text-center">
               <svg className="mx-auto h-12 w-12 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <h3 className="mt-4 text-lg font-medium text-white">No results for "{searchInput}"</h3>
               <p className="mt-2 text-slate-400">Try different keywords or check your spelling.</p>
-            </div>
+            </Card>
           )}
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
+        <Card className="p-8 text-center">
           <svg className="mx-auto h-12 w-12 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -254,7 +255,7 @@ export default function Search() {
               ))}
             </div>
           </div>
-        </div>
+        </Card>
       )}
     </div>
   )

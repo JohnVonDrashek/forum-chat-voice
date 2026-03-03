@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import Avatar from '../components/Avatar'
+import Card from '../components/ui/Card'
 import { formatTimeAgo } from '../lib/dateFormatters'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 
@@ -50,7 +51,7 @@ export default function ProfilePage() {
     return (
       <div className="mx-auto max-w-4xl">
         <div className="animate-pulse">
-          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6">
+          <Card className="p-6">
             <div className="flex items-start gap-4 sm:gap-6">
               <div className="h-16 w-16 rounded-full bg-slate-700 sm:h-24 sm:w-24" />
               <div className="flex-1">
@@ -59,7 +60,7 @@ export default function ProfilePage() {
                 <div className="mt-4 h-4 w-full rounded bg-slate-700" />
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     )
@@ -82,7 +83,7 @@ export default function ProfilePage() {
   if (!profile) {
     return (
       <div className="mx-auto max-w-4xl text-center">
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8">
+        <Card className="p-8">
           <svg className="mx-auto h-12 w-12 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
@@ -91,7 +92,7 @@ export default function ProfilePage() {
           <Link to="/" className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500">
             Go back home
           </Link>
-        </div>
+        </Card>
       </div>
     )
   }
@@ -99,7 +100,7 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-4xl">
       {/* Profile Header */}
-      <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 sm:p-6">
+      <Card className="p-4 sm:p-6">
         <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left sm:gap-6">
           {/* Avatar */}
           <Avatar seed={profile.id} type="user" avatarUrl={profile.avatar_url} className="h-20 w-20 shrink-0 sm:h-24 sm:w-24" />
@@ -150,7 +151,7 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Activity Tabs */}
       <div className="mt-6">
@@ -181,14 +182,14 @@ export default function ProfilePage() {
         {activeTab === 'threads' && (
           <div className="mt-4">
             {threads.length === 0 ? (
-              <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
+              <Card className="p-8 text-center">
                 <svg className="mx-auto h-12 w-12 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
                 <p className="mt-4 text-slate-400">No threads yet.</p>
-              </div>
+              </Card>
             ) : (
-              <div className="rounded-xl border border-slate-700 bg-slate-800/50 divide-y divide-slate-700/50">
+              <Card className="divide-y divide-slate-700/50">
                 {threads.map((thread) => (
                   <Link
                     key={thread.id}
@@ -214,7 +215,7 @@ export default function ProfilePage() {
                     </div>
                   </Link>
                 ))}
-              </div>
+              </Card>
             )}
           </div>
         )}
@@ -223,12 +224,12 @@ export default function ProfilePage() {
         {activeTab === 'posts' && (
           <div className="mt-4">
             {posts.length === 0 ? (
-              <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 text-center">
+              <Card className="p-8 text-center">
                 <svg className="mx-auto h-12 w-12 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                 </svg>
                 <p className="mt-4 text-slate-400">No posts yet.</p>
-              </div>
+              </Card>
             ) : (
               <div className="space-y-3">
                 {posts.map((post) => (
