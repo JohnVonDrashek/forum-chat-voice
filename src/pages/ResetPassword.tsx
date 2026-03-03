@@ -1,19 +1,38 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useAuth } from '../lib/auth'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Card from '../components/ui/Card'
 
+const resetPasswordSchema = z.object({
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string().min(1, 'Please confirm your password'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+})
+
+type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>
+
 export default function ResetPassword() {
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
   const [isValidSession, setIsValidSession] = useState(true)
   const { updatePassword, user } = useAuth()
   const navigate = useNavigate()
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema),
+  })
 
   // Check if user has a valid recovery session
   useEffect(() => {
@@ -33,23 +52,11 @@ export default function ResetPassword() {
     return () => clearTimeout(timer)
   }, [user])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = async (data: ResetPasswordFormData) => {
     setError('')
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
-      return
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
-
     setLoading(true)
 
-    const { error } = await updatePassword(password)
+    const { error } = await updatePassword(data.password)
     if (error) {
       setError(error.message)
       setLoading(false)
@@ -117,7 +124,7 @@ export default function ResetPassword() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-slate-300">
               New Password
@@ -125,12 +132,13 @@ export default function ResetPassword() {
             <Input
               type="password"
               id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              {...register('password')}
               className="mt-1 block w-full"
               placeholder="Enter new password"
-              required
             />
+            {errors.password && (
+              <p className="text-red-400 text-sm mt-1">{errors.password.message}</p>
+            )}
             <p className="mt-1 text-xs text-slate-500">At least 6 characters</p>
           </div>
 
@@ -141,12 +149,13 @@ export default function ResetPassword() {
             <Input
               type="password"
               id="confirmPassword"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              {...register('confirmPassword')}
               className="mt-1 block w-full"
               placeholder="Confirm new password"
-              required
             />
+            {errors.confirmPassword && (
+              <p className="text-red-400 text-sm mt-1">{errors.confirmPassword.message}</p>
+            )}
           </div>
 
           <Button

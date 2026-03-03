@@ -4,6 +4,7 @@ import { AuthProvider } from './lib/auth'
 import { VoiceProvider } from './lib/voice'
 import ScrollToTop from './components/ScrollToTop'
 import Layout from './components/Layout'
+import Skeleton from './components/ui/Skeleton'
 import { RequireAuth, RequireAdmin } from './components/RequireAuth'
 
 // Lazy-load all pages for code splitting
@@ -27,10 +28,10 @@ const Admin = lazy(() => import('./pages/Admin'))
 function PageFallback() {
   return (
     <div className="mx-auto max-w-4xl">
-      <div className="animate-pulse space-y-4">
-        <div className="h-8 w-48 rounded bg-slate-700" />
-        <div className="h-32 rounded-xl bg-slate-700" />
-        <div className="h-32 rounded-xl bg-slate-700" />
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-32 rounded-xl" />
       </div>
     </div>
   )

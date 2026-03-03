@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth'
 import Avatar from '../components/Avatar'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
+import Skeleton from '../components/ui/Skeleton'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import { formatTimeAgo } from '../lib/dateFormatters'
 
@@ -53,10 +54,38 @@ export default function Category() {
   if (loading) {
     return (
       <div className="mx-auto max-w-4xl">
-        <div className="animate-pulse">
-          <div className="h-8 w-48 rounded bg-slate-700" />
-          <div className="mt-2 h-4 w-96 rounded bg-slate-700" />
+        {/* Header skeleton */}
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="mt-2 h-4 w-72" />
+          </div>
+          <Skeleton className="h-10 w-28 rounded-lg" />
         </div>
+
+        {/* Thread list skeleton */}
+        <Card>
+          <div className="divide-y divide-slate-700/50">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-start gap-4 px-4 py-4">
+                <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className={`h-5 ${i % 2 === 0 ? 'w-3/4' : 'w-2/3'}`} />
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+                <div className="hidden shrink-0 space-y-1 sm:block">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
     )
   }

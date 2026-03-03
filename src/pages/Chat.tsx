@@ -1,12 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
+import Skeleton from '../components/ui/Skeleton'
 import { formatTime, formatDateLabel } from '../lib/dateFormatters'
 import type { Profile, ChatMessageWithAuthor } from '../types'
+
+type ChatMessageWithAuthorArray = ChatMessageWithAuthor[]
 
 interface ChatMsg {
   id: string
@@ -34,7 +38,7 @@ function toMsg(row: { id: string; channel_id: string; author_id: string; content
 
 export default function Chat() {
   const { channelId: channelSlug = 'general' } = useParams()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const queryClient = useQueryClient()
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -131,12 +135,78 @@ export default function Chat() {
       })
       if (error) throw new Error('Failed to send message')
     },
-    onSuccess: () => {
+    onMutate: async (content: string) => {
+      if (!user || !channel) return
+
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.chatMessages(channelSlug) })
+
+      // Snapshot previous messages from React Query cache
+      const previousMessages = queryClient.getQueryData<ChatMessageWithAuthorArray>(queryKeys.chatMessages(channelSlug))
+
+      // Snapshot previous local messages state
+      const previousLocalMessages = [...messages]
+
+      // Build a temporary optimistic message
+      const tempId = `temp-${Date.now()}`
+      const now = new Date().toISOString()
+      const authorProfile: Profile = profile || {
+        id: user.id,
+        username: user.username || user.email.split('@')[0],
+        display_name: user.username || user.email.split('@')[0],
+        avatar_url: user.avatar || null,
+        bio: null,
+        website: null,
+        is_admin: false,
+        created_at: now,
+        updated_at: now,
+      }
+
+      const optimisticCacheMessage: ChatMessageWithAuthor = {
+        id: tempId,
+        channel_id: channel.id,
+        author_id: user.id,
+        content,
+        created_at: now,
+        author: authorProfile,
+      }
+
+      // Update React Query cache
+      queryClient.setQueryData<ChatMessageWithAuthorArray>(
+        queryKeys.chatMessages(channelSlug),
+        (old = []) => [...old, optimisticCacheMessage]
+      )
+
+      // Also update local messages state for immediate display
+      const optimisticLocalMsg: ChatMsg = toMsg({
+        id: tempId,
+        channel_id: channel.id,
+        author_id: user.id,
+        content,
+        created_at: now,
+        author: authorProfile,
+      })
+      setMessages(prev => [...prev, optimisticLocalMsg])
+
+      // Clear input immediately
       setInputValue('')
-      queryClient.invalidateQueries({ queryKey: queryKeys.chatMessages(channelSlug) })
+
+      return { previousMessages, previousLocalMessages }
     },
-    onError: (error) => {
+    onError: (error, _content, context) => {
+      toast.error('Failed to send message')
       console.error('[FCV:Chat] Failed to send message:', error)
+      // Roll back React Query cache
+      if (context?.previousMessages) {
+        queryClient.setQueryData(queryKeys.chatMessages(channelSlug), context.previousMessages)
+      }
+      // Roll back local messages state
+      if (context?.previousLocalMessages) {
+        setMessages(context.previousLocalMessages)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.chatMessages(channelSlug) })
     },
   })
 
@@ -177,8 +247,20 @@ export default function Chat() {
       {/* Messages Area */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {loading && (
-          <div className="flex h-full items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-600 border-t-indigo-500" />
+          <div className="space-y-6 py-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="flex gap-3 px-2">
+                <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-12" />
+                  </div>
+                  <Skeleton className={`h-4 ${i % 3 === 0 ? 'w-3/4' : i % 3 === 1 ? 'w-1/2' : 'w-5/6'}`} />
+                  {i % 2 === 0 && <Skeleton className="h-4 w-2/5" />}
+                </div>
+              </div>
+            ))}
           </div>
         )}
         {isError && (
@@ -248,14 +330,6 @@ export default function Chat() {
       </div>
 
       {/* Input Area */}
-      {sendMutation.error && (
-        <div className="shrink-0 px-3 sm:px-4">
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-            {sendMutation.error.message}
-            <button onClick={() => sendMutation.reset()} className="ml-2 text-red-300 hover:text-red-200">dismiss</button>
-          </div>
-        </div>
-      )}
       <div className="shrink-0 border-t border-slate-700 px-3 py-3 sm:px-4 sm:py-4">
         {!user ? (
           <div className="flex items-center justify-center gap-2 rounded-lg bg-slate-700/50 px-4 py-3">

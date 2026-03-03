@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import Avatar from '../components/Avatar'
 import Card from '../components/ui/Card'
+import Skeleton from '../components/ui/Skeleton'
 import { formatTimeAgo } from '../lib/dateFormatters'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 
@@ -50,17 +51,43 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-4xl">
-        <div className="animate-pulse">
-          <Card className="p-6">
-            <div className="flex items-start gap-4 sm:gap-6">
-              <div className="h-16 w-16 rounded-full bg-slate-700 sm:h-24 sm:w-24" />
-              <div className="flex-1">
-                <div className="h-8 w-48 rounded bg-slate-700" />
-                <div className="mt-2 h-4 w-32 rounded bg-slate-700" />
-                <div className="mt-4 h-4 w-full rounded bg-slate-700" />
+        {/* Profile header skeleton */}
+        <Card className="p-4 sm:p-6">
+          <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left sm:gap-6">
+            <Skeleton className="h-20 w-20 shrink-0 rounded-full sm:h-24 sm:w-24" />
+            <div className="mt-4 flex-1 sm:mt-0 w-full">
+              <Skeleton className="mx-auto h-8 w-48 sm:mx-0" />
+              <Skeleton className="mx-auto mt-2 h-4 w-32 sm:mx-0" />
+              <Skeleton className="mx-auto mt-3 h-4 w-full max-w-md sm:mx-0" />
+              <div className="mt-4 flex flex-wrap justify-center gap-6 sm:justify-start">
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="hidden h-6 w-32 sm:block" />
               </div>
             </div>
-          </Card>
+          </div>
+        </Card>
+
+        {/* Activity tabs skeleton */}
+        <div className="mt-6">
+          <div className="flex gap-2 border-b border-slate-700 pb-4">
+            <Skeleton className="h-9 w-28 rounded-lg" />
+            <Skeleton className="h-9 w-24 rounded-lg" />
+          </div>
+          <div className="mt-4 space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+                <div className="flex items-start gap-3">
+                  <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     )

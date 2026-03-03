@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import Card from './ui/Card'
+import Skeleton from './ui/Skeleton'
 
 interface RequireAuthProps {
   children: ReactNode
@@ -13,9 +14,9 @@ export function RequireAuth({ children }: RequireAuthProps) {
   if (loading) {
     return (
       <div className="mx-auto max-w-4xl">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 rounded bg-slate-700" />
-          <div className="h-32 rounded-xl bg-slate-700" />
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-32 rounded-xl" />
         </div>
       </div>
     )
@@ -50,9 +51,9 @@ export function RequireAdmin({ children }: RequireAuthProps) {
   if (loading) {
     return (
       <div className="mx-auto max-w-4xl">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 rounded bg-slate-700" />
-          <div className="h-32 rounded-xl bg-slate-700" />
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-32 rounded-xl" />
         </div>
       </div>
     )

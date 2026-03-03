@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Avatar from '../components/Avatar'
 import Card from '../components/ui/Card'
+import Skeleton from '../components/ui/Skeleton'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import { formatTimeAgo } from '../lib/dateFormatters'
 
@@ -63,22 +64,22 @@ export default function Home() {
         ) : isLoading ? (
           <div className="divide-y divide-slate-700/50">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-start gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4 animate-pulse">
-                <div className="h-9 w-9 shrink-0 rounded-full bg-slate-700 sm:h-10 sm:w-10" />
+              <div key={i} className="flex items-start gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4">
+                <Skeleton className="h-9 w-9 shrink-0 rounded-full sm:h-10 sm:w-10" />
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="h-4 w-16 rounded bg-slate-700" />
+                    <Skeleton className="h-4 w-16" />
                   </div>
-                  <div className="h-5 w-3/4 rounded bg-slate-700" />
+                  <Skeleton className="h-5 w-3/4" />
                   <div className="flex items-center gap-2">
-                    <div className="h-4 w-4 rounded-full bg-slate-700" />
-                    <div className="h-3 w-20 rounded bg-slate-700" />
-                    <div className="h-3 w-12 rounded bg-slate-700" />
+                    <Skeleton className="h-4 w-4 rounded-full" />
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-12" />
                   </div>
                 </div>
                 <div className="hidden shrink-0 space-y-1 sm:block">
-                  <div className="h-3 w-16 rounded bg-slate-700" />
-                  <div className="h-4 w-12 rounded bg-slate-700" />
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-4 w-12" />
                 </div>
               </div>
             ))}

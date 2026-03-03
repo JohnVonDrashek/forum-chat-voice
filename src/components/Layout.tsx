@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { useState, useCallback, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Toaster } from 'react-hot-toast'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import MobileSidebar from './MobileSidebar'
@@ -137,6 +138,11 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-slate-900">
+      <Toaster position="bottom-right" toastOptions={{
+        style: { background: '#1e293b', color: '#f1f5f9', border: '1px solid #334155' },
+        success: { iconTheme: { primary: '#22c55e', secondary: '#f1f5f9' } },
+        error: { iconTheme: { primary: '#ef4444', secondary: '#f1f5f9' } },
+      }} />
       <Header onMenuClick={handleMenuClick} />
 
       {/* Mobile sidebar */}

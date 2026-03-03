@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
+import Skeleton from '../components/ui/Skeleton'
 import { formatTimeAgo, formatDate } from '../lib/dateFormatters'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 
@@ -43,6 +45,7 @@ export default function Bookmarks() {
     onError: (_err, _bookmarkId, context) => {
       // Rollback on error
       queryClient.setQueryData(queryKeys.bookmarks(user!.id), context?.previousBookmarks)
+      toast.error('Failed to remove bookmark')
     },
     onSettled: () => {
       // Always refetch after error or success
@@ -57,10 +60,31 @@ export default function Bookmarks() {
   if (loading) {
     return (
       <div className="mx-auto max-w-4xl">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 rounded bg-slate-700" />
-          <div className="h-32 rounded bg-slate-700" />
+        <div className="mb-6">
+          <Skeleton className="h-8 w-36" />
+          <Skeleton className="mt-2 h-4 w-56" />
         </div>
+        <Card>
+          <div className="border-b border-slate-700 px-4 py-3">
+            <Skeleton className="h-4 w-24" />
+          </div>
+          <div className="divide-y divide-slate-700/50">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-start gap-3 px-4 py-4">
+                <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className={`h-5 ${i % 2 === 0 ? 'w-3/4' : 'w-1/2'}`} />
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+                <Skeleton className="h-8 w-8 shrink-0 rounded-lg" />
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
     )
   }

@@ -1,36 +1,40 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useAuth } from '../lib/auth'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 
+const registerSchema = z.object({
+  username: z.string().min(3, 'Username must be at least 3 characters'),
+  email: z.string().min(1, 'Email is required').email('Please enter a valid email'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+})
+
+type RegisterFormData = z.infer<typeof registerSchema>
+
 export default function Register() {
-  const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { signUp } = useAuth()
   const navigate = useNavigate()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+  })
 
-    if (username.length < 3) {
-      setError('Username must be at least 3 characters')
-      return
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
-      return
-    }
-
+  const onSubmit = async (data: RegisterFormData) => {
     setLoading(true)
     setError('')
 
-    const { error } = await signUp(email, password, username)
+    const { error } = await signUp(data.email, data.password, data.username)
     if (error) {
       setError(error.message)
       setLoading(false)
@@ -51,7 +55,7 @@ export default function Register() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-slate-300">
               Username
@@ -59,12 +63,13 @@ export default function Register() {
             <Input
               type="text"
               id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              {...register('username')}
               className="mt-1 block w-full"
               placeholder="cooluser123"
-              required
             />
+            {errors.username && (
+              <p className="text-red-400 text-sm mt-1">{errors.username.message}</p>
+            )}
           </div>
 
           <div>
@@ -74,12 +79,13 @@ export default function Register() {
             <Input
               type="email"
               id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register('email')}
               className="mt-1 block w-full"
               placeholder="you@example.com"
-              required
             />
+            {errors.email && (
+              <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>
+            )}
           </div>
 
           <div>
@@ -89,12 +95,13 @@ export default function Register() {
             <Input
               type="password"
               id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              {...register('password')}
               className="mt-1 block w-full"
               placeholder="••••••••"
-              required
             />
+            {errors.password && (
+              <p className="text-red-400 text-sm mt-1">{errors.password.message}</p>
+            )}
             <p className="mt-1 text-xs text-slate-500">At least 6 characters</p>
           </div>
 

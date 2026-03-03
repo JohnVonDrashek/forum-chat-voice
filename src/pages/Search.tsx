@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import Avatar from '../components/Avatar'
 import Card from '../components/ui/Card'
+import Skeleton from '../components/ui/Skeleton'
 import { formatTimeAgo } from '../lib/dateFormatters'
 import { useDebounce } from '../lib/hooks'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
@@ -116,7 +117,9 @@ export default function Search() {
         )}
 
         {hasQuery && isLoading && (
-          <p className="mt-2 text-sm text-slate-400">Searching...</p>
+          <div className="mt-2">
+            <Skeleton className="h-4 w-32" />
+          </div>
         )}
       </div>
 
@@ -144,6 +147,28 @@ export default function Search() {
 
       {hasQuery ? (
         <div className="space-y-6">
+          {/* Skeleton results while loading */}
+          {isLoading && (
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className={`h-5 ${i % 2 === 0 ? 'w-3/4' : 'w-2/3'}`} />
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-3 w-24" />
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-3 w-16" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {(filter === 'all' || filter === 'threads') && threadResults.length > 0 && (
             <div>
               {filter === 'all' && (

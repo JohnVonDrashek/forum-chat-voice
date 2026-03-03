@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import Avatar from '../components/Avatar'
 import { supabase } from '../lib/supabase'
+import Skeleton from '../components/ui/Skeleton'
 import { formatNotificationTime } from '../lib/dateFormatters'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import type { Notification as DBNotification } from '../types'
@@ -286,7 +287,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
           {/* Auth */}
           {loading ? (
-            <div className="h-8 w-16 animate-pulse rounded bg-slate-700" />
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-6 w-6 rounded-full" />
+              <Skeleton className="hidden h-4 w-20 sm:block" />
+            </div>
           ) : user ? (
             <div className="flex items-center gap-2 sm:gap-3">
               <Link

@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Card from '../components/ui/Card'
+import Skeleton from '../components/ui/Skeleton'
 import { formatShortTimeAgo, formatMessageTime } from '../lib/dateFormatters'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import type { Profile } from '../types'
@@ -170,25 +172,62 @@ export default function DirectMessages() {
   const sendMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!recipientId || !user) throw new Error('Not authenticated')
-      const otherId = currentConversation?.recipientId || recipientId
+      const targetId = currentConversation?.recipientId || recipientId
       const { error } = await supabase.from('direct_messages').insert({
         sender_id: user.id,
-        recipient_id: otherId,
+        recipient_id: targetId,
         content,
       })
       if (error) throw new Error('Failed to send message')
     },
-    onSuccess: () => {
+    onMutate: async (content: string) => {
+      if (!recipientId || !user || !otherId) return
+
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.dmMessages(otherId) })
+
+      // Snapshot previous messages
+      const previousMessages = queryClient.getQueryData<typeof rawMessages>(queryKeys.dmMessages(otherId))
+
+      // Build a temporary optimistic DM
+      const tempId = `temp-${Date.now()}`
+      const now = new Date().toISOString()
+
+      const optimisticDM = {
+        id: tempId,
+        sender_id: user.id,
+        recipient_id: otherId,
+        content,
+        created_at: now,
+        read: false,
+      }
+
+      // Optimistically add the DM
+      queryClient.setQueryData(
+        queryKeys.dmMessages(otherId),
+        (old: typeof rawMessages = []) => [...old, optimisticDM]
+      )
+
+      // Clear input immediately
       setNewMessage('')
+
+      return { previousMessages }
+    },
+    onError: (error, _content, context) => {
+      toast.error('Failed to send message')
+      console.error('[FCV:DM] Failed to send message:', error)
+      // Roll back to previous messages
+      if (context?.previousMessages && otherId) {
+        queryClient.setQueryData(queryKeys.dmMessages(otherId), context.previousMessages)
+      }
+    },
+    onSettled: () => {
       if (user) {
         queryClient.invalidateQueries({ queryKey: queryKeys.dmConversationsList(user.id) })
         if (otherId) {
           queryClient.invalidateQueries({ queryKey: queryKeys.dmMessages(otherId) })
         }
       }
-    },
-    onError: (error) => {
-      console.error('[FCV:DM] Failed to send message:', error)
     },
   })
 
@@ -350,12 +389,6 @@ export default function DirectMessages() {
               </div>
 
               {/* Input */}
-              {sendMutation.error && (
-                <div className="mx-4 mb-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-                  {sendMutation.error.message}
-                  <button onClick={() => sendMutation.reset()} className="ml-2 text-red-300 hover:text-red-200">dismiss</button>
-                </div>
-              )}
               <div className="border-t border-slate-700 p-4">
                 <form onSubmit={handleSend} className="flex gap-2">
                     <Input
@@ -427,7 +460,17 @@ export default function DirectMessages() {
 
             <div className="max-h-64 overflow-y-auto">
               {searching && (
-                <div className="px-4 py-3 text-center text-sm text-slate-400">Searching...</div>
+                <div className="space-y-1">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-3">
+                      <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <Skeleton className={`h-4 ${i % 2 === 0 ? 'w-28' : 'w-20'}`} />
+                        <Skeleton className="h-3 w-16" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
               {!searching && searchQuery.trim() && searchResults.length === 0 && (
                 <div className="px-4 py-3 text-center text-sm text-slate-400">No users found</div>

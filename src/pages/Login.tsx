@@ -1,24 +1,39 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useAuth } from '../lib/auth'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 
+const loginSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Please enter a valid email'),
+  password: z.string().min(1, 'Password is required'),
+})
+
+type LoginFormData = z.infer<typeof loginSchema>
+
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { signIn, signInWithGitHub } = useAuth()
   const navigate = useNavigate()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  })
+
+  const onSubmit = async (data: LoginFormData) => {
     setLoading(true)
     setError('')
 
-    const { error } = await signIn(email, password)
+    const { error } = await signIn(data.email, data.password)
     if (error) {
       setError(error.message)
       setLoading(false)
@@ -43,7 +58,7 @@ export default function Login() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-slate-300">
               Email
@@ -51,12 +66,13 @@ export default function Login() {
             <Input
               type="email"
               id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register('email')}
               className="mt-1 block w-full"
               placeholder="you@example.com"
-              required
             />
+            {errors.email && (
+              <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>
+            )}
           </div>
 
           <div>
@@ -71,12 +87,13 @@ export default function Login() {
             <Input
               type="password"
               id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              {...register('password')}
               className="mt-1 block w-full"
               placeholder="••••••••"
-              required
             />
+            {errors.password && (
+              <p className="text-red-400 text-sm mt-1">{errors.password.message}</p>
+            )}
           </div>
 
           <Button

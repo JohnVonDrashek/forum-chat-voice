@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { useMutation } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import { uploadAvatar } from '../lib/avatars'
@@ -10,37 +14,88 @@ import Card from '../components/ui/Card'
 
 type Tab = 'profile' | 'account' | 'notifications' | 'appearance'
 
+const profileSchema = z.object({
+  displayName: z.string().optional(),
+  bio: z.string().optional(),
+  website: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
+})
+
+type ProfileFormData = z.infer<typeof profileSchema>
+
+const accountSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Please enter a valid email'),
+  currentPassword: z.string().optional(),
+  newPassword: z.string().optional(),
+  confirmPassword: z.string().optional(),
+}).refine((data) => {
+  if (data.newPassword && data.newPassword.length < 6) return false
+  return true
+}, {
+  message: 'New password must be at least 6 characters',
+  path: ['newPassword'],
+}).refine((data) => {
+  if (data.newPassword && data.newPassword !== data.confirmPassword) return false
+  return true
+}, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+})
+
+type AccountFormData = z.infer<typeof accountSchema>
+
 export default function Settings() {
   const { user, profile } = useAuth()
   const [activeTab, setActiveTab] = useState<Tab>('profile')
 
-  // Profile state
-  const [displayName, setDisplayName] = useState('')
-  const [bio, setBio] = useState('')
-  const [website, setWebsite] = useState('')
+  // Avatar state
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Account state
-  const [email, setEmail] = useState('')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  // Profile form
+  const {
+    register: registerProfile,
+    handleSubmit: handleSubmitProfile,
+    reset: resetProfile,
+    formState: { errors: profileErrors },
+  } = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+  })
+
+  // Account form
+  const {
+    register: registerAccount,
+    handleSubmit: handleSubmitAccount,
+    reset: resetAccount,
+    formState: { errors: accountErrors },
+  } = useForm<AccountFormData>({
+    resolver: zodResolver(accountSchema),
+  })
 
   // Load profile data
   useEffect(() => {
     if (profile) {
-      setDisplayName(profile.display_name || profile.username || '')
-      setBio(profile.bio || '')
-      setWebsite(profile.website || '')
+      resetProfile({
+        displayName: profile.display_name || profile.username || '',
+        bio: profile.bio || '',
+        website: profile.website || '',
+      })
       setAvatarUrl(profile.avatar_url || null)
     } else if (user) {
-      setDisplayName(user.user_metadata?.username || '')
+      resetProfile({
+        displayName: user.user_metadata?.username || '',
+        bio: '',
+        website: '',
+      })
     }
-    setEmail(user?.email || '')
-  }, [profile, user])
+    resetAccount({
+      email: user?.email || '',
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    })
+  }, [profile, user, resetProfile, resetAccount])
 
   // Notification state - persisted to localStorage
   const [emailNotifs, setEmailNotifs] = useState(() => {
@@ -76,31 +131,35 @@ export default function Settings() {
   })
 
   const saveMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (data: ProfileFormData | AccountFormData | undefined) => {
       if (!user) throw new Error('Not authenticated')
 
-      if (activeTab === 'profile') {
+      if (activeTab === 'profile' && data) {
+        const profileData = data as ProfileFormData
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
-            display_name: displayName || null,
-            bio: bio || null,
-            website: website || null,
+            display_name: profileData.displayName || null,
+            bio: profileData.bio || null,
+            website: profileData.website || null,
             updated_at: new Date().toISOString(),
           })
           .eq('id', user.id)
         if (updateError) throw new Error(updateError.message)
       }
 
-      if (activeTab === 'account' && newPassword) {
-        if (newPassword !== confirmPassword) {
-          throw new Error('Passwords do not match')
+      if (activeTab === 'account' && data) {
+        const accountData = data as AccountFormData
+        if (accountData.newPassword) {
+          const { error: pwError } = await supabase.auth.updateUser({ password: accountData.newPassword })
+          if (pwError) throw new Error(pwError.message)
+          resetAccount({
+            email: accountData.email,
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: '',
+          })
         }
-        const { error: pwError } = await supabase.auth.updateUser({ password: newPassword })
-        if (pwError) throw new Error(pwError.message)
-        setCurrentPassword('')
-        setNewPassword('')
-        setConfirmPassword('')
       }
 
       if (activeTab === 'notifications') {
@@ -113,10 +172,22 @@ export default function Settings() {
         localStorage.setItem('fontSize', fontSize)
       }
     },
+    onSuccess: () => {
+      toast.success('Settings saved')
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to save settings')
+    },
   })
 
   const handleSave = () => {
-    saveMutation.mutate()
+    if (activeTab === 'profile') {
+      handleSubmitProfile((data) => saveMutation.mutate(data))()
+    } else if (activeTab === 'account') {
+      handleSubmitAccount((data) => saveMutation.mutate(data))()
+    } else {
+      saveMutation.mutate(undefined)
+    }
   }
 
   const tabs: { id: Tab; label: string; icon: ReactNode }[] = [
@@ -230,32 +301,38 @@ export default function Settings() {
                   <label className="mb-1 block text-sm font-medium text-slate-300">Display Name</label>
                   <Input
                     type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
+                    {...registerProfile('displayName')}
                     className="w-full"
                   />
+                  {profileErrors.displayName && (
+                    <p className="text-red-400 text-sm mt-1">{profileErrors.displayName.message}</p>
+                  )}
                 </div>
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-300">Bio</label>
                   <textarea
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
+                    {...registerProfile('bio')}
                     rows={3}
                     placeholder="Tell us about yourself..."
                     className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
+                  {profileErrors.bio && (
+                    <p className="text-red-400 text-sm mt-1">{profileErrors.bio.message}</p>
+                  )}
                 </div>
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-300">Website</label>
                   <Input
                     type="url"
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
+                    {...registerProfile('website')}
                     placeholder="https://example.com"
                     className="w-full"
                   />
+                  {profileErrors.website && (
+                    <p className="text-red-400 text-sm mt-1">{profileErrors.website.message}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -274,10 +351,12 @@ export default function Settings() {
                   <label className="mb-1 block text-sm font-medium text-slate-300">Email Address</label>
                   <Input
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    {...registerAccount('email')}
                     className="w-full"
                   />
+                  {accountErrors.email && (
+                    <p className="text-red-400 text-sm mt-1">{accountErrors.email.message}</p>
+                  )}
                 </div>
               </div>
 
@@ -288,28 +367,34 @@ export default function Settings() {
                     <label className="mb-1 block text-sm font-medium text-slate-300">Current Password</label>
                     <Input
                       type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      {...registerAccount('currentPassword')}
                       className="w-full"
                     />
+                    {accountErrors.currentPassword && (
+                      <p className="text-red-400 text-sm mt-1">{accountErrors.currentPassword.message}</p>
+                    )}
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-slate-300">New Password</label>
                     <Input
                       type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
+                      {...registerAccount('newPassword')}
                       className="w-full"
                     />
+                    {accountErrors.newPassword && (
+                      <p className="text-red-400 text-sm mt-1">{accountErrors.newPassword.message}</p>
+                    )}
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-slate-300">Confirm New Password</label>
                     <Input
                       type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      {...registerAccount('confirmPassword')}
                       className="w-full"
                     />
+                    {accountErrors.confirmPassword && (
+                      <p className="text-red-400 text-sm mt-1">{accountErrors.confirmPassword.message}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -455,12 +540,6 @@ export default function Settings() {
 
           {/* Save Button */}
           <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-700 pt-6">
-            {saveMutation.error && (
-              <span className="text-sm text-red-400">{saveMutation.error.message}</span>
-            )}
-            {saveMutation.isSuccess && (
-              <span className="text-sm text-green-400">Settings saved!</span>
-            )}
             <button
               onClick={handleSave}
               disabled={saveMutation.isPending}
@@ -487,7 +566,9 @@ export default function Settings() {
             if (url) {
               await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id)
               setAvatarUrl(url)
+              toast.success('Avatar updated')
             } else {
+              toast.error('Failed to upload avatar')
               console.error('[FCV:Settings] Failed to upload avatar')
             }
             setAvatarUploading(false)

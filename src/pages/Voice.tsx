@@ -4,6 +4,7 @@ import { useAuth } from '../lib/auth'
 import { useVoice } from '../lib/voice'
 import Avatar from '../components/Avatar'
 import Card from '../components/ui/Card'
+import Skeleton from '../components/ui/Skeleton'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 import type { VoiceRoom } from '../types'
 import type { VoiceParticipant } from '../lib/voice'
@@ -80,10 +81,25 @@ export default function Voice() {
         {roomsLoading && (
           <div className="grid gap-4 sm:grid-cols-2">
             {[...Array(2)].map((_, i) => (
-              <Card key={i} className="animate-pulse p-4">
-                <div className="h-5 w-32 rounded bg-slate-700" />
-                <div className="mt-4 h-10 w-full rounded bg-slate-700" />
-              </Card>
+              <div key={i} className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-5" />
+                    <Skeleton className="h-5 w-32" />
+                  </div>
+                  <Skeleton className="h-5 w-12 rounded-full" />
+                </div>
+                <Skeleton className="mt-2 h-4 w-48" />
+                <div className="mt-4 flex items-center gap-2">
+                  <div className="flex -space-x-2">
+                    {[...Array(3)].map((_, j) => (
+                      <Skeleton key={j} className="h-8 w-8 rounded-full border-2 border-slate-800" />
+                    ))}
+                  </div>
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <Skeleton className="mt-4 h-10 w-full rounded-lg" />
+              </div>
             ))}
           </div>
         )}

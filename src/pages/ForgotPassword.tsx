@@ -1,27 +1,44 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useAuth } from '../lib/auth'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Card from '../components/ui/Card'
 
+const forgotPasswordSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Please enter a valid email'),
+})
+
+type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>
+
 export default function ForgotPassword() {
-  const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [submittedEmail, setSubmittedEmail] = useState('')
   const { resetPassword } = useAuth()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
+  })
+
+  const onSubmit = async (data: ForgotPasswordFormData) => {
     setLoading(true)
     setError('')
 
-    const { error } = await resetPassword(email)
+    const { error } = await resetPassword(data.email)
     if (error) {
       setError(error.message)
       setLoading(false)
     } else {
+      setSubmittedEmail(data.email)
       setSuccess(true)
       setLoading(false)
     }
@@ -38,7 +55,7 @@ export default function ForgotPassword() {
           </div>
           <h1 className="text-2xl font-bold text-white">Check your email</h1>
           <p className="mt-2 text-slate-400">
-            We've sent a password reset link to <span className="font-medium text-white">{email}</span>
+            We've sent a password reset link to <span className="font-medium text-white">{submittedEmail}</span>
           </p>
           <p className="mt-4 text-sm text-slate-500">
             Didn't receive the email? Check your spam folder or{' '}
@@ -74,7 +91,7 @@ export default function ForgotPassword() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-slate-300">
               Email
@@ -82,12 +99,13 @@ export default function ForgotPassword() {
             <Input
               type="email"
               id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register('email')}
               className="mt-1 block w-full"
               placeholder="you@example.com"
-              required
             />
+            {errors.email && (
+              <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>
+            )}
           </div>
 
           <Button

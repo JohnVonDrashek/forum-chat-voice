@@ -1,6 +1,7 @@
 import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { uploadAvatar } from '../lib/avatars'
@@ -9,15 +10,16 @@ import ImageCropModal from '../components/ImageCropModal'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
+import Skeleton from '../components/ui/Skeleton'
 import { formatDate } from '../lib/dateFormatters'
-import type { PostWithAuthor } from '../types'
+import type { PostWithAuthor, Profile } from '../types'
 
 const POSTS_PER_PAGE = 5
 
 export default function Thread() {
   const { threadId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const queryClient = useQueryClient()
 
   // Use React Query for thread - instant on back navigation!
@@ -158,6 +160,7 @@ export default function Thread() {
       if (context?.previous !== undefined) {
         queryClient.setQueryData(queryKeys.isBookmarked(user.id, thread.id), context.previous)
       }
+      toast.error('Failed to update bookmark')
       console.error('[FCV:Thread] Failed to toggle bookmark:', _error)
     },
     onSettled: () => {
@@ -193,31 +196,63 @@ export default function Thread() {
     bookmarkMutation.mutate()
   }
 
-  // Reply mutation
+  // Reply mutation with optimistic update
   const replyMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ content, replyToId }: { content: string; replyToId: string | null }) => {
       if (!thread || !user) throw new Error('Not authenticated')
       const { error, data: insertedPost } = await supabase
         .from('posts')
         .insert({
           thread_id: thread.id,
           author_id: user.id,
-          content: replyContent.trim(),
-          reply_to_id: replyingTo?.id || null,
+          content,
+          reply_to_id: replyToId,
         })
         .select('*, author:profiles(*)')
         .single()
       if (error) throw error
       return insertedPost as PostWithAuthor
     },
-    onSuccess: (insertedPost) => {
-      if (!thread) return
-      // Add to cache
+    onMutate: async ({ content, replyToId }) => {
+      if (!thread || !user) return
+
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.posts(thread.id) })
+
+      // Snapshot previous posts
+      const previousPosts = queryClient.getQueryData<PostWithAuthor[]>(queryKeys.posts(thread.id))
+
+      // Build a temporary optimistic post
+      const tempId = `temp-${Date.now()}`
+      const now = new Date().toISOString()
+      const authorProfile: Profile = profile || {
+        id: user.id,
+        username: user.username || user.email.split('@')[0],
+        display_name: user.username || user.email.split('@')[0],
+        avatar_url: user.avatar || null,
+        bio: null,
+        website: null,
+        is_admin: false,
+        created_at: now,
+        updated_at: now,
+      }
+
+      const optimisticPost: PostWithAuthor = {
+        id: tempId,
+        thread_id: thread.id,
+        author_id: user.id,
+        content,
+        reply_to_id: replyToId,
+        created_at: now,
+        updated_at: now,
+        author: authorProfile,
+      }
+
+      // Optimistically add the post
       queryClient.setQueryData<PostWithAuthor[]>(
         queryKeys.posts(thread.id),
         (old = []) => {
-          if (old.some(p => p.id === insertedPost.id)) return old
-          const updated = [...old, insertedPost]
+          const updated = [...old, optimisticPost]
           // Navigate to last page to see the new post
           const newTotalPages = Math.ceil(updated.length / POSTS_PER_PAGE)
           if (newTotalPages > currentPage) {
@@ -227,8 +262,29 @@ export default function Thread() {
         }
       )
 
+      // Clear the form immediately for instant feel
       setReplyContent('')
       setReplyingTo(null)
+
+      return { previousPosts }
+    },
+    onError: (error, _variables, context) => {
+      toast.error('Failed to post reply')
+      console.error('[FCV:Thread] Failed to post reply:', error)
+      if (!thread) return
+      // Roll back to previous posts
+      if (context?.previousPosts) {
+        queryClient.setQueryData(queryKeys.posts(thread.id), context.previousPosts)
+      }
+    },
+    onSuccess: (insertedPost) => {
+      if (!thread) return
+
+      // Replace the temp post with the real one from the server
+      queryClient.setQueryData<PostWithAuthor[]>(
+        queryKeys.posts(thread.id),
+        (old = []) => old.map(p => p.id.startsWith('temp-') ? insertedPost : p)
+      )
 
       // Update thread's last_post_at
       supabase
@@ -240,27 +296,64 @@ export default function Thread() {
             console.error('[FCV:Thread] Failed to update thread after reply:', updateError)
           }
         })
-
-      // Invalidate caches so home page shows updated post count/last activity
-      queryClient.invalidateQueries({ queryKey: queryKeys.threads(20) })
     },
-    onError: (error) => {
-      console.error('[FCV:Thread] Failed to post reply:', error)
+    onSettled: () => {
+      if (!thread) return
+      // Invalidate to get the real data and update related caches
+      queryClient.invalidateQueries({ queryKey: queryKeys.posts(thread.id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.threads(20) })
     },
   })
 
   const handleReply = (e: React.FormEvent) => {
     e.preventDefault()
     if (!thread || !replyContent.trim() || !user) return
-    replyMutation.mutate()
+    replyMutation.mutate({ content: replyContent.trim(), replyToId: replyingTo?.id || null })
   }
 
   if (loading) {
     return (
       <div className="mx-auto max-w-4xl">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-3/4 rounded bg-slate-700" />
-          <div className="h-32 rounded bg-slate-700" />
+        {/* Breadcrumb skeleton */}
+        <div className="mb-4 flex items-center gap-2">
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-4 w-4" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+
+        {/* Thread header skeleton */}
+        <div className="mb-6">
+          <div className="mt-2 flex items-start gap-3">
+            <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1">
+              <Skeleton className="h-8 w-3/4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-center gap-3">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+        </div>
+
+        {/* Post skeletons */}
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+              <div className="flex gap-4">
+                <Skeleton className="hidden h-12 w-12 shrink-0 rounded-full sm:block" />
+                <div className="min-w-0 flex-1 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-28" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     )
@@ -650,11 +743,18 @@ export default function Thread() {
           onCrop={async (blob) => {
             setCropImageSrc(null)
             setAvatarUploading(true)
-            const imageUrl = await uploadAvatar(blob, `thread/${thread.id}/custom.png`)
-            if (imageUrl) {
-              await supabase.from('threads').update({ image_url: imageUrl }).eq('id', thread.id)
-              // Update cache
-              queryClient.setQueryData(queryKeys.thread(thread.id), { ...thread, image_url: imageUrl })
+            try {
+              const imageUrl = await uploadAvatar(blob, `thread/${thread.id}/custom.png`)
+              if (imageUrl) {
+                await supabase.from('threads').update({ image_url: imageUrl }).eq('id', thread.id)
+                // Update cache
+                queryClient.setQueryData(queryKeys.thread(thread.id), { ...thread, image_url: imageUrl })
+                toast.success('Thread image updated')
+              } else {
+                toast.error('Failed to upload thread image')
+              }
+            } catch {
+              toast.error('Failed to upload thread image')
             }
             setAvatarUploading(false)
           }}

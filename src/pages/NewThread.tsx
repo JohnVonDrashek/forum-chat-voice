@@ -1,6 +1,10 @@
 import { useState, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { uploadAvatar, uploadDefaultAvatar } from '../lib/avatars'
@@ -10,6 +14,13 @@ import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Card from '../components/ui/Card'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
+
+const newThreadSchema = z.object({
+  title: z.string().min(5, 'Title must be at least 5 characters'),
+  content: z.string().min(10, 'Content must be at least 10 characters'),
+})
+
+type NewThreadFormData = z.infer<typeof newThreadSchema>
 
 export default function NewThread() {
   const { categorySlug } = useParams()
@@ -21,27 +32,25 @@ export default function NewThread() {
     enabled: !!categorySlug,
     ...queryOptions.static,
   })
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
   const [threadImageBlob, setThreadImageBlob] = useState<Blob | null>(null)
   const [threadImagePreview, setThreadImagePreview] = useState<string | null>(null)
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<NewThreadFormData>({
+    resolver: zodResolver(newThreadSchema),
+  })
+
   const submitMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (data: NewThreadFormData) => {
       if (!user || !category) throw new Error('Not authenticated')
 
-      if (title.length < 5) {
-        throw new Error('Title must be at least 5 characters')
-      }
-
-      if (content.length < 10) {
-        throw new Error('Content must be at least 10 characters')
-      }
-
       // Create slug from title
-      const slug = title
+      const slug = data.title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '')
@@ -53,7 +62,7 @@ export default function NewThread() {
         .insert({
           category_id: category.id,
           author_id: user.id,
-          title,
+          title: data.title,
           slug,
           post_count: 1,
           last_post_at: new Date().toISOString(),
@@ -67,7 +76,7 @@ export default function NewThread() {
       const { error: postError } = await supabase.from('posts').insert({
         thread_id: thread.id,
         author_id: user.id,
-        content,
+        content: data.content,
       })
 
       if (postError) throw new Error(postError.message)
@@ -88,14 +97,17 @@ export default function NewThread() {
       return thread
     },
     onSuccess: (thread) => {
+      toast.success('Thread created')
       navigate(`/t/${thread.id}`)
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create thread')
     },
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = (data: NewThreadFormData) => {
     if (!user || !category) return
-    submitMutation.mutate()
+    submitMutation.mutate(data)
   }
 
   if (!category) {
@@ -177,7 +189,7 @@ export default function NewThread() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-slate-300">
               Title
@@ -185,12 +197,13 @@ export default function NewThread() {
             <Input
               type="text"
               id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              {...register('title')}
               className="mt-1 block w-full"
               placeholder="What's on your mind?"
-              required
             />
+            {errors.title && (
+              <p className="text-red-400 text-sm mt-1">{errors.title.message}</p>
+            )}
           </div>
 
           <div>
@@ -199,13 +212,14 @@ export default function NewThread() {
             </label>
             <textarea
               id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
+              {...register('content')}
               rows={8}
               className="mt-1 block w-full resize-none rounded-lg border border-slate-600 bg-slate-700 px-4 py-3 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               placeholder="Share your thoughts..."
-              required
             />
+            {errors.content && (
+              <p className="text-red-400 text-sm mt-1">{errors.content.message}</p>
+            )}
           </div>
 
           <div className="flex gap-3">

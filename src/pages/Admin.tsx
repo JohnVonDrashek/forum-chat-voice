@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import Avatar from '../components/Avatar'
 import Card from '../components/ui/Card'
+import Skeleton from '../components/ui/Skeleton'
 import { formatTimeAgo } from '../lib/dateFormatters'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
 
@@ -105,7 +106,19 @@ export default function Admin() {
           {activeTab === 'overview' && (
             <>
               {statsLoading && (
-                <div className="py-8 text-center text-slate-400">Loading stats...</div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {[...Array(3)].map((_, i) => (
+                    <Card key={i} className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-10 w-10 rounded-lg" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-3 w-20" />
+                          <Skeleton className="h-7 w-16" />
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               )}
               {statsError && (
                 <div className="py-8 text-center text-red-400">Failed to load stats.</div>
@@ -159,7 +172,38 @@ export default function Admin() {
           {activeTab === 'users' && (
             <div className="space-y-4">
               {usersLoading && (
-                <div className="py-8 text-center text-slate-400">Loading users...</div>
+                <Card className="overflow-hidden">
+                  <table className="w-full">
+                    <thead className="border-b border-slate-700 bg-slate-800">
+                      <tr>
+                        <th className="px-4 py-3 text-left"><Skeleton className="h-3 w-10" /></th>
+                        <th className="hidden px-4 py-3 text-left sm:table-cell"><Skeleton className="h-3 w-10" /></th>
+                        <th className="hidden px-4 py-3 text-left md:table-cell"><Skeleton className="h-3 w-14" /></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/50">
+                      {[...Array(5)].map((_, i) => (
+                        <tr key={i}>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <Skeleton className="h-8 w-8 rounded-full" />
+                              <div className="space-y-1">
+                                <Skeleton className={`h-4 ${i % 2 === 0 ? 'w-28' : 'w-20'}`} />
+                                <Skeleton className="h-3 w-16" />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="hidden px-4 py-3 sm:table-cell">
+                            <Skeleton className="h-5 w-14 rounded-full" />
+                          </td>
+                          <td className="hidden px-4 py-3 md:table-cell">
+                            <Skeleton className="h-4 w-16" />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Card>
               )}
               {usersError && (
                 <div className="py-8 text-center text-red-400">Failed to load users.</div>
