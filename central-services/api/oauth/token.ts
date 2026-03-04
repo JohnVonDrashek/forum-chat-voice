@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createHash } from 'crypto'
 import jwt from 'jsonwebtoken'
 import { getHubSupabase, getHubSupabaseAnon } from '../_lib/supabase.js'
-import { rateLimit } from '../_lib/rate-limit.js'
+import { rateLimit } from '@johnvondrashek/forumline-server-sdk'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

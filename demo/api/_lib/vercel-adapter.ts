@@ -1,15 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import type { GenericRequest, GenericResponse } from '@johnvondrashek/forumline-server-sdk'
-
-/** Parse cookies from a Cookie header string */
-function parseCookies(cookieHeader: string): Record<string, string> {
-  const cookies: Record<string, string> = {}
-  for (const pair of cookieHeader.split(';')) {
-    const [key, ...rest] = pair.trim().split('=')
-    if (key) cookies[key] = rest.join('=')
-  }
-  return cookies
-}
+import { parseCookies } from '@johnvondrashek/forumline-server-sdk'
 
 /** Adapt a VercelRequest into a GenericRequest */
 export function adaptRequest(req: VercelRequest): GenericRequest {

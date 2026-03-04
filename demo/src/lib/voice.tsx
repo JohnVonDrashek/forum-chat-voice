@@ -277,7 +277,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
       const displayName = user.username || user.user_metadata?.username || user.email.split('@')[0]
 
-      const resp = await fetch('/api/livekit-token', {
+      const resp = await fetch('/api/livekit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

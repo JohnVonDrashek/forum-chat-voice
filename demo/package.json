@@ -18,9 +18,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@johnvondrashek/forumline-central-services-client": "^0.1.0",
-    "@johnvondrashek/forumline-react": "^0.1.0",
-    "@johnvondrashek/forumline-server-sdk": "^0.1.0",
+    "@johnvondrashek/forumline-central-services-client": "^0.2.0",
+    "@johnvondrashek/forumline-react": "^0.2.5",
+    "@johnvondrashek/forumline-server-sdk": "^0.3.0",
     "@dicebear/avataaars": "^9.3.2",
     "@dicebear/core": "^9.3.2",
     "@dicebear/shapes": "^9.3.2",
