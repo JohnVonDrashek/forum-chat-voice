@@ -6,21 +6,27 @@
  * State is managed by ForumProvider.
  */
 
-import { useState, useCallback, type ReactNode } from 'react'
+import { useState, useCallback, useRef, type ReactNode } from 'react'
 import { useForum } from './ForumProvider'
 
-/** Tooltip that appears to the right of a rail icon */
+/** Tooltip that appears to the right of a rail icon, using fixed positioning to escape overflow */
 function RailTooltip({ label, children }: { label: string; children: ReactNode }) {
-  const [show, setShow] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const handleEnter = () => {
+    const rect = ref.current?.getBoundingClientRect()
+    if (rect) setPos({ top: rect.top + rect.height / 2, left: rect.right + 12 })
+  }
+
   return (
-    <div
-      className="relative"
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-    >
+    <div ref={ref} onMouseEnter={handleEnter} onMouseLeave={() => setPos(null)}>
       {children}
-      {show && (
-        <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-md bg-slate-950 px-3 py-1.5 text-sm font-medium text-white shadow-lg">
+      {pos && (
+        <div
+          className="pointer-events-none fixed z-50 -translate-y-1/2 whitespace-nowrap rounded-md bg-slate-950 px-3 py-1.5 text-sm font-medium text-white shadow-lg"
+          style={{ top: pos.top, left: pos.left }}
+        >
           {label}
           <div className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-slate-950" />
         </div>
