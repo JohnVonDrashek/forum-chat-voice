@@ -170,7 +170,7 @@ export function getForumlineServer(): ForumlineServer {
     },
 
     async getNotifications(userId: string): Promise<ForumNotification[]> {
-      const supabase = createClient(supabaseUrl, supabaseAnonKey)
+      const supabase = createClient(supabaseUrl, serviceRoleKey)
       const { data: notifications } = await supabase
         .from('notifications')
         .select('*')
@@ -182,7 +182,7 @@ export function getForumlineServer(): ForumlineServer {
     },
 
     async getUnreadCounts(userId: string) {
-      const supabase = createClient(supabaseUrl, supabaseAnonKey)
+      const supabase = createClient(supabaseUrl, serviceRoleKey)
 
       const { count: notifCount } = await supabase
         .from('notifications')
@@ -206,7 +206,7 @@ export function getForumlineServer(): ForumlineServer {
     },
 
     async markNotificationRead(notificationId: string, userId: string) {
-      const supabase = createClient(supabaseUrl, supabaseAnonKey)
+      const supabase = createClient(supabaseUrl, serviceRoleKey)
       await supabase
         .from('notifications')
         .update({ read: true })
