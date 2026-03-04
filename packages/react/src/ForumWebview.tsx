@@ -9,7 +9,7 @@
  * back to the forum fully authenticated.
  */
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import type { ForumMembership } from './ForumProvider'
 
 interface ForumWebviewProps {
@@ -18,13 +18,35 @@ interface ForumWebviewProps {
   authUrl?: string | null
   /** Called when the auth flow completes */
   onAuthed?: (domain: string) => void
+  /** Called when the user signs out of the forum */
+  onSignedOut?: (domain: string) => void
 }
 
-export default function ForumWebview({ forum, authUrl, onAuthed }: ForumWebviewProps) {
+export default function ForumWebview({ forum, authUrl, onAuthed, onSignedOut }: ForumWebviewProps) {
   const [loading, setLoading] = useState(true)
   const [iframeSrc, setIframeSrc] = useState(forum.web_base)
   const [loggingIn, setLoggingIn] = useState(false)
   const hasCalledAuthed = useRef(false)
+
+  // Listen for auth state messages from the forum iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type !== 'forumline:auth_state') return
+      if (event.data.signedIn) {
+        if (onAuthed && !hasCalledAuthed.current) {
+          hasCalledAuthed.current = true
+          onAuthed(forum.domain)
+        }
+      } else {
+        if (onSignedOut) {
+          hasCalledAuthed.current = false
+          onSignedOut(forum.domain)
+        }
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [forum.domain, onAuthed, onSignedOut])
 
   const handleLogin = useCallback(() => {
     if (!authUrl) return

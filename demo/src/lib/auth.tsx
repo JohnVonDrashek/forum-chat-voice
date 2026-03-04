@@ -127,6 +127,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(false)
       console.log('[FLD:Auth] Auth init complete, loading=false')
+
+      // Notify parent frame (hub) of auth state
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'forumline:auth_state', signedIn: !!rawUser }, '*')
+      }
     }).catch((err) => {
       console.error('[FLD:Auth] getSession() failed:', err)
       setLoading(false)
@@ -169,6 +174,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             loadedUserIdRef.current = rawUser.id
           }
 
+          // Notify parent frame (hub) of sign-in
+          if (window.parent !== window) {
+            window.parent.postMessage({ type: 'forumline:auth_state', signedIn: true }, '*')
+          }
+
           // Redirect to reset-password page on PASSWORD_RECOVERY event
           if (event === 'PASSWORD_RECOVERY') {
             window.location.href = '/reset-password'
@@ -179,6 +189,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null)
           setProfile(null)
           loadedUserIdRef.current = null
+
+          // Notify parent frame (hub) of sign-out
+          if (window.parent !== window) {
+            window.parent.postMessage({ type: 'forumline:auth_state', signedIn: false }, '*')
+          }
         }
       }
     )

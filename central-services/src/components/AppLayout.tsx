@@ -28,6 +28,14 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
     setAuthedForums(prev => new Set(prev).add(domain))
   }, [])
 
+  const handleForumSignedOut = useCallback((domain: string) => {
+    setAuthedForums(prev => {
+      const next = new Set(prev)
+      next.delete(domain)
+      return next
+    })
+  }, [])
+
   return (
     <div className="flex h-screen">
       <ForumRail
@@ -46,6 +54,7 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
             forum={activeForum}
             authUrl={authUrlForForum}
             onAuthed={handleForumAuthed}
+            onSignedOut={handleForumSignedOut}
           />
         ) : (
           <WelcomePage hubSession={hubSession} isHubConnected={isHubConnected} />
