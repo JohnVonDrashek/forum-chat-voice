@@ -36,3 +36,9 @@ packages/*/src/**/*.js.map
 **/supabase/.temp/
 .vercel
 .env*.local
+
+# Tauri auto-generated platform files
+desktop/gen/
+
+# Test screenshots
+*.png
