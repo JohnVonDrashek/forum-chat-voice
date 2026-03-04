@@ -198,8 +198,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     )
 
+    // Listen for auth state requests from parent frame (hub)
+    const handleAuthRequest = (event: MessageEvent) => {
+      if (event.data?.type !== 'forumline:request_auth_state') return
+      if (window.parent !== window) {
+        window.parent.postMessage({
+          type: 'forumline:auth_state',
+          signedIn: !!loadedUserIdRef.current,
+        }, '*')
+      }
+    }
+    window.addEventListener('message', handleAuthRequest)
+
     return () => {
       unsubscribe()
+      window.removeEventListener('message', handleAuthRequest)
     }
   }, [])
 

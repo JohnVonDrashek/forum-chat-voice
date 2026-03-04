@@ -55,6 +55,8 @@ export default function ForumWebview({ forum, authUrl, onAuthed, onSignedOut }: 
     setIframeSrc(authUrl)
   }, [authUrl])
 
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
   const handleLoad = useCallback(() => {
     setLoading(false)
     if (loggingIn && onAuthed && !hasCalledAuthed.current) {
@@ -62,6 +64,15 @@ export default function ForumWebview({ forum, authUrl, onAuthed, onSignedOut }: 
       setLoggingIn(false)
       onAuthed(forum.domain)
     }
+    // Ask the forum for its current auth state (handles the race where
+    // the forum's postMessage fired before our listener was ready).
+    // Retry a few times since the forum's React app may still be mounting.
+    const requestAuthState = () => {
+      iframeRef.current?.contentWindow?.postMessage({ type: 'forumline:request_auth_state' }, '*')
+    }
+    requestAuthState()
+    setTimeout(requestAuthState, 500)
+    setTimeout(requestAuthState, 1500)
   }, [loggingIn, onAuthed, forum.domain])
 
   const showBanner = !!authUrl && !loggingIn && !hasCalledAuthed.current
@@ -97,6 +108,7 @@ export default function ForumWebview({ forum, authUrl, onAuthed, onSignedOut }: 
         )}
 
         <iframe
+          ref={iframeRef}
           key={forum.domain}
           src={iframeSrc}
           title={`${forum.name} forum`}
