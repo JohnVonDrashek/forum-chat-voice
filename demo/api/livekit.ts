@@ -93,7 +93,7 @@ async function handleParticipants(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-async function handleAllParticipants(req: VercelRequest, res: VercelResponse) {
+async function handleAllParticipants(_req: VercelRequest, res: VercelResponse) {
   const lk = getLiveKitClient()
   if (!lk) return res.status(200).json({ rooms: {} })
 

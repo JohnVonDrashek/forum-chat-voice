@@ -1,4 +1,5 @@
 {
+  "installCommand": "echo 'Dependencies pre-installed by CI'",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
