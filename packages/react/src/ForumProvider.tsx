@@ -1,13 +1,12 @@
 /**
  * ForumProvider — Shared state for multi-forum management.
  *
- * In Tauri desktop app: uses IPC to communicate with the Rust backend.
- * On web: uses localStorage to persist forum list.
+ * Uses localStorage to persist the forum list and active forum.
+ * Works in both web and Tauri contexts (Tauri is a thin shell now).
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import type { UnreadCounts } from '@johnvondrashek/forumline-protocol'
-import { isTauri } from './tauri'
 
 // ============================================================================
 // Types
@@ -35,7 +34,7 @@ interface ForumContextType {
 }
 
 // ============================================================================
-// localStorage helpers (web)
+// localStorage helpers
 // ============================================================================
 
 const LS_FORUMS_KEY = 'forumline_forums'
@@ -67,7 +66,7 @@ function lsSetActiveDomain(domain: string | null) {
 }
 
 // ============================================================================
-// Manifest fetch (web)
+// Manifest fetch
 // ============================================================================
 
 interface ForumManifest {
@@ -97,20 +96,6 @@ async function fetchManifest(url: string): Promise<ForumManifest> {
 }
 
 // ============================================================================
-// Tauri IPC helpers (dynamic imports)
-// ============================================================================
-
-async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  const { invoke } = await import('@tauri-apps/api/core')
-  return invoke<T>(cmd, args)
-}
-
-async function tauriListen<T>(event: string, handler: (event: { payload: T }) => void) {
-  const { listen } = await import('@tauri-apps/api/event')
-  return listen<T>(event, handler)
-}
-
-// ============================================================================
 // Context
 // ============================================================================
 
@@ -129,146 +114,71 @@ export function useForum(): ForumContextType {
 export function ForumProvider({ children }: { children: ReactNode }) {
   const [forums, setForums] = useState<ForumMembership[]>([])
   const [activeForum, setActiveForum] = useState<ForumMembership | null>(null)
-  const [unreadCounts, setUnreadCounts] = useState<Record<string, UnreadCounts>>({})
-  const tauriActive = isTauri()
+  const [unreadCounts] = useState<Record<string, UnreadCounts>>({})
 
-  // Load forum list on mount
+  // Load forum list from localStorage on mount
   useEffect(() => {
-    if (tauriActive) {
-      // Tauri: load from Rust backend
-      const load = async () => {
-        try {
-          const list = await tauriInvoke<ForumMembership[]>('get_forum_list')
-          setForums(list)
+    const list = lsLoadForums()
+    setForums(list)
 
-          const activeDomain = await tauriInvoke<string | null>('get_active_forum')
-          if (activeDomain) {
-            const match = list.find(f => f.domain === activeDomain) ?? null
-            setActiveForum(match)
-          }
-
-          const counts = await tauriInvoke<Record<string, UnreadCounts>>('get_unread_counts')
-          setUnreadCounts(counts)
-        } catch (err) {
-          console.error('[Forumline:Forum] Failed to load forum list:', err)
-        }
-      }
-      load()
-    } else {
-      // Web: load from localStorage
-      const list = lsLoadForums()
-      setForums(list)
-
-      const activeDomain = lsGetActiveDomain()
-      if (activeDomain) {
-        const match = list.find(f => f.domain === activeDomain) ?? null
-        setActiveForum(match)
-      }
+    const activeDomain = lsGetActiveDomain()
+    if (activeDomain) {
+      const match = list.find(f => f.domain === activeDomain) ?? null
+      setActiveForum(match)
     }
-  }, [tauriActive])
-
-  // Listen for forum switch events from Rust backend (Tauri only)
-  useEffect(() => {
-    if (!tauriActive) return
-    let unlisten: (() => void) | undefined
-    tauriListen<string>('forum-switched', (event) => {
-      const domain = event.payload
-      setForums(currentForums => {
-        const match = currentForums.find(f => f.domain === domain) ?? null
-        setActiveForum(match)
-        return currentForums
-      })
-    }).then(fn => { unlisten = fn })
-    return () => { unlisten?.() }
-  }, [tauriActive])
+  }, [])
 
   const switchForum = useCallback(async (domain: string) => {
-    if (tauriActive) {
-      try {
-        await tauriInvoke('switch_forum', { domain })
-        setForums(currentForums => {
-          const match = currentForums.find(f => f.domain === domain) ?? null
-          setActiveForum(match)
-          return currentForums
-        })
-      } catch (err) {
-        console.error('[Forumline:Forum] Failed to switch forum:', err)
-      }
-    } else {
-      // Web: switch active forum in localStorage
-      setForums(currentForums => {
-        const match = currentForums.find(f => f.domain === domain) ?? null
-        setActiveForum(match)
-        lsSetActiveDomain(domain)
-        return currentForums
-      })
-    }
-  }, [tauriActive])
+    setForums(currentForums => {
+      const match = currentForums.find(f => f.domain === domain) ?? null
+      setActiveForum(match)
+      lsSetActiveDomain(domain)
+      return currentForums
+    })
+  }, [])
 
   const goHome = useCallback(() => {
     setActiveForum(null)
-    if (!tauriActive) {
-      lsSetActiveDomain(null)
-    }
-  }, [tauriActive])
+    lsSetActiveDomain(null)
+  }, [])
 
   const addForum = useCallback(async (url: string) => {
-    if (tauriActive) {
-      await tauriInvoke('add_forum', { url })
-      const list = await tauriInvoke<ForumMembership[]>('get_forum_list')
-      setForums(list)
-    } else {
-      // Web: fetch manifest and add to localStorage
-      const manifest = await fetchManifest(url)
+    const manifest = await fetchManifest(url)
 
-      setForums(prev => {
-        if (prev.some(f => f.domain === manifest.domain)) return prev
+    setForums(prev => {
+      if (prev.some(f => f.domain === manifest.domain)) return prev
 
-        const membership: ForumMembership = {
-          domain: manifest.domain,
-          name: manifest.name,
-          icon_url: manifest.icon_url,
-          web_base: manifest.web_base,
-          api_base: manifest.api_base,
-          capabilities: manifest.capabilities,
-          accent_color: manifest.accent_color,
-          added_at: new Date().toISOString(),
-        }
+      const membership: ForumMembership = {
+        domain: manifest.domain,
+        name: manifest.name,
+        icon_url: manifest.icon_url,
+        web_base: manifest.web_base,
+        api_base: manifest.api_base,
+        capabilities: manifest.capabilities,
+        accent_color: manifest.accent_color,
+        added_at: new Date().toISOString(),
+      }
 
-        const updated = [...prev, membership]
-        lsSaveForums(updated)
-        return updated
-      })
-    }
-  }, [tauriActive])
+      const updated = [...prev, membership]
+      lsSaveForums(updated)
+      return updated
+    })
+  }, [])
 
   const removeForum = useCallback(async (domain: string) => {
-    if (tauriActive) {
-      await tauriInvoke('remove_forum', { domain })
-      const list = await tauriInvoke<ForumMembership[]>('get_forum_list')
-      setForums(list)
-      setActiveForum(prev => prev?.domain === domain ? null : prev)
-      setUnreadCounts(prev => {
-        const next = { ...prev }
-        delete next[domain]
-        return next
-      })
-    } else {
-      // Web: remove from localStorage
-      setForums(prev => {
-        const updated = prev.filter(f => f.domain !== domain)
-        lsSaveForums(updated)
-        return updated
-      })
-      setActiveForum(prev => {
-        if (prev?.domain === domain) {
-          lsSetActiveDomain(null)
-          return null
-        }
-        return prev
-      })
-    }
-  }, [tauriActive])
+    setForums(prev => {
+      const updated = prev.filter(f => f.domain !== domain)
+      lsSaveForums(updated)
+      return updated
+    })
+    setActiveForum(prev => {
+      if (prev?.domain === domain) {
+        lsSetActiveDomain(null)
+        return null
+      }
+      return prev
+    })
+  }, [])
 
   return (
     <ForumContext.Provider value={{
