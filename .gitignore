@@ -32,9 +32,6 @@ packages/*/src/**/*.d.ts
 packages/*/src/**/*.d.ts.map
 packages/*/src/**/*.js.map
 
-# Screenshots
-*.png
-
 # Supabase CLI temp
 **/supabase/.temp/
 .vercel

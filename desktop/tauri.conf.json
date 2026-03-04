@@ -1,18 +1,16 @@
 {
-  "$schema": "../demo/node_modules/@tauri-apps/cli/config.schema.json",
+  "$schema": "node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Forumline",
   "version": "0.1.0",
   "identifier": "com.forumchatvoice.desktop",
   "build": {
-    "beforeDevCommand": "cd ../demo && npm run dev",
-    "beforeBuildCommand": "cd ../demo && npm run build",
-    "frontendDist": "../demo/dist",
+    "frontendDist": "https://forumline-hub.vercel.app",
     "devUrl": "http://localhost:5173"
   },
   "app": {
     "windows": [
       {
-        "title": "Forumline Demo",
+        "title": "Forumline",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

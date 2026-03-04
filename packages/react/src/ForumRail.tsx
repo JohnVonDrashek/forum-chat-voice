@@ -7,10 +7,15 @@
  */
 
 import { useState, useCallback } from 'react'
-import { isTauri } from './tauri'
 import { useForum } from './ForumProvider'
 
-export default function ForumRail() {
+interface ForumRailProps {
+  onDmClick?: () => void
+  dmUnreadCount?: number
+  onSettingsClick?: () => void
+}
+
+export default function ForumRail({ onDmClick, dmUnreadCount = 0, onSettingsClick }: ForumRailProps = {}) {
   const { forums, activeForum, unreadCounts, switchForum, goHome, addForum } = useForum()
   const [showAddModal, setShowAddModal] = useState(false)
   const [addUrl, setAddUrl] = useState('')
@@ -37,9 +42,6 @@ export default function ForumRail() {
     if (!counts) return 0
     return counts.notifications + counts.chat_mentions + counts.dms
   }
-
-  // Only render in Tauri desktop app
-  if (!isTauri()) return null
 
   return (
     <>
@@ -125,14 +127,32 @@ export default function ForumRail() {
         {/* Spacer */}
         <div className="flex-1" />
 
+        {/* DM Button (desktop app only) */}
+        {onDmClick && (
+          <button
+            onClick={onDmClick}
+            className="group relative flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800 text-slate-400 transition-all hover:rounded-xl hover:bg-slate-700 hover:text-white"
+            title="Direct Messages"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            {dmUnreadCount > 0 && (
+              <div className="absolute -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                {dmUnreadCount > 99 ? '99+' : dmUnreadCount}
+              </div>
+            )}
+          </button>
+        )}
+
         {/* Settings */}
         <button
           className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800 text-slate-400 transition-all hover:rounded-xl hover:bg-slate-700 hover:text-white"
           title="Settings"
-          onClick={() => {
+          onClick={onSettingsClick ?? (() => {
             goHome()
             window.location.hash = '/settings'
-          }}
+          })}
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />

@@ -1124,7 +1124,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "forum-chat-voice"
+name = "forumline-demo"
 version = "0.1.0"
 dependencies = [
  "log",

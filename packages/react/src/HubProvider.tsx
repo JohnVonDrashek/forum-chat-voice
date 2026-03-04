@@ -35,6 +35,11 @@ interface HubProviderProps {
   hubTokenEndpoint?: string
   /** Interval in ms to poll hub-token endpoint for revocation. Set to 0 to disable. Defaults to 30000. */
   heartbeatInterval?: number
+  /**
+   * Direct session for desktop app — bypasses the hub-token endpoint fetch.
+   * When provided, uses the access token directly to create clients.
+   */
+  directSession?: { access_token: string; user_id: string } | null
   children: ReactNode
 }
 
@@ -45,6 +50,7 @@ export function HubProvider({
   hubUrl,
   hubTokenEndpoint = '/api/forumline/auth/hub-token',
   heartbeatInterval = 30000,
+  directSession,
   children,
 }: HubProviderProps) {
   const [hubClient, setHubClient] = useState<CentralServicesClient | null>(null)
@@ -61,16 +67,23 @@ export function HubProvider({
 
     const init = async () => {
       try {
-        // Fetch the hub access token from our server-side cookie
-        const res = await fetch(hubTokenEndpoint, { credentials: 'include' })
-        const data = await res.json()
+        let token: string
 
-        if (!data.hub_access_token) {
-          console.log('[FLD:Hub] No hub access token available — hub DMs disabled')
-          return
+        if (directSession) {
+          // Desktop app: use the session token directly
+          token = directSession.access_token
+        } else {
+          // Web forum: fetch the hub access token from our server-side cookie
+          const res = await fetch(hubTokenEndpoint, { credentials: 'include' })
+          const data = await res.json()
+
+          if (!data.hub_access_token) {
+            console.log('[FLD:Hub] No hub access token available — hub DMs disabled')
+            return
+          }
+
+          token = data.hub_access_token
         }
-
-        const token = data.hub_access_token
 
         // Create hub DM client
         const client = new CentralServicesClient(hubUrl, token)
@@ -84,14 +97,18 @@ export function HubProvider({
         })
         setHubSupabase(hubSb)
 
-        // Get the hub user ID from the token
-        try {
-          const { data: { user: hubUser } } = await hubSb.auth.getUser(token)
-          if (hubUser) {
-            setHubUserId(hubUser.id)
+        // Get the hub user ID
+        if (directSession) {
+          setHubUserId(directSession.user_id)
+        } else {
+          try {
+            const { data: { user: hubUser } } = await hubSb.auth.getUser(token)
+            if (hubUser) {
+              setHubUserId(hubUser.id)
+            }
+          } catch {
+            // If getUser fails, we can still use the client for API calls
           }
-        } catch {
-          // If getUser fails, we can still use the client for API calls
         }
 
         setIsHubConnected(true)
@@ -102,7 +119,7 @@ export function HubProvider({
     }
 
     init()
-  }, [user, hubSupabaseUrl, hubSupabaseAnonKey, hubUrl, hubTokenEndpoint])
+  }, [user, hubSupabaseUrl, hubSupabaseAnonKey, hubUrl, hubTokenEndpoint, directSession])
 
   const teardown = useCallback(() => {
     setHubClient(null)
@@ -124,8 +141,9 @@ export function HubProvider({
   }, [user, reconnect])
 
   // Heartbeat: poll hub-token endpoint to detect revocation
+  // Skip when using directSession (Supabase handles its own session refresh)
   useEffect(() => {
-    if (!isHubConnected || !user || !heartbeatInterval) return
+    if (!isHubConnected || !user || !heartbeatInterval || directSession) return
 
     const id = setInterval(async () => {
       try {
@@ -141,7 +159,7 @@ export function HubProvider({
     }, heartbeatInterval)
 
     return () => clearInterval(id)
-  }, [isHubConnected, user, heartbeatInterval, hubTokenEndpoint, teardown])
+  }, [isHubConnected, user, heartbeatInterval, hubTokenEndpoint, teardown, directSession])
 
   return (
     <HubContext.Provider value={{ hubClient, hubSupabase, hubUserId, isHubConnected, reconnect }}>

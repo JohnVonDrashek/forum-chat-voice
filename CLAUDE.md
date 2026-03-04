@@ -16,7 +16,8 @@ Both projects deploy via GitHub Actions on push to main. Do NOT deploy via Verce
 Both use the `VERCEL_TOKEN` GitHub secret.
 
 ## Testing
-When testing, always be on the look out for bugs unrelated to changes. Jot them down and present them to the user at the conclusion of testing as potentional next steps to fix.
+
+Do NOT ignore bugs that you see even if they are unrelated to your changes. Jot them down and present them to the user at the conclusion of testing as potentional next steps to fix.
 
 ## Monorepo Structure
 

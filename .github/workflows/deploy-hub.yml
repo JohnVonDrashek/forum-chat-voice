@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'central-services/**'
+      - 'packages/**'
 
 jobs:
   deploy:
@@ -22,6 +23,17 @@ jobs:
       - name: Install Vercel CLI
         run: npm i -g vercel
 
+      - name: Install workspace dependencies
+        run: npm install
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token ${{ secrets.VERCEL_TOKEN }}
+        working-directory: central-services
+
+      - name: Build
+        run: vercel build --prod --token ${{ secrets.VERCEL_TOKEN }}
+        working-directory: central-services
+
       - name: Deploy to production
-        run: vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
+        run: vercel deploy --prebuilt --prod --token ${{ secrets.VERCEL_TOKEN }}
         working-directory: central-services
