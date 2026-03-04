@@ -21,7 +21,7 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
   const dmUnreadCount = 0
 
   const authUrlForForum = activeForum && hubSession && !authedForums.has(activeForum.domain)
-    ? `${activeForum.api_base}/forumline/auth?hub_token=${hubSession.access_token}`
+    ? `${activeForum.api_base}/auth?hub_token=${hubSession.access_token}`
     : null
 
   const handleForumAuthed = useCallback((domain: string) => {
