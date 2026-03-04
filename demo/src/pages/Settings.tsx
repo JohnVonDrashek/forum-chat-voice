@@ -49,7 +49,7 @@ type AccountFormData = z.infer<typeof accountSchema>
 
 export default function Settings() {
   const { user, profile } = useAuth()
-  const { isHubConnected, reconnect } = useHub()
+  const { reconnect } = useHub()
   const [activeTab, setActiveTab] = useState<Tab>('profile')
 
   // Handle ?forumline_linked=true query param
@@ -487,7 +487,7 @@ export default function Settings() {
 
               <div className="border-t border-slate-700 pt-6">
                 <h3 className="mb-4 font-medium text-white">Forumline Connection</h3>
-                {isHubConnected || profile?.forumline_id ? (
+                {profile?.forumline_id ? (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm">
                       <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
