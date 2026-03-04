@@ -25,7 +25,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@johnvondrashek/forumline-protocol": "^0.2.0"
+    "@johnvondrashek/forumline-protocol": "^0.3.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
