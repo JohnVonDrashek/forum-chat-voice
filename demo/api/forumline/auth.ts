@@ -1,8 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import crypto from 'crypto'
 import { createClient } from '@supabase/supabase-js'
-import { getForumlineServer } from '../_lib/forumline-server.js'
-import { adaptRequest, adaptResponse } from '../_lib/vercel-adapter.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const linkToken = req.query.link_token as string | undefined

@@ -74,7 +74,7 @@ export function getForumlineServer(): ForumlineServer {
 
       if (hubEmail) {
         // Check if a local user with this email already exists
-        const { data: localUsersByEmail } = await supabase.auth.admin.listUsers()
+        const { data: localUsersByEmail } = await supabase.auth.admin.listUsers() as { data: { users: Array<{ email?: string; id: string }> } }
         const matchingUser = localUsersByEmail?.users?.find(
           u => u.email?.toLowerCase() === hubEmail!.toLowerCase()
         )

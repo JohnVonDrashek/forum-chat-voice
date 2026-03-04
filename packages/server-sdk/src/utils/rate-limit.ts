@@ -5,12 +5,14 @@ interface RateLimitEntry {
 
 const store = new Map<string, RateLimitEntry>()
 
-setInterval(() => {
+// Use unref() so this timer doesn't keep serverless functions alive
+const cleanup = setInterval(() => {
   const now = Date.now()
   for (const [key, entry] of store) {
     if (now > entry.resetAt) store.delete(key)
   }
 }, 60_000)
+if (typeof cleanup.unref === 'function') cleanup.unref()
 
 /**
  * In-memory rate limiter for serverless functions.
