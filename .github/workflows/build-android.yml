@@ -32,8 +32,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            desktop/target
-          key: ${{ runner.os }}-cargo-android-${{ hashFiles('desktop/Cargo.lock') }}
+            native-app/target
+          key: ${{ runner.os }}-cargo-android-${{ hashFiles('native-app/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-android-
 
@@ -54,5 +54,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: forumline-android
-          path: desktop/gen/android/app/build/outputs/
+          path: native-app/gen/android/app/build/outputs/
           retention-days: 7

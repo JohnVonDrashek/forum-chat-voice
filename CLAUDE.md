@@ -24,7 +24,7 @@ Do NOT ignore bugs that you see even if they are unrelated to your changes. Jot 
 ```
 demo/              — Forumline Demo web app (Vite + React)
 central-services/  — Forumline Central Services (identity service)
-desktop/           — Tauri desktop app
+native-app/        — Tauri native app (desktop, iOS, Android)
 packages/
   protocol/                  — @forumline/protocol (federation types)
   server-sdk/                — @forumline/server-sdk (protocol endpoint handlers)

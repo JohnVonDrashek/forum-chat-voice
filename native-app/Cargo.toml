@@ -1,7 +1,7 @@
 [package]
 name = "forumline-demo"
 version = "0.1.0"
-description = "Forumline Demo desktop app"
+description = "Forumline native app (desktop, iOS, Android)"
 authors = [""]
 license = ""
 repository = ""
