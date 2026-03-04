@@ -1,0 +1,86 @@
+name: Desktop Nightly Build
+
+on:
+  schedule:
+    # Every day at 4:00 AM UTC
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      skip_dmg:
+        description: 'Skip DMG creation (build .app only)'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  build:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('desktop/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2"
+
+      - name: Build Tauri app
+        run: cargo tauri build --bundles app
+        working-directory: desktop
+
+      - name: Install create-dmg
+        if: inputs.skip_dmg != 'true'
+        run: npm install -g create-dmg
+
+      - name: Create DMG with create-dmg
+        if: inputs.skip_dmg != 'true'
+        run: |
+          APP_PATH="desktop/target/release/bundle/macos/Forumline.app"
+          VERSION=$(grep '"version"' desktop/tauri.conf.json | head -1 | sed 's/.*: *"\(.*\)".*/\1/')
+          DATE=$(date +%Y%m%d)
+
+          create-dmg "$APP_PATH" --overwrite --dmg-title "Forumline Nightly" --no-code-sign || true
+
+          # create-dmg outputs to current directory with auto-generated name
+          DMG_FILE=$(ls -1 Forumline*.dmg 2>/dev/null | head -1)
+          if [ -n "$DMG_FILE" ]; then
+            FINAL_NAME="Forumline-nightly-${DATE}-${VERSION}.dmg"
+            mv "$DMG_FILE" "$FINAL_NAME"
+            echo "DMG_PATH=$FINAL_NAME" >> "$GITHUB_ENV"
+            echo "Created: $FINAL_NAME"
+          else
+            echo "::error::DMG was not created"
+            exit 1
+          fi
+
+      - name: Upload DMG artifact
+        if: inputs.skip_dmg != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: forumline-nightly-dmg
+          path: ${{ env.DMG_PATH }}
+          retention-days: 7
+
+      - name: Upload .app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: forumline-nightly-app
+          path: desktop/target/release/bundle/macos/Forumline.app
+          retention-days: 7

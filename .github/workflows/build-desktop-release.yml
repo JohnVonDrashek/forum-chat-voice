@@ -1,0 +1,100 @@
+name: Desktop Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 0.1.0). Defaults to version in tauri.conf.json.'
+        required: false
+        type: string
+      create_release:
+        description: 'Create a GitHub release with the DMG'
+        required: false
+        default: 'true'
+        type: boolean
+
+jobs:
+  build:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('desktop/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2"
+
+      - name: Build Tauri app
+        run: cargo tauri build --bundles app
+        working-directory: desktop
+
+      - name: Install create-dmg
+        run: npm install -g create-dmg
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            VERSION=$(grep '"version"' desktop/tauri.conf.json | head -1 | sed 's/.*: *"\(.*\)".*/\1/')
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create DMG with create-dmg
+        run: |
+          APP_PATH="desktop/target/release/bundle/macos/Forumline.app"
+
+          create-dmg "$APP_PATH" --overwrite --dmg-title "Forumline" --no-code-sign || true
+
+          DMG_FILE=$(ls -1 Forumline*.dmg 2>/dev/null | head -1)
+          if [ -n "$DMG_FILE" ]; then
+            FINAL_NAME="Forumline-${{ steps.version.outputs.version }}.dmg"
+            mv "$DMG_FILE" "$FINAL_NAME"
+            echo "DMG_PATH=$FINAL_NAME" >> "$GITHUB_ENV"
+            echo "Created: $FINAL_NAME"
+          else
+            echo "::error::DMG was not created"
+            exit 1
+          fi
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: forumline-release-dmg
+          path: ${{ env.DMG_PATH }}
+
+      - name: Create GitHub Release
+        if: inputs.create_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-v${{ steps.version.outputs.version }}
+          name: Forumline Desktop v${{ steps.version.outputs.version }}
+          body: |
+            ## Forumline Desktop v${{ steps.version.outputs.version }}
+
+            macOS desktop app built with Tauri.
+
+            ### Install
+            Download `Forumline-${{ steps.version.outputs.version }}.dmg`, open it, and drag Forumline to Applications.
+          files: ${{ env.DMG_PATH }}
+          draft: false
+          prerelease: false
