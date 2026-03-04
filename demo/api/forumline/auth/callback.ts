@@ -90,13 +90,13 @@ async function handleLinkFlow(req: VercelRequest, res: VercelResponse, linkUid: 
 
   // Set cookies (same as SDK callback) and clear the link cookie
   const setCookies = [
-    'forumline_state=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0',
-    'forumline_link_uid=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0',
-    `forumline_identity=${identity_token}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=3600`,
-    `forumline_user_id=${linkUid}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=3600`,
+    'forumline_state=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0',
+    'forumline_link_uid=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0',
+    `forumline_identity=${identity_token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=3600`,
+    `forumline_user_id=${linkUid}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=3600`,
   ]
   if (hub_access_token) {
-    setCookies.push(`hub_access_token=${hub_access_token}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=3600`)
+    setCookies.push(`hub_access_token=${hub_access_token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=3600`)
   }
   res.setHeader('Set-Cookie', setCookies)
 

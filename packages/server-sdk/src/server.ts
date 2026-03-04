@@ -216,7 +216,7 @@ export class ForumlineServer {
         authorizeUrl.searchParams.set('access_token', req.query.hub_token as string)
       }
 
-      res.setHeader('Set-Cookie', `forumline_state=${state}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=600`)
+      res.setHeader('Set-Cookie', `forumline_state=${state}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=600`)
       return res.redirect(302, authorizeUrl.toString())
     }
   }
@@ -274,12 +274,12 @@ export class ForumlineServer {
 
       // Set cookies
       const setCookies = [
-        'forumline_state=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0',
-        `forumline_identity=${identity_token}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=3600`,
-        `forumline_user_id=${localUserId}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=3600`,
+        'forumline_state=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0',
+        `forumline_identity=${identity_token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=3600`,
+        `forumline_user_id=${localUserId}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=3600`,
       ]
       if (hub_access_token) {
-        setCookies.push(`hub_access_token=${hub_access_token}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=3600`)
+        setCookies.push(`hub_access_token=${hub_access_token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=3600`)
       }
       res.setHeader('Set-Cookie', setCookies)
 
@@ -360,8 +360,8 @@ export class ForumlineServer {
       // Check expiry
       if (typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()) {
         res.setHeader('Set-Cookie', [
-          'forumline_identity=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0',
-          'forumline_user_id=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0',
+          'forumline_identity=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0',
+          'forumline_user_id=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0',
         ])
         return res.status(200).json(null)
       }

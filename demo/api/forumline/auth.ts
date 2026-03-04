@@ -31,13 +31,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     authUrl.searchParams.set('state', state)
 
     res.setHeader('Set-Cookie', [
-      `forumline_state=${state}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=600`,
-      `forumline_link_uid=${user.id}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=600`,
+      `forumline_state=${state}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=600`,
+      `forumline_link_uid=${user.id}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=600`,
     ])
     return res.redirect(302, authUrl.toString())
   }
 
-  // Normal sign-in flow — use SDK handler
-  const server = getForumlineServer()
-  return server.authRedirectHandler()(adaptRequest(req), adaptResponse(res))
+  // Normal sign-in flow — inline the redirect with SameSite=None for iframe compat
+  const hubUrl = process.env.FORUMLINE_HUB_URL!
+  const clientId = process.env.FORUMLINE_CLIENT_ID!
+  const siteUrl = process.env.VITE_SITE_URL || 'https://forum-chat-voice.vercel.app'
+  const state = crypto.randomBytes(16).toString('hex')
+
+  const authUrl = new URL(`${hubUrl}/api/oauth/authorize`)
+  authUrl.searchParams.set('client_id', clientId)
+  authUrl.searchParams.set('redirect_uri', `${siteUrl}/api/forumline/auth/callback`)
+  authUrl.searchParams.set('state', state)
+
+  // Pass hub_token if provided (user already authenticated on the hub)
+  const hubToken = req.query.hub_token as string | undefined
+  if (hubToken) {
+    authUrl.searchParams.set('access_token', hubToken)
+  }
+
+  res.setHeader('Set-Cookie', `forumline_state=${state}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=600`)
+  return res.redirect(302, authUrl.toString())
 }
