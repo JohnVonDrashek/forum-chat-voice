@@ -33,6 +33,10 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       rollupOptions: {
+        external: [
+          '@tauri-apps/plugin-notification',
+          '@tauri-apps/api',
+        ],
         output: {
           manualChunks: {
             'vendor-react': ['react', 'react-dom'],
