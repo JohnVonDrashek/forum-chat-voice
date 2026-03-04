@@ -519,15 +519,22 @@ export default function Settings() {
                     <p className="mb-3 text-sm text-slate-400">
                       Connect your account to Forumline to enable cross-forum direct messages and a unified identity across forums.
                     </p>
-                    <a
-                      href="/api/forumline/auth"
+                    <button
+                      onClick={async () => {
+                        const { data: { session } } = await supabase.auth.getSession()
+                        if (!session?.access_token) {
+                          toast.error('Session expired. Please sign in again.')
+                          return
+                        }
+                        window.location.href = `/api/forumline/auth?link_token=${session.access_token}`
+                      }}
                       className="inline-flex items-center gap-2 rounded-lg border border-indigo-500/30 bg-indigo-600/10 px-4 py-2 text-sm font-medium text-indigo-300 hover:bg-indigo-600/20"
                     >
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                       </svg>
                       Connect to Forumline
-                    </a>
+                    </button>
                   </div>
                 )}
               </div>

@@ -135,20 +135,10 @@ export function getForumlineServer(): ForumlineServer {
       return newUser.user.id
     },
 
-    async afterAuth({ userId, request }) {
+    async afterAuth({ userId }) {
       const supabase = createClient(supabaseUrl, serviceRoleKey)
 
-      // Check if user has an existing Supabase session (connecting from Settings)
-      const cookies = request.cookies
-      const sbAccessToken = cookies['sb-access-token'] ||
-        cookies[`sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`]
-
-      if (sbAccessToken) {
-        // User is already logged in — they're connecting their account from Settings
-        return `${siteUrl}/settings?forumline_linked=true`
-      }
-
-      // Not logged in — generate a Supabase session via magic link
+      // Generate a Supabase session via magic link so the user is signed in
       const { data: userData } = await supabase.auth.admin.getUserById(userId)
       if (!userData?.user?.email) return undefined
 
