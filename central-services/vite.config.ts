@@ -13,13 +13,13 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     base: '/',
     resolve: {
-      // In dev mode, alias to package source for hot reload.
-      // In production, use published packages from node_modules.
-      alias: mode === 'development' ? {
+      // Always alias to monorepo package source so builds stay in sync
+      // without needing to publish packages first.
+      alias: {
         '@johnvondrashek/forumline-protocol': path.resolve(__dirname, '../packages/protocol/src/index.ts'),
         '@johnvondrashek/forumline-central-services-client': path.resolve(__dirname, '../packages/central-services-client/src/index.ts'),
         '@johnvondrashek/forumline-react': path.resolve(__dirname, '../packages/react/src/index.ts'),
-      } : {},
+      },
     },
     clearScreen: false,
     server: {
