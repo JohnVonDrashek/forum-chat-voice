@@ -9,3 +9,4 @@ export type { ForumlineServerConfig, RequestHandler, GenericRequest, GenericResp
 export { ForumlineSupabaseAdapter } from './supabase-adapter.js'
 export type { SupabaseAdapterConfig } from './supabase-adapter.js'
 export { parseCookies, decodeJwtPayload, verifyJwt } from './utils/cookies.js'
+export { rateLimit } from './utils/rate-limit.js'

@@ -1,17 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
+import { parseCookies } from '@johnvondrashek/forumline-server-sdk'
 import { getForumlineServer } from '../../_lib/forumline-server.js'
 import { adaptRequest, adaptResponse } from '../../_lib/vercel-adapter.js'
-
-/** Parse cookies from a Cookie header string */
-function parseCookies(cookieHeader: string): Record<string, string> {
-  const cookies: Record<string, string> = {}
-  for (const pair of cookieHeader.split(';')) {
-    const [key, ...rest] = pair.trim().split('=')
-    if (key) cookies[key] = rest.join('=')
-  }
-  return cookies
-}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {

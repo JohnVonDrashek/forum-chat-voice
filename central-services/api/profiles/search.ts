@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getHubSupabase, getAuthenticatedUser } from '../_lib/supabase.js'
+import { searchProfiles } from '../_lib/services/profiles.js'
 
 /**
  * GET /api/profiles/search?q=alice
@@ -19,17 +20,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const supabase = getHubSupabase()
-
-  const { data: profiles, error } = await supabase
-    .from('hub_profiles')
-    .select('id, username, display_name, avatar_url')
-    .neq('id', user.id)
-    .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
-    .limit(10)
+  const { data, error } = await searchProfiles(supabase, q, user.id)
 
   if (error) {
-    return res.status(500).json({ error: 'Failed to search profiles' })
+    return res.status(500).json({ error })
   }
 
-  return res.status(200).json(profiles || [])
+  return res.status(200).json(data)
 }

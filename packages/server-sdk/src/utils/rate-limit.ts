@@ -1,5 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node'
-
 interface RateLimitEntry {
   count: number
   resetAt: number
@@ -15,15 +13,21 @@ setInterval(() => {
 }, 60_000)
 
 /**
- * In-memory rate limiter for Vercel serverless functions.
+ * In-memory rate limiter for serverless functions.
  * Returns true if the request is allowed, false if rate-limited (and sends 429).
+ *
+ * Works with any request/response objects that have standard headers/status methods.
  */
 export function rateLimit(
-  req: VercelRequest,
-  res: VercelResponse,
+  req: { headers: Record<string, string | string[] | undefined> },
+  res: {
+    setHeader: (name: string, value: string | string[]) => void
+    status: (code: number) => { json: (body: unknown) => void }
+  },
   opts: { key: string; limit: number; windowMs: number }
 ): boolean {
-  const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 'unknown'
+  const forwarded = req.headers['x-forwarded-for']
+  const ip = (typeof forwarded === 'string' ? forwarded : forwarded?.[0])?.split(',')[0]?.trim() || 'unknown'
   const storeKey = `${opts.key}:${ip}`
   const now = Date.now()
 

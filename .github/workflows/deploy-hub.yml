@@ -10,54 +10,14 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      packages: read
-    env:
-      VERCEL_ORG_ID: team_v8Ej4FlhSEJtk4zdtTWiwTPE
-      VERCEL_PROJECT_ID: prj_bIR1T3sDDe3bhKQjLHH7WGlXuKCu
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install Vercel CLI
-        run: npm i -g vercel
-
-      - name: Install workspace packages (for building from source)
-        run: npm ci
-        env:
-          GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build monorepo packages from source
-        run: |
-          npm run --workspace=packages/protocol build
-          npm run --workspace=packages/central-services-client build
-          npm run --workspace=packages/react build
-
-      - name: Install central-services dependencies
-        run: npm ci
-        working-directory: central-services
-        env:
-          GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Sync built packages into central-services node_modules
-        run: |
-          cp -r packages/protocol/dist/* central-services/node_modules/@johnvondrashek/forumline-protocol/dist/
-          cp packages/protocol/package.json central-services/node_modules/@johnvondrashek/forumline-protocol/package.json
-          cp -r packages/central-services-client/dist/* central-services/node_modules/@johnvondrashek/forumline-central-services-client/dist/
-          cp -r packages/react/dist/* central-services/node_modules/@johnvondrashek/forumline-react/dist/
-
-      - name: Pull Vercel environment
-        run: vercel pull --yes --environment=production --token ${{ secrets.VERCEL_TOKEN }}
-        working-directory: central-services
-
-      - name: Build
-        run: vercel build --prod --token ${{ secrets.VERCEL_TOKEN }}
-        working-directory: central-services
-
-      - name: Deploy to production
-        run: vercel deploy --prebuilt --prod --token ${{ secrets.VERCEL_TOKEN }}
-        working-directory: central-services
+    uses: ./.github/workflows/deploy.yml
+    with:
+      project-id: prj_bIR1T3sDDe3bhKQjLHH7WGlXuKCu
+      working-directory: central-services
+      packages-to-build: packages/protocol packages/central-services-client packages/react
+      sync-commands: |
+        cp -r packages/protocol/dist/* central-services/node_modules/@johnvondrashek/forumline-protocol/dist/
+        cp packages/protocol/package.json central-services/node_modules/@johnvondrashek/forumline-protocol/package.json
+        cp -r packages/central-services-client/dist/* central-services/node_modules/@johnvondrashek/forumline-central-services-client/dist/
+        cp -r packages/react/dist/* central-services/node_modules/@johnvondrashek/forumline-react/dist/
+    secrets: inherit

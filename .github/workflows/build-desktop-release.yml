@@ -44,7 +44,7 @@ jobs:
 
       - name: Build Tauri app
         run: cargo tauri build --bundles app
-        working-directory: desktop
+        working-directory: native-app
 
       - name: Install create-dmg
         run: npm install -g create-dmg

@@ -42,11 +42,11 @@ jobs:
 
       - name: Initialize Android project
         run: cargo tauri android init
-        working-directory: desktop
+        working-directory: native-app
 
       - name: Build Android app
         run: cargo tauri android build
-        working-directory: desktop
+        working-directory: native-app
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
 

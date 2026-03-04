@@ -1,19 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
+import { parseCookies } from '@johnvondrashek/forumline-server-sdk'
 import { getForumlineServer } from '../../_lib/forumline-server.js'
 import { adaptRequest, adaptResponse } from '../../_lib/vercel-adapter.js'
 
 const siteUrl = process.env.VITE_SITE_URL || 'https://forum-chat-voice.vercel.app'
-
-/** Parse cookies from a Cookie header string */
-function parseCookies(cookieHeader: string): Record<string, string> {
-  const cookies: Record<string, string> = {}
-  for (const pair of cookieHeader.split(';')) {
-    const [key, ...rest] = pair.trim().split('=')
-    if (key) cookies[key] = rest.join('=')
-  }
-  return cookies
-}
 
 /**
  * Handle account linking flow (user clicked "Connect to Forumline" from Settings).

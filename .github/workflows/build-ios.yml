@@ -30,7 +30,7 @@ jobs:
 
       - name: Build iOS app
         run: cargo tauri ios build
-        working-directory: desktop
+        working-directory: native-app
 
       - name: Upload iOS artifact
         uses: actions/upload-artifact@v4

@@ -4,7 +4,18 @@
   "workspaces": ["packages/*"],
   "scripts": {
     "tauri": "tauri",
-    "tauri:dev": "TAURI_DIR=desktop tauri dev",
-    "tauri:build": "TAURI_DIR=desktop tauri build"
+    "tauri:dev": "TAURI_DIR=native-app tauri dev",
+    "tauri:build": "TAURI_DIR=native-app tauri build",
+    "build:packages": "npm run --workspace=packages/protocol build && npm run --workspace=packages/server-sdk build && npm run --workspace=packages/central-services-client build && npm run --workspace=packages/react build",
+    "clean": "npm run --workspaces --if-present clean",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "prettier": "^3.0.0",
+    "typescript-eslint": "^8.0.0"
   }
 }

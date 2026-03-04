@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getHubSupabase, getHubSupabaseAnon } from '../_lib/supabase.js'
-import { rateLimit } from '../_lib/rate-limit.js'
+import { rateLimit } from '@johnvondrashek/forumline-server-sdk'
 import { usernameSchema, passwordSchema, emailSchema } from '@johnvondrashek/forumline-protocol/validation'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
