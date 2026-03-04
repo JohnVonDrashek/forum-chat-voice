@@ -1,14 +1,15 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createHash } from 'crypto'
 import jwt from 'jsonwebtoken'
-import { getHubSupabase, getHubSupabaseAnon, handleCors } from '../_lib/supabase.js'
+import { getHubSupabase, getHubSupabaseAnon } from '../_lib/supabase.js'
+import { rateLimit } from '../_lib/rate-limit.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (handleCors(req, res)) return
-
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
+
+  if (!rateLimit(req, res, { key: 'oauth-token', limit: 10, windowMs: 60_000 })) return
 
   const { code, client_id, client_secret, redirect_uri } = req.body || {}
 
@@ -81,7 +82,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Sign a JWT containing the identity
-  const jwtSecret = process.env.HUB_JWT_SECRET || process.env.HUB_SUPABASE_SERVICE_ROLE_KEY!
+  const jwtSecret = process.env.HUB_JWT_SECRET
+  if (!jwtSecret) {
+    console.error('[Hub] HUB_JWT_SECRET environment variable is not set')
+    return res.status(500).json({ error: 'Server misconfiguration' })
+  }
   const identityToken = jwt.sign(
     { identity, forum_id: client.forum_id },
     jwtSecret,

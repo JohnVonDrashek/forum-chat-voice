@@ -1,10 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { randomBytes, createHash } from 'crypto'
-import { getHubSupabase, getAuthenticatedUser, handleCors } from '../_lib/supabase.js'
+import { getHubSupabase, getAuthenticatedUser } from '../_lib/supabase.js'
+import { forumUrlSchema } from '@johnvondrashek/forumline-protocol/validation'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (handleCors(req, res)) return
-
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -18,7 +17,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'domain, name, api_base, and web_base are required' })
   }
 
+  // Validate URLs
+  const apiBaseResult = forumUrlSchema.safeParse(api_base)
+  if (!apiBaseResult.success) {
+    return res.status(400).json({ error: `api_base: ${apiBaseResult.error.issues[0].message}` })
+  }
+  const webBaseResult = forumUrlSchema.safeParse(web_base)
+  if (!webBaseResult.success) {
+    return res.status(400).json({ error: `web_base: ${webBaseResult.error.issues[0].message}` })
+  }
+
   const supabase = getHubSupabase()
+
+  // Enforce forum registration quota (max 5 per user)
+  const { count: forumCount } = await supabase
+    .from('forumline_forums')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_id', user.id)
+
+  if ((forumCount ?? 0) >= 5) {
+    return res.status(403).json({ error: 'Maximum of 5 forums per user' })
+  }
 
   // Check if domain already registered
   const { data: existing } = await supabase

@@ -27,7 +27,7 @@ jobs:
         run: npm i -g vercel
 
       - name: Install workspace packages (for building from source)
-        run: npm install
+        run: npm ci
         env:
           GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -38,7 +38,7 @@ jobs:
           npm run --workspace=packages/react build
 
       - name: Install central-services dependencies
-        run: npm install
+        run: npm ci
         working-directory: central-services
         env:
           GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}

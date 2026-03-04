@@ -10,7 +10,7 @@ import type {
   NotificationInput,
 } from '@johnvondrashek/forumline-protocol'
 
-import { parseCookies, decodeJwtPayload } from './utils/cookies.js'
+import { parseCookies, decodeJwtPayload, verifyJwt } from './utils/cookies.js'
 
 export interface ForumlineServerConfig {
   /** Forum name */
@@ -49,6 +49,12 @@ export interface ForumlineServerConfig {
     clientId: string
     clientSecret: string
   }
+
+  /**
+   * JWT secret used to verify identity tokens signed by the hub.
+   * Required for secure session validation.
+   */
+  hubJwtSecret?: string
 
   /** Site URL for redirects (e.g. https://my-forum.example.com) */
   siteUrl?: string
@@ -352,13 +358,20 @@ export class ForumlineServer {
         return res.status(200).json(null)
       }
 
-      const payload = decodeJwtPayload(identityToken)
-      if (!payload?.identity) {
-        return res.status(200).json(null)
+      // Verify JWT signature if hub secret is configured, otherwise fall back to decode-only
+      let payload: Record<string, unknown> | null
+      if (this.config.hubJwtSecret) {
+        payload = verifyJwt(identityToken, this.config.hubJwtSecret)
+        // verifyJwt also checks expiry, so invalid/expired tokens return null
+      } else {
+        payload = decodeJwtPayload(identityToken)
+        // Check expiry manually when not using verified JWT
+        if (payload && typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()) {
+          payload = null
+        }
       }
 
-      // Check expiry
-      if (typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()) {
+      if (!payload?.identity) {
         res.setHeader('Set-Cookie', [
           'forumline_identity=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0',
           'forumline_user_id=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0',

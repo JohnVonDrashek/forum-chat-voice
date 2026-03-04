@@ -1,13 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getHubSupabase, getAuthenticatedUser, handleCors } from '../_lib/supabase.js'
+import { getHubSupabase, getAuthenticatedUser } from '../_lib/supabase.js'
+import { rateLimit } from '../_lib/rate-limit.js'
+import { messageContentSchema } from '@johnvondrashek/forumline-protocol/validation'
 
 /**
  * GET  /api/dms/:userId — Fetch messages with a specific user
  * POST /api/dms/:userId — Send a message to a specific user
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (handleCors(req, res)) return
-
   const user = await getAuthenticatedUser(req, res)
   if (!user) return
 
@@ -32,26 +32,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleGet(
-  _req: VercelRequest,
+  req: VercelRequest,
   res: VercelResponse,
   supabase: ReturnType<typeof getHubSupabase>,
   currentUserId: string,
   otherUserId: string
 ) {
-  const { data: messages, error } = await supabase
+  const limit = Math.min(Number(req.query.limit) || 50, 100)
+  const before = req.query.before as string | undefined
+
+  let query = supabase
     .from('hub_direct_messages')
     .select('id, sender_id, recipient_id, content, read, created_at')
     .or(
       `and(sender_id.eq.${currentUserId},recipient_id.eq.${otherUserId}),` +
       `and(sender_id.eq.${otherUserId},recipient_id.eq.${currentUserId})`
     )
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (before) {
+    query = query.lt('id', before)
+  }
+
+  const { data: messages, error } = await query
 
   if (error) {
     return res.status(500).json({ error: 'Failed to fetch messages' })
   }
 
-  return res.status(200).json(messages || [])
+  // Reverse to chronological order for client display
+  return res.status(200).json((messages || []).reverse())
 }
 
 async function handlePost(
@@ -61,10 +72,13 @@ async function handlePost(
   currentUserId: string,
   otherUserId: string
 ) {
+  if (!rateLimit(req, res, { key: 'dm-send', limit: 30, windowMs: 60_000 })) return
+
   const { content } = req.body || {}
 
-  if (!content || typeof content !== 'string' || !content.trim()) {
-    return res.status(400).json({ error: 'content is required' })
+  const contentResult = messageContentSchema.safeParse(content?.trim?.())
+  if (!contentResult.success) {
+    return res.status(400).json({ error: contentResult.error.issues[0].message })
   }
 
   // Verify the recipient exists

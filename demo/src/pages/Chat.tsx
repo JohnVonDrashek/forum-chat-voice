@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -220,16 +220,19 @@ export default function Chat() {
   }
 
   // Group messages by date
-  const groupedMessages: { date: string; messages: ChatMsg[] }[] = []
-  messages.forEach(msg => {
-    const date = formatDateLabel(msg.createdAt)
-    const lastGroup = groupedMessages[groupedMessages.length - 1]
-    if (lastGroup && lastGroup.date === date) {
-      lastGroup.messages.push(msg)
-    } else {
-      groupedMessages.push({ date, messages: [msg] })
-    }
-  })
+  const groupedMessages = useMemo(() => {
+    const groups: { date: string; messages: ChatMsg[] }[] = []
+    messages.forEach(msg => {
+      const date = formatDateLabel(msg.createdAt)
+      const lastGroup = groups[groups.length - 1]
+      if (lastGroup && lastGroup.date === date) {
+        lastGroup.messages.push(msg)
+      } else {
+        groups.push({ date, messages: [msg] })
+      }
+    })
+    return groups
+  }, [messages])
 
   return (
     <div className="chat-page-wrapper flex flex-col overflow-hidden">
@@ -344,15 +347,6 @@ export default function Chat() {
         ) : (
           <form onSubmit={handleSend}>
             <div className="flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2">
-              <button
-                type="button"
-                className="shrink-0 text-slate-400 hover:text-slate-300"
-                aria-label="Add attachment"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </button>
               <input
                 ref={inputRef}
                 type="text"

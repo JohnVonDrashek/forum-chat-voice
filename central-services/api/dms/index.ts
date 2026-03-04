@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getHubSupabase, getAuthenticatedUser, handleCors } from '../_lib/supabase.js'
+import { getHubSupabase, getAuthenticatedUser } from '../_lib/supabase.js'
 
 /**
  * GET /api/dms
@@ -7,8 +7,6 @@ import { getHubSupabase, getAuthenticatedUser, handleCors } from '../_lib/supaba
  * Returns conversations grouped by the other user, with last message and unread count.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (handleCors(req, res)) return
-
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -24,6 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .select('id, sender_id, recipient_id, content, read, created_at')
     .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
     .order('created_at', { ascending: false })
+    .limit(500)
 
   if (error) {
     return res.status(500).json({ error: 'Failed to fetch conversations' })

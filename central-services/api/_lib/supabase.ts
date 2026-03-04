@@ -37,12 +37,3 @@ export async function getAuthenticatedUser(req: VercelRequest, res: VercelRespon
 
   return user
 }
-
-/** Handle CORS preflight and return true if the request was handled */
-export function handleCors(req: VercelRequest, res: VercelResponse): boolean {
-  if (req.method === 'OPTIONS') {
-    res.status(204).end()
-    return true
-  }
-  return false
-}

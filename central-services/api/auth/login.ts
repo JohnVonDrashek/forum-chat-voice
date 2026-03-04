@@ -1,12 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getHubSupabaseAnon, handleCors } from '../_lib/supabase.js'
+import { getHubSupabaseAnon } from '../_lib/supabase.js'
+import { rateLimit } from '../_lib/rate-limit.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (handleCors(req, res)) return
-
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
+
+  if (!rateLimit(req, res, { key: 'login', limit: 10, windowMs: 60_000 })) return
 
   const { email, password } = req.body || {}
 
@@ -22,7 +23,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   })
 
   if (error) {
-    return res.status(401).json({ error: error.message })
+    console.error('[login] Supabase auth.signInWithPassword error:', error)
+    return res.status(401).json({ error: 'Invalid email or password' })
   }
 
   return res.status(200).json({

@@ -36,7 +36,6 @@ export const queryKeys = {
   category: (slug: string) => ['category', slug] as const,
 
   // Search
-  search: (query: string, filter: string) => ['search', query, filter] as const,
   searchThreads: (query: string) => ['search', 'threads', query] as const,
   searchPosts: (query: string) => ['search', 'posts', query] as const,
 

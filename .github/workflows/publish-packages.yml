@@ -20,13 +20,19 @@ jobs:
           registry-url: https://npm.pkg.github.com
 
       - name: Install workspace dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build and publish protocol
         run: |
           cd packages/protocol
           npm run build
-          npm publish || true
+          npm publish 2>&1 || {
+            if echo "$?" | grep -q "already exists"; then
+              echo "Version already published, skipping"
+            else
+              exit 1
+            fi
+          }
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -34,7 +40,13 @@ jobs:
         run: |
           cd packages/server-sdk
           npm run build
-          npm publish || true
+          npm publish 2>&1 || {
+            if echo "$?" | grep -q "already exists"; then
+              echo "Version already published, skipping"
+            else
+              exit 1
+            fi
+          }
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -42,7 +54,13 @@ jobs:
         run: |
           cd packages/central-services-client
           npm run build
-          npm publish || true
+          npm publish 2>&1 || {
+            if echo "$?" | grep -q "already exists"; then
+              echo "Version already published, skipping"
+            else
+              exit 1
+            fi
+          }
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -50,6 +68,12 @@ jobs:
         run: |
           cd packages/react
           npm run build
-          npm publish || true
+          npm publish 2>&1 || {
+            if echo "$?" | grep -q "already exists"; then
+              echo "Version already published, skipping"
+            else
+              exit 1
+            fi
+          }
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

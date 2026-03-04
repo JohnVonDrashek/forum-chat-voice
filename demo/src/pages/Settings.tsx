@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
@@ -9,12 +9,15 @@ import { useHub } from '@johnvondrashek/forumline-react'
 import { supabase } from '../lib/supabase'
 import { getDataProvider } from '../lib/data-provider'
 import { uploadAvatar } from '../lib/avatars'
-import Avatar from '../components/Avatar'
 import ImageCropModal from '../components/ImageCropModal'
-import Input from '../components/ui/Input'
 import Card from '../components/ui/Card'
 import { isTauri, getTauriAutostart, getTauriNotification } from '@johnvondrashek/forumline-react'
 import { invoke } from '@tauri-apps/api/core'
+import ProfileTab, { type ProfileFormData } from './settings/ProfileTab'
+import AccountTab, { type AccountFormData } from './settings/AccountTab'
+import NotificationsTab from './settings/NotificationsTab'
+import AppearanceTab from './settings/AppearanceTab'
+import DesktopTab from './settings/DesktopTab'
 
 type Tab = 'profile' | 'account' | 'notifications' | 'appearance' | 'desktop'
 
@@ -23,8 +26,6 @@ const profileSchema = z.object({
   bio: z.string().optional(),
   website: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
 })
-
-type ProfileFormData = z.infer<typeof profileSchema>
 
 const accountSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Please enter a valid email'),
@@ -44,8 +45,6 @@ const accountSchema = z.object({
   message: 'Passwords do not match',
   path: ['confirmPassword'],
 })
-
-type AccountFormData = z.infer<typeof accountSchema>
 
 export default function Settings() {
   const { user, profile } = useAuth()
@@ -72,7 +71,6 @@ export default function Settings() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Profile form
   const {
@@ -339,429 +337,57 @@ export default function Settings() {
 
         {/* Content */}
         <Card className="flex-1 p-6">
-          {/* Profile Tab */}
           {activeTab === 'profile' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Profile Information</h2>
-                <p className="text-sm text-slate-400">Update your profile details</p>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <Avatar seed={user?.id || 'demo'} type="user" avatarUrl={avatarUrl} size={80} />
-                <div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (!file) return
-                      const reader = new FileReader()
-                      reader.onload = () => setCropImageSrc(reader.result as string)
-                      reader.readAsDataURL(file)
-                      e.target.value = ''
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={avatarUploading}
-                    className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-600 disabled:opacity-50"
-                  >
-                    {avatarUploading ? 'Uploading...' : 'Change Avatar'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="settings-display-name" className="mb-1 block text-sm font-medium text-slate-300">Display Name</label>
-                  <Input
-                    type="text"
-                    id="settings-display-name"
-                    {...registerProfile('displayName')}
-                    className="w-full"
-                  />
-                  {profileErrors.displayName && (
-                    <p className="text-red-400 text-sm mt-1">{profileErrors.displayName.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="settings-bio" className="mb-1 block text-sm font-medium text-slate-300">Bio</label>
-                  <textarea
-                    id="settings-bio"
-                    {...registerProfile('bio')}
-                    rows={3}
-                    placeholder="Tell us about yourself..."
-                    className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                  {profileErrors.bio && (
-                    <p className="text-red-400 text-sm mt-1">{profileErrors.bio.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="settings-website" className="mb-1 block text-sm font-medium text-slate-300">Website</label>
-                  <Input
-                    type="url"
-                    id="settings-website"
-                    {...registerProfile('website')}
-                    placeholder="https://example.com"
-                    className="w-full"
-                  />
-                  {profileErrors.website && (
-                    <p className="text-red-400 text-sm mt-1">{profileErrors.website.message}</p>
-                  )}
-                </div>
-              </div>
-            </div>
+            <ProfileTab
+              userId={user?.id}
+              avatarUrl={avatarUrl}
+              avatarUploading={avatarUploading}
+              onAvatarFileSelected={(file) => {
+                const reader = new FileReader()
+                reader.onload = () => setCropImageSrc(reader.result as string)
+                reader.readAsDataURL(file)
+              }}
+              register={registerProfile}
+              errors={profileErrors}
+            />
           )}
 
-          {/* Account Tab */}
           {activeTab === 'account' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Account Settings</h2>
-                <p className="text-sm text-slate-400">Manage your email and password</p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="settings-email" className="mb-1 block text-sm font-medium text-slate-300">Email Address</label>
-                  <Input
-                    type="email"
-                    id="settings-email"
-                    {...registerAccount('email')}
-                    className="w-full"
-                  />
-                  {accountErrors.email && (
-                    <p className="text-red-400 text-sm mt-1">{accountErrors.email.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="border-t border-slate-700 pt-6">
-                <h3 className="mb-4 font-medium text-white">Change Password</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="settings-current-password" className="mb-1 block text-sm font-medium text-slate-300">Current Password</label>
-                    <Input
-                      type="password"
-                      id="settings-current-password"
-                      {...registerAccount('currentPassword')}
-                      className="w-full"
-                    />
-                    {accountErrors.currentPassword && (
-                      <p className="text-red-400 text-sm mt-1">{accountErrors.currentPassword.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label htmlFor="settings-new-password" className="mb-1 block text-sm font-medium text-slate-300">New Password</label>
-                    <Input
-                      type="password"
-                      id="settings-new-password"
-                      {...registerAccount('newPassword')}
-                      className="w-full"
-                    />
-                    {accountErrors.newPassword && (
-                      <p className="text-red-400 text-sm mt-1">{accountErrors.newPassword.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label htmlFor="settings-confirm-password" className="mb-1 block text-sm font-medium text-slate-300">Confirm New Password</label>
-                    <Input
-                      type="password"
-                      id="settings-confirm-password"
-                      {...registerAccount('confirmPassword')}
-                      className="w-full"
-                    />
-                    {accountErrors.confirmPassword && (
-                      <p className="text-red-400 text-sm mt-1">{accountErrors.confirmPassword.message}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-slate-700 pt-6">
-                <h3 className="mb-4 font-medium text-white">Forumline Connection</h3>
-                {profile?.forumline_id ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="text-green-400">Connected to Forumline</span>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        if (!user) return
-                        const { error } = await supabase
-                          .from('profiles')
-                          .update({ forumline_id: null })
-                          .eq('id', user.id)
-                        if (error) {
-                          toast.error('Failed to disconnect: ' + error.message)
-                          return
-                        }
-                        // Clear httpOnly Forumline cookies (hub session)
-                        await fetch('/api/forumline/auth/session', { method: 'DELETE' }).catch(() => {})
-                        toast.success('Disconnected from Forumline')
-                        window.location.reload()
-                      }}
-                      className="text-sm text-slate-400 hover:text-red-400 underline"
-                    >
-                      Disconnect from Forumline
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="mb-3 text-sm text-slate-400">
-                      Connect your account to Forumline to enable cross-forum direct messages and a unified identity across forums.
-                    </p>
-                    <button
-                      onClick={async () => {
-                        const { data: { session } } = await supabase.auth.getSession()
-                        if (!session?.access_token) {
-                          toast.error('Session expired. Please sign in again.')
-                          return
-                        }
-                        window.location.href = `/api/forumline/auth?link_token=${session.access_token}`
-                      }}
-                      className="inline-flex items-center gap-2 rounded-lg border border-indigo-500/30 bg-indigo-600/10 px-4 py-2 text-sm font-medium text-indigo-300 hover:bg-indigo-600/20"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                      </svg>
-                      Connect to Forumline
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t border-slate-700 pt-6">
-                <h3 className="mb-2 font-medium text-red-400">Danger Zone</h3>
-                <p className="mb-4 text-sm text-slate-400">Permanently delete your account and all data</p>
-                <button className="rounded-lg border border-red-600 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-600/10">
-                  Delete Account
-                </button>
-              </div>
-            </div>
+            <AccountTab
+              userId={user?.id}
+              forumlineId={profile?.forumline_id}
+              register={registerAccount}
+              errors={accountErrors}
+            />
           )}
 
-          {/* Notifications Tab */}
           {activeTab === 'notifications' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Notification Preferences</h2>
-                <p className="text-sm text-slate-400">Choose how you want to be notified</p>
-              </div>
-
-              <div>
-                <h3 className="mb-4 font-medium text-white">Email Notifications</h3>
-                <div className="space-y-3">
-                  {[
-                    { key: 'replies', label: 'Replies to your posts' },
-                    { key: 'mentions', label: 'Mentions of your username' },
-                    { key: 'likes', label: 'Likes on your posts' },
-                    { key: 'follows', label: 'New followers' },
-                    { key: 'directMessages', label: 'Direct messages' },
-                    { key: 'newsletter', label: 'Newsletter and updates' },
-                  ].map((item) => (
-                    <label key={item.key} className="flex items-center justify-between">
-                      <span className="text-sm text-slate-300">{item.label}</span>
-                      <button
-                        role="switch"
-                        aria-checked={emailNotifs[item.key as keyof typeof emailNotifs]}
-                        aria-label={`Email notification for ${item.label}`}
-                        onClick={() => setEmailNotifs({ ...emailNotifs, [item.key]: !emailNotifs[item.key as keyof typeof emailNotifs] })}
-                        className={`relative h-6 w-11 rounded-full transition-colors ${
-                          emailNotifs[item.key as keyof typeof emailNotifs] ? 'bg-indigo-600' : 'bg-slate-600'
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                            emailNotifs[item.key as keyof typeof emailNotifs] ? 'translate-x-5' : ''
-                          }`}
-                        />
-                      </button>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border-t border-slate-700 pt-6">
-                <h3 className="mb-4 font-medium text-white">Push Notifications</h3>
-                <div className="space-y-3">
-                  {[
-                    { key: 'replies', label: 'Replies to your posts' },
-                    { key: 'mentions', label: 'Mentions of your username' },
-                    { key: 'likes', label: 'Likes on your posts' },
-                    { key: 'follows', label: 'New followers' },
-                    { key: 'directMessages', label: 'Direct messages' },
-                  ].map((item) => (
-                    <label key={item.key} className="flex items-center justify-between">
-                      <span className="text-sm text-slate-300">{item.label}</span>
-                      <button
-                        role="switch"
-                        aria-checked={pushNotifs[item.key as keyof typeof pushNotifs]}
-                        aria-label={`Push notification for ${item.label}`}
-                        onClick={() => setPushNotifs({ ...pushNotifs, [item.key]: !pushNotifs[item.key as keyof typeof pushNotifs] })}
-                        className={`relative h-6 w-11 rounded-full transition-colors ${
-                          pushNotifs[item.key as keyof typeof pushNotifs] ? 'bg-indigo-600' : 'bg-slate-600'
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                            pushNotifs[item.key as keyof typeof pushNotifs] ? 'translate-x-5' : ''
-                          }`}
-                        />
-                      </button>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <NotificationsTab
+              emailNotifs={emailNotifs}
+              setEmailNotifs={setEmailNotifs}
+              pushNotifs={pushNotifs}
+              setPushNotifs={setPushNotifs}
+            />
           )}
 
-          {/* Appearance Tab */}
           {activeTab === 'appearance' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Appearance</h2>
-                <p className="text-sm text-slate-400">Customize how the forum looks</p>
-              </div>
-
-              <div>
-                <h3 className="mb-3 font-medium text-white">Theme</h3>
-                <div className="flex gap-3">
-                  {[
-                    { id: 'dark', label: 'Dark', icon: '🌙' },
-                    { id: 'light', label: 'Light', icon: '☀️' },
-                    { id: 'system', label: 'System', icon: '💻' },
-                  ].map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => setTheme(t.id as typeof theme)}
-                      className={`flex flex-1 flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                        theme === t.id
-                          ? 'border-indigo-500 bg-indigo-500/10'
-                          : 'border-slate-600 hover:border-slate-500'
-                      }`}
-                    >
-                      <span className="text-2xl">{t.icon}</span>
-                      <span className="text-sm font-medium text-white">{t.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border-t border-slate-700 pt-6">
-                <h3 className="mb-3 font-medium text-white">Font Size</h3>
-                <div className="flex gap-3">
-                  {[
-                    { id: 'small', label: 'Small', sample: 'Aa' },
-                    { id: 'medium', label: 'Medium', sample: 'Aa' },
-                    { id: 'large', label: 'Large', sample: 'Aa' },
-                  ].map((f) => (
-                    <button
-                      key={f.id}
-                      onClick={() => setFontSize(f.id as typeof fontSize)}
-                      className={`flex flex-1 flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                        fontSize === f.id
-                          ? 'border-indigo-500 bg-indigo-500/10'
-                          : 'border-slate-600 hover:border-slate-500'
-                      }`}
-                    >
-                      <span className={`font-medium text-white ${f.id === 'small' ? 'text-sm' : f.id === 'large' ? 'text-xl' : 'text-base'}`}>
-                        {f.sample}
-                      </span>
-                      <span className="text-sm font-medium text-white">{f.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <AppearanceTab
+              theme={theme}
+              setTheme={setTheme}
+              fontSize={fontSize}
+              setFontSize={setFontSize}
+            />
           )}
 
-          {/* Desktop Tab (Tauri only) */}
           {activeTab === 'desktop' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Desktop Settings</h2>
-                <p className="text-sm text-slate-400">Configure desktop app behavior</p>
-              </div>
-
-              <div className="space-y-4">
-                <label className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-medium text-slate-300">Launch at login</span>
-                    <p className="text-xs text-slate-500">Start the app automatically when you log in</p>
-                  </div>
-                  <button
-                    role="switch"
-                    aria-checked={launchAtLogin}
-                    aria-label="Launch at login"
-                    onClick={() => setLaunchAtLogin(!launchAtLogin)}
-                    className={`relative h-6 w-11 rounded-full transition-colors ${
-                      launchAtLogin ? 'bg-indigo-600' : 'bg-slate-600'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                        launchAtLogin ? 'translate-x-5' : ''
-                      }`}
-                    />
-                  </button>
-                </label>
-
-                <label className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-medium text-slate-300">Close to tray</span>
-                    <p className="text-xs text-slate-500">Keep running in the background when the window is closed</p>
-                  </div>
-                  <button
-                    role="switch"
-                    aria-checked={closeToTray}
-                    aria-label="Close to tray"
-                    onClick={() => setCloseToTray(!closeToTray)}
-                    className={`relative h-6 w-11 rounded-full transition-colors ${
-                      closeToTray ? 'bg-indigo-600' : 'bg-slate-600'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                        closeToTray ? 'translate-x-5' : ''
-                      }`}
-                    />
-                  </button>
-                </label>
-
-                <label className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-medium text-slate-300">Native notifications</span>
-                    <p className="text-xs text-slate-500">Show system notifications for new messages</p>
-                  </div>
-                  <button
-                    role="switch"
-                    aria-checked={nativeNotifications}
-                    aria-label="Native notifications"
-                    onClick={() => setNativeNotifications(!nativeNotifications)}
-                    className={`relative h-6 w-11 rounded-full transition-colors ${
-                      nativeNotifications ? 'bg-indigo-600' : 'bg-slate-600'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                        nativeNotifications ? 'translate-x-5' : ''
-                      }`}
-                    />
-                  </button>
-                </label>
-              </div>
-            </div>
+            <DesktopTab
+              launchAtLogin={launchAtLogin}
+              setLaunchAtLogin={setLaunchAtLogin}
+              closeToTray={closeToTray}
+              setCloseToTray={setCloseToTray}
+              nativeNotifications={nativeNotifications}
+              setNativeNotifications={setNativeNotifications}
+            />
           )}
 
           {/* Save Button */}

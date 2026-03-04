@@ -1,25 +1,30 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getHubSupabase, getHubSupabaseAnon, handleCors } from '../_lib/supabase.js'
+import { getHubSupabase, getHubSupabaseAnon } from '../_lib/supabase.js'
+import { rateLimit } from '../_lib/rate-limit.js'
+import { usernameSchema, passwordSchema, emailSchema } from '@johnvondrashek/forumline-protocol/validation'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (handleCors(req, res)) return
-
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  if (!rateLimit(req, res, { key: 'signup', limit: 5, windowMs: 60_000 })) return
+
   const { email, password, username, display_name } = req.body || {}
 
-  if (!email || !password || !username) {
-    return res.status(400).json({ error: 'email, password, and username are required' })
+  const emailResult = emailSchema.safeParse(email)
+  if (!emailResult.success) {
+    return res.status(400).json({ error: emailResult.error.issues[0].message })
   }
 
-  if (username.length < 3 || username.length > 30) {
-    return res.status(400).json({ error: 'Username must be 3-30 characters' })
+  const passwordResult = passwordSchema.safeParse(password)
+  if (!passwordResult.success) {
+    return res.status(400).json({ error: passwordResult.error.issues[0].message })
   }
 
-  if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-    return res.status(400).json({ error: 'Username may only contain letters, numbers, hyphens, and underscores' })
+  const usernameResult = usernameSchema.safeParse(username)
+  if (!usernameResult.success) {
+    return res.status(400).json({ error: usernameResult.error.issues[0].message })
   }
 
   const serviceSupabase = getHubSupabase()
@@ -49,7 +54,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   })
 
   if (error) {
-    return res.status(400).json({ error: error.message })
+    console.error('[signup] Supabase auth.signUp error:', error)
+    return res.status(400).json({ error: 'Signup failed' })
   }
 
   if (!data.user || !data.session) {
@@ -67,8 +73,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (profileError) {
     // Profile creation failed — clean up auth user
+    console.error('[signup] Failed to create hub_profile for user', data.user.id, ':', profileError)
     await serviceSupabase.auth.admin.deleteUser(data.user.id)
-    return res.status(500).json({ error: 'Failed to create profile: ' + profileError.message })
+    return res.status(500).json({ error: 'Failed to create profile' })
   }
 
   return res.status(201).json({

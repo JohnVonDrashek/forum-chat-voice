@@ -217,7 +217,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           )
           break
         case 'forumline:request_unread_counts':
-          // Will be implemented in Phase 3 — no-op for now
           break
       }
     }

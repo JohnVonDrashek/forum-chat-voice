@@ -7,6 +7,7 @@ import { useUnreadReporter } from './hooks/useUnreadReporter'
 import { useNotificationReporter } from './hooks/useNotificationReporter'
 import ScrollToTop from './components/ScrollToTop'
 import Layout from './components/Layout'
+import ErrorBoundary from './components/ErrorBoundary'
 import Skeleton from './components/ui/Skeleton'
 import { RequireAuth, RequireAdmin, RedirectIfAuth } from './components/RequireAuth'
 
@@ -51,18 +52,20 @@ function AuthenticatedProviders({ children }: { children: React.ReactNode }) {
   useUnreadReporter(user?.id ?? null)
   useNotificationReporter(user?.id ?? null)
   return (
-    <HubProvider
-      user={user}
-      hubSupabaseUrl={HUB_SUPABASE_URL}
-      hubSupabaseAnonKey={HUB_SUPABASE_ANON_KEY}
-      hubUrl={HUB_URL}
-    >
-      <ForumProvider>
-        <VoiceProvider>
-          {children}
-        </VoiceProvider>
-      </ForumProvider>
-    </HubProvider>
+    <ErrorBoundary>
+      <HubProvider
+        user={user}
+        hubSupabaseUrl={HUB_SUPABASE_URL}
+        hubSupabaseAnonKey={HUB_SUPABASE_ANON_KEY}
+        hubUrl={HUB_URL}
+      >
+        <ForumProvider>
+          <VoiceProvider>
+            {children}
+          </VoiceProvider>
+        </ForumProvider>
+      </HubProvider>
+    </ErrorBoundary>
   )
 }
 
