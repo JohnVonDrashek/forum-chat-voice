@@ -32,7 +32,7 @@ async function updateForumAuthState(accessToken: string, forumDomain: string, au
 }
 
 export default function AppLayout({ hubSession }: AppLayoutProps) {
-  const { activeForum, setUnreadCounts, switchForum } = useForum()
+  const { activeForum, setUnreadCounts, switchForum, goHome } = useForum()
   const { hubClient, isHubConnected } = useHub()
   const [view, setView] = useState<AppView>('forums')
   const [authedForums, setAuthedForums] = useState<Set<string> | null>(null)
@@ -143,7 +143,16 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
         )}
 
         {activeForum && (
-          <div className={view !== 'forums' ? 'hidden' : 'flex flex-1 overflow-hidden'}>
+          <div className={view !== 'forums' ? 'hidden' : 'flex flex-1 flex-col overflow-hidden'}>
+            <button
+              onClick={goHome}
+              className="flex shrink-0 items-center gap-2 border-b border-slate-700 bg-slate-900 px-4 py-2.5 text-slate-300 hover:text-white"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="text-sm font-medium">{activeForum.name}</span>
+            </button>
             <ForumWebview
               forum={activeForum}
               authUrl={authUrlForForum}

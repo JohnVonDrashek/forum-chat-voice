@@ -11,45 +11,23 @@ interface MobileTabBarProps {
 export default function MobileTabBar({ view, onChangeView, dmUnreadCount }: MobileTabBarProps) {
   const { activeForum, goHome } = useForum()
 
-  const handleHomeClick = () => {
-    goHome()
+  const handleForumsClick = () => {
+    if (view === 'forums' && activeForum) {
+      // Viewing a forum — go back to forum list
+      goHome()
+    }
     onChangeView('forums')
   }
 
-  const handleForumsClick = () => {
-    if (activeForum) {
-      // Already viewing a forum, just switch to forums view
-      onChangeView('forums')
-    } else {
-      // No forum selected, go home (shows forum list)
-      goHome()
-      onChangeView('forums')
-    }
-  }
-
-  const isHome = view === 'forums' && !activeForum
-  const isForums = view === 'forums' && !!activeForum
-
   return (
     <div className="flex border-t border-slate-700 bg-slate-900 pb-[env(safe-area-inset-bottom)]">
-      {/* Home */}
-      <button
-        onClick={handleHomeClick}
-        className={`flex flex-1 flex-col items-center gap-1 py-2 ${isHome ? 'text-indigo-400' : 'text-slate-500'}`}
-      >
-        <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-        </svg>
-        <span className="text-[10px] font-medium">Home</span>
-      </button>
-
       {/* Forums */}
       <button
         onClick={handleForumsClick}
-        className={`flex flex-1 flex-col items-center gap-1 py-2 ${isForums ? 'text-indigo-400' : 'text-slate-500'}`}
+        className={`flex flex-1 flex-col items-center gap-1 py-2 ${view === 'forums' ? 'text-indigo-400' : 'text-slate-500'}`}
       >
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+        <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
         </svg>
         <span className="text-[10px] font-medium">Forums</span>
       </button>
