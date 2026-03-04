@@ -1,6 +1,6 @@
 {
   "name": "@johnvondrashek/forumline-react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,7 +10,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/JohnVonDrashek/forum-chat-voice.git",
@@ -24,12 +26,12 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@johnvondrashek/forumline-protocol": "^0.1.0",
-    "@johnvondrashek/forumline-central-services-client": "^0.1.0"
+    "@johnvondrashek/forumline-central-services-client": "^0.1.0",
+    "@johnvondrashek/forumline-protocol": "^0.1.0"
   },
   "peerDependencies": {
-    "react": "^18 || ^19",
-    "@supabase/supabase-js": "^2"
+    "@supabase/supabase-js": "^2",
+    "react": "^18 || ^19"
   },
   "peerDependenciesMeta": {
     "@tauri-apps/api": {
@@ -43,6 +45,10 @@
     }
   },
   "devDependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-autostart": "^2.5.1",
+    "@tauri-apps/plugin-notification": "^2.3.3",
+    "@tauri-apps/plugin-shell": "^2.3.5",
     "@types/react": "^19.2.14",
     "typescript": "^5.9.3"
   }
