@@ -60,53 +60,57 @@ export function getForumlineServer(): ForumlineServer {
         return existingProfile.id
       }
 
-      // 2. Try to get email from hub token and link by email
+      // 2. Get hub email and check for collision with existing local account
+      let hubEmail: string | undefined
       if (hubAccessToken) {
         const hubSupabaseUrl = process.env.FORUMLINE_HUB_SUPABASE_URL
         const hubServiceKey = process.env.FORUMLINE_HUB_SERVICE_ROLE_KEY
         if (hubSupabaseUrl && hubServiceKey) {
           const hubSb = createClient(hubSupabaseUrl, hubServiceKey)
           const { data: { user: hubUser } } = await hubSb.auth.getUser(hubAccessToken)
-          if (hubUser?.email) {
-            // Look up local user by email
-            const { data: localUsersByEmail } = await supabase.auth.admin.listUsers()
-            const matchingUser = localUsersByEmail?.users?.find(u => u.email === hubUser.email)
-            if (matchingUser) {
-              await supabase
-                .from('profiles')
-                .update({ forumline_id: identity.forumline_id })
-                .eq('id', matchingUser.id)
-              return matchingUser.id
-            }
-
-            // 3. Create new user with real email
-            const tempPassword = crypto.randomUUID()
-            const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-              email: hubUser.email,
-              password: tempPassword,
-              email_confirm: true,
-              user_metadata: {
-                username: identity.username,
-                display_name: identity.display_name,
-                forumline_id: identity.forumline_id,
-              },
-            })
-
-            if (createError || !newUser.user) {
-              throw new Error(`Failed to create local user: ${createError?.message}`)
-            }
-
-            await supabase
-              .from('profiles')
-              .update({ forumline_id: identity.forumline_id })
-              .eq('id', newUser.user.id)
-
-            return newUser.user.id
-          }
+          hubEmail = hubUser?.email || undefined
         }
       }
 
-      // 4. Fallback: create user with forumline.local email
+      if (hubEmail) {
+        // Check if a local user with this email already exists
+        const { data: localUsersByEmail } = await supabase.auth.admin.listUsers()
+        const matchingUser = localUsersByEmail?.users?.find(
+          u => u.email?.toLowerCase() === hubEmail!.toLowerCase()
+        )
+        if (matchingUser) {
+          // Email collision — do NOT auto-link. User must link from Settings.
+          const err = new Error('EMAIL_COLLISION: A local account with this email already exists. Sign in locally and connect Forumline from Settings.')
+          err.name = 'EmailCollisionError'
+          throw err
+        }
+
+        // No collision — create new local user with hub email
+        const tempPassword = crypto.randomUUID()
+        const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+          email: hubEmail,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: {
+            username: identity.username,
+            display_name: identity.display_name,
+            forumline_id: identity.forumline_id,
+          },
+        })
+
+        if (createError || !newUser.user) {
+          throw new Error(`Failed to create local user: ${createError?.message}`)
+        }
+
+        await supabase
+          .from('profiles')
+          .update({ forumline_id: identity.forumline_id })
+          .eq('id', newUser.user.id)
+
+        return newUser.user.id
+      }
+
+      // 3. Fallback: create user with forumline.local email
       const tempPassword = crypto.randomUUID()
       const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
         email: `${identity.username}@forumline.local`,

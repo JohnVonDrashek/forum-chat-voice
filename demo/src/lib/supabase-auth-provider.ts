@@ -21,29 +21,30 @@ export class SupabaseAuthProvider implements ForumAuthProvider {
   }
 
   async signUp(email: string, password: string, username: string): Promise<{ error: Error | null; userId?: string }> {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { username, display_name: username },
-      },
-    })
-    if (error) return { error: new Error(error.message) }
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, username }),
+      })
+      const body = await res.json()
 
-    // Create profile immediately (don't rely solely on DB trigger)
-    if (data.user) {
-      const { error: profileError } = await supabase.from('profiles').upsert({
-        id: data.user.id,
-        username,
-        display_name: username,
-      }, { onConflict: 'id' })
-
-      if (profileError) {
-        return { error: new Error(profileError.message) }
+      if (!res.ok) {
+        return { error: new Error(body.error || 'Signup failed') }
       }
-    }
 
-    return { error: null, userId: data.user?.id }
+      // Set the session returned by the server
+      if (body.session?.access_token && body.session?.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: body.session.access_token,
+          refresh_token: body.session.refresh_token,
+        })
+      }
+
+      return { error: null, userId: body.user?.id }
+    } catch (err) {
+      return { error: err instanceof Error ? err : new Error('Signup failed') }
+    }
   }
 
   async signOut(): Promise<void> {

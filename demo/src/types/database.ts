@@ -231,43 +231,6 @@ export type Database = {
           }
         ]
       }
-      direct_messages: {
-        Row: {
-          id: string
-          sender_id: string
-          recipient_id: string
-          content: string
-          read: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          sender_id: string
-          recipient_id: string
-          content: string
-          read?: boolean
-          created_at?: string
-        }
-        Update: {
-          read?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "direct_messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "direct_messages_recipient_id_fkey"
-            columns: ["recipient_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       voice_rooms: {
         Row: {
           id: string

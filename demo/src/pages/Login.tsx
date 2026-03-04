@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -17,9 +17,24 @@ type LoginFormData = z.infer<typeof loginSchema>
 
 export default function Login() {
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const { signIn, signInWithGitHub } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam === 'email_exists') {
+      setInfo('An account with this email already exists. Sign in with your local account, then connect Forumline from Settings.')
+      searchParams.delete('error')
+      setSearchParams(searchParams, { replace: true })
+    } else if (errorParam === 'auth_failed') {
+      setError('Forumline sign-in failed. Please try again.')
+      searchParams.delete('error')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [])
 
   const {
     register,
@@ -53,6 +68,11 @@ export default function Login() {
         <p className="mt-2 text-slate-400">Welcome back! Sign in to your account.</p>
 
         <div aria-live="polite">
+          {info && (
+            <div role="status" className="mt-4 rounded-lg bg-indigo-500/10 border border-indigo-500/20 p-3 text-sm text-indigo-300">
+              {info}
+            </div>
+          )}
           {error && (
             <div id="login-error" role="alert" className="mt-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
               {error}

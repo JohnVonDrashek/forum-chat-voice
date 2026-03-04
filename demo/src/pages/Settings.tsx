@@ -488,11 +488,31 @@ export default function Settings() {
               <div className="border-t border-slate-700 pt-6">
                 <h3 className="mb-4 font-medium text-white">Forumline Connection</h3>
                 {isHubConnected || profile?.forumline_id ? (
-                  <div className="flex items-center gap-2 text-sm">
-                    <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-green-400">Connected to Forumline</span>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-green-400">Connected to Forumline</span>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!user) return
+                        const { error } = await supabase
+                          .from('profiles')
+                          .update({ forumline_id: null })
+                          .eq('id', user.id)
+                        if (error) {
+                          toast.error('Failed to disconnect: ' + error.message)
+                        } else {
+                          toast.success('Disconnected from Forumline')
+                          window.location.reload()
+                        }
+                      }}
+                      className="text-sm text-slate-400 hover:text-red-400 underline"
+                    >
+                      Disconnect from Forumline
+                    </button>
                   </div>
                 ) : (
                   <div>
