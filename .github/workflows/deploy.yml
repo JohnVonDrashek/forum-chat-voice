@@ -28,28 +28,19 @@ jobs:
       - name: Install Vercel CLI
         run: npm i -g vercel
 
-      - name: Wait for Publish Packages if running
-        run: |
-          # If a Publish Packages run is in progress for this commit, wait for it
-          RUN_ID=$(gh run list --workflow=publish-packages.yml --commit ${{ github.sha }} --status in_progress --json databaseId -q '.[0].databaseId' 2>/dev/null || true)
-          if [ -n "$RUN_ID" ]; then
-            echo "Waiting for Publish Packages run $RUN_ID to complete..."
-            gh run watch "$RUN_ID" --exit-status
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install app dependencies
+      - name: Install all dependencies
         run: npm ci
-        working-directory: ${{ inputs.working-directory }}
         env:
           GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build packages
+        run: npx turbo run build --filter=...${{ inputs.working-directory }}
 
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=production --token ${{ secrets.VERCEL_TOKEN }}
         working-directory: ${{ inputs.working-directory }}
 
-      - name: Build
+      - name: Build for Vercel
         run: vercel build --prod --token ${{ secrets.VERCEL_TOKEN }}
         working-directory: ${{ inputs.working-directory }}
 

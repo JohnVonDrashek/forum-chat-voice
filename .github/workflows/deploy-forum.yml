@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'forum-demo/**'
+      - 'packages/**'
 
 jobs:
   deploy:

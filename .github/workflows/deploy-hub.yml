@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'central-services/**'
+      - 'packages/**'
 
 jobs:
   deploy:

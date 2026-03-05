@@ -1,13 +1,14 @@
 {
   "name": "forumline",
   "private": true,
-  "workspaces": ["packages/*"],
+  "packageManager": "npm@10.8.2",
+  "workspaces": ["packages/*", "forum-demo", "central-services"],
   "scripts": {
     "tauri": "tauri",
     "tauri:dev": "TAURI_DIR=native-app tauri dev",
     "tauri:build": "TAURI_DIR=native-app tauri build",
     "dev:hub": "npm run --prefix central-services dev",
-    "build:packages": "npm run --workspace=packages/protocol build && npm run --workspace=packages/server-sdk build && npm run --workspace=packages/central-services-client build && npm run --workspace=packages/react build",
+    "build": "turbo run build",
     "clean": "npm run --workspaces --if-present clean",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -17,6 +18,7 @@
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.0.0",
     "prettier": "^3.0.0",
+    "turbo": "^2",
     "typescript-eslint": "^8.0.0"
   }
 }
