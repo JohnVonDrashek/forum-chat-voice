@@ -36,19 +36,6 @@ jobs:
       - name: Build packages
         run: npx turbo run build --filter=./${{ inputs.working-directory }}...
 
-      - name: Link workspace packages into app node_modules
-        run: |
-          # npm hoists workspace symlinks to root node_modules/ but leaves empty
-          # @johnvondrashek/ dirs in app node_modules/, blocking Node.js resolution.
-          # Create symlinks so Vercel's nft bundler can find the packages.
-          for pkg in packages/*/; do
-            name=$(node -p "require('./$pkg/package.json').name.replace('@johnvondrashek/', '')")
-            target="${{ inputs.working-directory }}/node_modules/@johnvondrashek/$name"
-            rm -rf "$target"
-            ln -s "$(pwd)/$pkg" "$target"
-          done
-          ls -la ${{ inputs.working-directory }}/node_modules/@johnvondrashek/
-
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=production --token ${{ secrets.VERCEL_TOKEN }} --cwd ${{ inputs.working-directory }}
 
