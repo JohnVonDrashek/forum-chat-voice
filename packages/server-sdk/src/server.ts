@@ -136,7 +136,7 @@ export interface GenericResponse {
 export type RequestHandler = (req: GenericRequest, res: GenericResponse) => void | Promise<void>
 
 export class ForumlineServer {
-  private config: ForumlineServerConfig
+  readonly config: ForumlineServerConfig
   private sseClients: Map<string, Set<{
     write: (data: string) => void
     end: () => void

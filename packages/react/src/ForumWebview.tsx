@@ -5,9 +5,8 @@
  * The iframe is sandboxed for security and keyed by domain for clean remounts.
  *
  * When `authUrl` is provided, a login banner appears at the top of the webview.
- * Clicking "Log in" opens a popup for the OAuth flow (the hub sets X-Frame-Options: deny,
- * so the auth URL cannot load inside the iframe). Once the popup completes/closes,
- * the component asks the forum iframe for its auth state.
+ * Clicking "Log in" navigates the iframe through the OAuth flow, which completes
+ * entirely server-side and redirects back to the forum fully authenticated.
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react'
@@ -63,12 +62,6 @@ export default function ForumWebview({ forum, authUrl, onAuthed, onSignedOut, on
           if (msg.signedIn) {
             if (onAuthed && !hasCalledAuthed.current) {
               hasCalledAuthed.current = true
-              setLoggingIn(false)
-              // Close the auth popup if still open
-              if (authPopupRef.current && !authPopupRef.current.closed) {
-                authPopupRef.current.close()
-              }
-              authPopupRef.current = null
               onAuthed(forum.domain)
             }
           } else {
@@ -96,44 +89,25 @@ export default function ForumWebview({ forum, authUrl, onAuthed, onSignedOut, on
     return () => window.removeEventListener('message', handleMessage)
   }, [forum.domain, forumOrigin, onAuthed, onSignedOut, onUnreadCounts, onNotification, onNavigate])
 
-  const authPopupRef = useRef<Window | null>(null)
-
   const handleLogin = useCallback(() => {
     if (!authUrl) return
     setLoggingIn(true)
-    // Open auth in a popup — the hub sets X-Frame-Options: deny so it can't load in the iframe
-    const w = 500, h = 600
-    const left = window.screenX + (window.outerWidth - w) / 2
-    const top = window.screenY + (window.outerHeight - h) / 2
-    authPopupRef.current = window.open(
-      authUrl,
-      'forumline-auth',
-      `width=${w},height=${h},left=${left},top=${top}`,
-    )
+    setLoading(true)
+    setIframeSrc(authUrl)
   }, [authUrl])
-
-  // Close auth popup when auth completes
-  useEffect(() => {
-    if (!loggingIn) return
-    const interval = setInterval(() => {
-      if (authPopupRef.current?.closed) {
-        clearInterval(interval)
-        setLoggingIn(false)
-        // Ask the forum if the auth succeeded
-        const requestAuth: HubToForumMessage = { type: 'forumline:request_auth_state' }
-        iframeRef.current?.contentWindow?.postMessage(requestAuth, forumOrigin)
-      }
-    }, 500)
-    return () => clearInterval(interval)
-  }, [loggingIn, forumOrigin])
 
   const handleLoad = useCallback(() => {
     setLoading(false)
+    if (loggingIn && onAuthed && !hasCalledAuthed.current) {
+      hasCalledAuthed.current = true
+      setLoggingIn(false)
+      onAuthed(forum.domain)
+    }
     // Ask the forum for its current auth state as a fallback
     // (the primary path is the forumline:ready event from the forum).
     const requestAuth: HubToForumMessage = { type: 'forumline:request_auth_state' }
     iframeRef.current?.contentWindow?.postMessage(requestAuth, forumOrigin)
-  }, [forum.domain, forumOrigin])
+  }, [loggingIn, onAuthed, forum.domain, forumOrigin])
 
   const showBanner = !!authUrl && !loggingIn && !hasCalledAuthed.current
 
