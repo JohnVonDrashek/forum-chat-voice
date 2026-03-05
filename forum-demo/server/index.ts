@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
+import { cors } from 'hono/cors'
 import { wrapHandler } from './vercel-compat.js'
 
 const app = new Hono()
@@ -23,6 +24,16 @@ app.use('*', async (c, next) => {
     'microphone=(self "https://app.forumline.net"), display-capture=(self "https://app.forumline.net")',
   )
 })
+
+// ---------------------------------------------------------------------------
+// .well-known (forumline manifest — needs CORS for hub discovery)
+// ---------------------------------------------------------------------------
+
+app.use(
+  '/.well-known/*',
+  cors({ origin: '*' }),
+  serveStatic({ root: './dist' }),
+)
 
 // ---------------------------------------------------------------------------
 // API routes
