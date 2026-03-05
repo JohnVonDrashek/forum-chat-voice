@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { ForumNotification } from '@johnvondrashek/forumline-protocol'
 import { ForumWebview, useForum, useHub, isTauri, getTauriNotification, useDeepLink } from '@johnvondrashek/forumline-react'
 import type { DeepLinkTarget } from '@johnvondrashek/forumline-react'
+import { hubSupabase } from '../App'
 import WelcomePage from './WelcomePage'
 import DmPanel from './DmPanel'
 import SettingsPage from './SettingsPage'
@@ -152,6 +153,135 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
       }
     }
   }, [mutedForums])
+
+  // DM notification listener — fires native/browser notification on new DMs
+  useEffect(() => {
+    if (!hubSession) return
+
+    const channel = hubSupabase
+      .channel('dm-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'hub_direct_messages',
+          filter: `recipient_id=eq.${hubSession.user.id}`,
+        },
+        async (payload) => {
+          // Don't notify if DM panel is active and visible
+          if (view === 'dms' && document.visibilityState === 'visible') return
+
+          const row = payload.new as { sender_id: string; content: string }
+
+          // Look up sender's username
+          const { data: sender } = await hubSupabase
+            .from('hub_profiles')
+            .select('username')
+            .eq('id', row.sender_id)
+            .single()
+
+          const title = `Message from ${sender?.username ?? 'someone'}`
+          const body = row.content.length > 100 ? row.content.slice(0, 100) + '...' : row.content
+
+          if (isTauri()) {
+            try {
+              const { sendNotification, isPermissionGranted, requestPermission } = await getTauriNotification()
+              let permitted = await isPermissionGranted()
+              if (!permitted) {
+                const result = await requestPermission()
+                permitted = result === 'granted'
+              }
+              if (permitted) sendNotification({ title, body })
+            } catch (err) {
+              console.error('[Hub] DM notification error:', err)
+            }
+          } else if ('Notification' in window) {
+            if (Notification.permission === 'default') {
+              await Notification.requestPermission()
+            }
+            if (Notification.permission === 'granted') {
+              new Notification(title, { body })
+            }
+          }
+        },
+      )
+      .subscribe()
+
+    return () => {
+      hubSupabase.removeChannel(channel)
+    }
+  }, [hubSession, view])
+
+  // Register service worker + push subscription
+  useEffect(() => {
+    if (!hubSession || !('serviceWorker' in navigator) || !('PushManager' in window)) return
+
+    const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
+    if (!vapidPublicKey) return
+
+    let cancelled = false
+
+    const registerPush = async () => {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js')
+        await navigator.serviceWorker.ready
+
+        // Check for existing subscription or create new one
+        let subscription = await registration.pushManager.getSubscription()
+        if (!subscription) {
+          // Convert VAPID key from URL-safe base64 to Uint8Array
+          const padding = '='.repeat((4 - (vapidPublicKey.length % 4)) % 4)
+          const base64 = (vapidPublicKey + padding).replace(/-/g, '+').replace(/_/g, '/')
+          const rawData = atob(base64)
+          const applicationServerKey = new Uint8Array(rawData.length)
+          for (let i = 0; i < rawData.length; i++) {
+            applicationServerKey[i] = rawData.charCodeAt(i)
+          }
+
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey,
+          })
+        }
+
+        if (cancelled) return
+
+        // Send subscription to server
+        const sub = subscription.toJSON()
+        await fetch('/api/push-subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${hubSession.access_token}`,
+          },
+          body: JSON.stringify({
+            endpoint: sub.endpoint,
+            keys: sub.keys,
+          }),
+        })
+      } catch (err) {
+        console.error('[Hub] Push subscription failed:', err)
+      }
+    }
+
+    registerPush()
+    return () => { cancelled = true }
+  }, [hubSession])
+
+  // Listen for notification click from service worker
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === 'notification-click') {
+        const { forum_domain, link } = event.data
+        if (forum_domain) {
+          switchForum(forum_domain)
+        }
+      }
+    }
+    navigator.serviceWorker?.addEventListener('message', handler)
+    return () => navigator.serviceWorker?.removeEventListener('message', handler)
+  }, [switchForum])
 
   return (
     <div className="flex h-dvh flex-col">
