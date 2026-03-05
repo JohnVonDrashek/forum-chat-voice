@@ -12,7 +12,6 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, username: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
-  signInWithGitHub: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: Error | null }>
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>
 }
@@ -235,10 +234,6 @@ export function AuthProvider({ children, authProvider }: { children: ReactNode; 
     loadedUserIdRef.current = null
   }
 
-  const signInWithGitHub = async () => {
-    await authProvider.signInWithOAuth('github')
-  }
-
   const resetPassword = async (email: string) => {
     return authProvider.resetPassword(email)
   }
@@ -248,7 +243,7 @@ export function AuthProvider({ children, authProvider }: { children: ReactNode; 
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, signInWithGitHub, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   )

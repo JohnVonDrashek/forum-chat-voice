@@ -40,9 +40,6 @@ export interface ForumAuthProvider {
   /** Sign out the current user */
   signOut(): Promise<void>
 
-  /** Sign in with a third-party OAuth provider */
-  signInWithOAuth(provider: string): Promise<void>
-
   /** Send a password reset email */
   resetPassword(email: string): Promise<{ error: Error | null }>
 

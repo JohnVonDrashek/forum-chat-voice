@@ -55,17 +55,6 @@ export class SupabaseAuthProvider implements ForumAuthProvider {
     }
   }
 
-  async signInWithOAuth(provider: string): Promise<void> {
-    try {
-      await supabase.auth.signInWithOAuth({
-        provider: provider as 'github',
-        options: { redirectTo: siteUrl },
-      })
-    } catch (err) {
-      console.error(`[Forumline:Auth] ${provider} OAuth failed:`, err)
-    }
-  }
-
   async resetPassword(email: string): Promise<{ error: Error | null }> {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${siteUrl}/reset-password`,
