@@ -39,6 +39,7 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
   const [deepLinkPath, setDeepLinkPath] = useState<string | null>(null)
   const [forumPath, setForumPath] = useState('/')
   const [copied, setCopied] = useState(false)
+  const [mutedForums, setMutedForums] = useState<Set<string>>(new Set())
 
   const { data: dmConversations } = useQuery({
     queryKey: ['hub', 'dm', 'conversations'],
@@ -87,11 +88,14 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
           headers: { Authorization: `Bearer ${hubSession.access_token}` },
         })
         if (!res.ok) return
-        const memberships: { forum_domain: string; forum_authed_at: string | null }[] = await res.json()
+        const memberships: { forum_domain: string; forum_authed_at: string | null; notifications_muted?: boolean }[] = await res.json()
         const authed = new Set(
           memberships.filter(m => m.forum_authed_at).map(m => m.forum_domain),
         )
         setAuthedForums(authed)
+        setMutedForums(new Set(
+          memberships.filter(m => m.notifications_muted).map(m => m.forum_domain),
+        ))
       } catch {
         // Non-critical — postMessage handshake will detect auth state anyway
       }
@@ -117,7 +121,9 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
     if (hubSession) updateForumAuthState(hubSession.access_token, domain, false)
   }, [hubSession])
 
-  const handleForumNotification = useCallback(async (_domain: string, notification: ForumNotification) => {
+  const handleForumNotification = useCallback(async (domain: string, notification: ForumNotification) => {
+    // Skip if forum is muted
+    if (mutedForums.has(domain)) return
     // Only notify when window is not visible (works on mobile too)
     if (document.visibilityState === 'visible') return
 
@@ -145,7 +151,7 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
         new Notification(title, { body })
       }
     }
-  }, [])
+  }, [mutedForums])
 
   return (
     <div className="flex h-dvh flex-col">

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { useForum, useHub } from '@johnvondrashek/forumline-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { hubSupabase } from '../App'
 import HubAuth from './HubAuth'
 import Avatar from './Avatar'
@@ -17,6 +18,50 @@ export default function SettingsPage({ hubSession, onClose }: SettingsPageProps)
   const { isHubConnected } = useHub()
   const [removingDomain, setRemovingDomain] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  const { data: memberships = [] } = useQuery({
+    queryKey: ['hub', 'memberships'],
+    queryFn: async () => {
+      if (!hubSession) return []
+      const res = await fetch('/api/memberships', {
+        headers: { Authorization: `Bearer ${hubSession.access_token}` },
+      })
+      if (!res.ok) return []
+      return res.json() as Promise<{ forum_domain: string; notifications_muted: boolean }[]>
+    },
+    enabled: !!hubSession,
+  })
+
+  const muteMutation = useMutation({
+    mutationFn: async ({ forum_domain, muted }: { forum_domain: string; muted: boolean }) => {
+      const res = await fetch('/api/forum-notifications', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${hubSession!.access_token}`,
+        },
+        body: JSON.stringify({ forum_domain, muted }),
+      })
+      if (!res.ok) throw new Error('Failed to toggle mute')
+    },
+    onMutate: async ({ forum_domain, muted }) => {
+      await queryClient.cancelQueries({ queryKey: ['hub', 'memberships'] })
+      const prev = queryClient.getQueryData<{ forum_domain: string; notifications_muted: boolean }[]>(['hub', 'memberships'])
+      queryClient.setQueryData<{ forum_domain: string; notifications_muted: boolean }[]>(
+        ['hub', 'memberships'],
+        (old = []) => old.map(m => m.forum_domain === forum_domain ? { ...m, notifications_muted: muted } : m),
+      )
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['hub', 'memberships'], ctx.prev)
+    },
+  })
+
+  const isMuted = useCallback((domain: string) => {
+    return memberships.find(m => m.forum_domain === domain)?.notifications_muted ?? false
+  }, [memberships])
 
   useEffect(() => {
     if (!hubSession) return
@@ -123,6 +168,22 @@ export default function SettingsPage({ hubSession, onClose }: SettingsPageProps)
                     <p className="font-medium text-white">{forum.name}</p>
                     <p className="text-sm text-slate-400">{forum.domain}</p>
                   </div>
+                  <button
+                    onClick={() => muteMutation.mutate({ forum_domain: forum.domain, muted: !isMuted(forum.domain) })}
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white"
+                    title={isMuted(forum.domain) ? 'Unmute notifications' : 'Mute notifications'}
+                  >
+                    {isMuted(forum.domain) ? (
+                      <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                      </svg>
+                    )}
+                  </button>
                   <Button
                     variant="danger"
                     onClick={() => handleRemoveForum(forum.domain)}
