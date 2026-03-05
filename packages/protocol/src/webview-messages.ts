@@ -10,6 +10,7 @@ export type ForumToHubMessage =
   | { type: 'forumline:auth_state'; signedIn: boolean }
   | { type: 'forumline:unread_counts'; counts: UnreadCounts }
   | { type: 'forumline:notification'; notification: ForumNotification }
+  | { type: 'forumline:navigate'; path: string }
 
 /** Messages sent from hub parent → forum iframe */
 export type HubToForumMessage =

@@ -25,11 +25,13 @@ interface ForumWebviewProps {
   onUnreadCounts?: (domain: string, counts: UnreadCounts) => void
   /** Called when the forum sends a notification */
   onNotification?: (domain: string, notification: ForumNotification) => void
+  /** Called when the user navigates within the forum */
+  onNavigate?: (domain: string, path: string) => void
   /** Optional path to navigate to within the forum (e.g. from a deep link) */
   initialPath?: string | null
 }
 
-export default function ForumWebview({ forum, authUrl, onAuthed, onSignedOut, onUnreadCounts, onNotification, initialPath }: ForumWebviewProps) {
+export default function ForumWebview({ forum, authUrl, onAuthed, onSignedOut, onUnreadCounts, onNotification, onNavigate, initialPath }: ForumWebviewProps) {
   const [loading, setLoading] = useState(true)
   const initialUrl = initialPath ? `${forum.web_base}${initialPath}` : forum.web_base
   const [iframeSrc, setIframeSrc] = useState(initialUrl)
@@ -77,11 +79,15 @@ export default function ForumWebview({ forum, authUrl, onAuthed, onSignedOut, on
         case 'forumline:notification':
           onNotification?.(forum.domain, msg.notification)
           break
+
+        case 'forumline:navigate':
+          onNavigate?.(forum.domain, msg.path)
+          break
       }
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [forum.domain, forumOrigin, onAuthed, onSignedOut, onUnreadCounts, onNotification])
+  }, [forum.domain, forumOrigin, onAuthed, onSignedOut, onUnreadCounts, onNotification, onNavigate])
 
   const handleLogin = useCallback(() => {
     if (!authUrl) return

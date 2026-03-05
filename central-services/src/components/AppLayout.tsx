@@ -37,6 +37,8 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
   const [view, setView] = useState<AppView>('forums')
   const [authedForums, setAuthedForums] = useState<Set<string> | null>(null)
   const [deepLinkPath, setDeepLinkPath] = useState<string | null>(null)
+  const [forumPath, setForumPath] = useState('/')
+  const [copied, setCopied] = useState(false)
 
   const { data: dmConversations } = useQuery({
     queryKey: ['hub', 'dm', 'conversations'],
@@ -54,10 +56,24 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
   }, [switchForum])
   useDeepLink(handleDeepLink)
 
-  // Clear deep link path when forum changes (so it doesn't persist to next switch)
+  // Clear deep link path and forum path when forum changes
   useEffect(() => {
+    setForumPath('/')
     return () => setDeepLinkPath(null)
   }, [activeForum?.domain])
+
+  const handleNavigate = useCallback((_domain: string, path: string) => {
+    setForumPath(path)
+  }, [])
+
+  const handleShare = useCallback(() => {
+    if (!activeForum) return
+    const url = activeForum.web_base + forumPath
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }, [activeForum, forumPath])
 
   // Pre-populate authedForums from persisted membership data on mount
   useEffect(() => {
@@ -144,15 +160,32 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
 
         {activeForum && (
           <div className={view !== 'forums' ? 'hidden' : 'flex flex-1 flex-col overflow-hidden'}>
-            <button
-              onClick={goHome}
-              className="flex shrink-0 items-center gap-2 border-b border-slate-700 bg-slate-900 px-4 py-2.5 text-slate-300 hover:text-white"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span className="text-sm font-medium">{activeForum.name}</span>
-            </button>
+            <div className="flex shrink-0 items-center border-b border-slate-700 bg-slate-900">
+              <button
+                onClick={goHome}
+                className="flex flex-1 items-center gap-2 px-4 py-2.5 text-slate-300 hover:text-white"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span className="text-sm font-medium">{activeForum.name}</span>
+              </button>
+              <button
+                onClick={handleShare}
+                className="px-3 py-2.5 text-slate-400 hover:text-white transition-colors"
+                title="Copy link to this page"
+              >
+                {copied ? (
+                  <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                )}
+              </button>
+            </div>
             <ForumWebview
               forum={activeForum}
               authUrl={authUrlForForum}
@@ -160,6 +193,7 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
               onSignedOut={handleForumSignedOut}
               onUnreadCounts={setUnreadCounts}
               onNotification={handleForumNotification}
+              onNavigate={handleNavigate}
               initialPath={deepLinkPath}
             />
           </div>

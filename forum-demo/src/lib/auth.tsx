@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
+import { useLocation } from 'react-router-dom'
 import type { ForumAuthProvider, AppUser } from './auth-provider'
 import { useDataProvider } from './data-provider'
 import { uploadDefaultAvatar } from './avatars'
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children, authProvider }: { children: ReactNode; authProvider: ForumAuthProvider }) {
   const dp = useDataProvider()
+  const location = useLocation()
   const [user, setUser] = useState<AppUser | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -206,6 +208,17 @@ export function AuthProvider({ children, authProvider }: { children: ReactNode; 
       window.removeEventListener('message', handleHubMessage)
     }
   }, [])
+
+  // Notify parent frame (hub) when the user navigates within the forum
+  useEffect(() => {
+    if (window.parent === window) return
+    const path = location.pathname + location.search + location.hash
+    const targetOrigin = parentOriginRef.current || '*'
+    window.parent.postMessage(
+      { type: 'forumline:navigate', path } satisfies ForumToHubMessage,
+      targetOrigin,
+    )
+  }, [location])
 
   // Strip ?forumline_auth=success from URL after Supabase picks up session
   useEffect(() => {
