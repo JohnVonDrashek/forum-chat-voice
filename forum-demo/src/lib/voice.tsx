@@ -396,11 +396,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       })
 
       await room.connect(livekitUrl, token)
-      // Force mono capture — stereo mics send voice on the left channel only,
-      // causing audio to play in one ear for remote participants.
-      await room.localParticipant.setMicrophoneEnabled(true, {
-        channelCount: 1,
-      })
+      await room.localParticipant.setMicrophoneEnabled(true)
 
       setIsConnected(true)
       setIsMuted(false)
@@ -424,7 +420,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     const room = livekitRoomRef.current
     if (!room) return
     const newMuted = !isMuted
-    await room.localParticipant.setMicrophoneEnabled(!newMuted, { channelCount: 1 })
+    await room.localParticipant.setMicrophoneEnabled(!newMuted)
     setIsMuted(newMuted)
   }, [isMuted])
 
