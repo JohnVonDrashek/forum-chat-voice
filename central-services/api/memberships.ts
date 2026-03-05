@@ -37,6 +37,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ ok: true })
   }
 
+  // PUT — toggle notification mute for a forum
+  if (req.method === 'PUT') {
+    const { forum_domain, muted } = req.body as { forum_domain?: string; muted?: boolean }
+    if (!forum_domain || typeof muted !== 'boolean') {
+      return res.status(400).json({ error: 'Missing forum_domain or muted' })
+    }
+
+    const { data: forum } = await supabase
+      .from('forumline_forums')
+      .select('id')
+      .eq('domain', forum_domain)
+      .single()
+
+    if (!forum) return res.status(404).json({ error: 'Forum not found' })
+
+    const { error } = await supabase
+      .from('forumline_memberships')
+      .update({ notifications_muted: muted })
+      .eq('user_id', user.id)
+      .eq('forum_id', forum.id)
+
+    if (error) return res.status(500).json({ error: 'Failed to update mute state' })
+    return res.status(200).json({ ok: true })
+  }
+
   // GET — list memberships
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })

@@ -35,7 +35,7 @@ export default function SettingsPage({ hubSession, onClose }: SettingsPageProps)
 
   const muteMutation = useMutation({
     mutationFn: async ({ forum_domain, muted }: { forum_domain: string; muted: boolean }) => {
-      const res = await fetch('/api/forum-notifications', {
+      const res = await fetch('/api/memberships', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

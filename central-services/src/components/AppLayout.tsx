@@ -249,7 +249,7 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
 
         // Send subscription to server
         const sub = subscription.toJSON()
-        await fetch('/api/push-subscribe', {
+        await fetch('/api/push?action=subscribe', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

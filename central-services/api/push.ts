@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import webpush from 'web-push'
-import { getHubSupabase } from './_lib/supabase.js'
+import { getHubSupabase, getAuthenticatedUser } from './_lib/supabase.js'
 
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT!
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY!
@@ -8,12 +8,70 @@ const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY!
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
 
+/**
+ * POST /api/push?action=subscribe — register a push subscription (authed user)
+ * DELETE /api/push?action=subscribe — unregister a push subscription (authed user)
+ * POST /api/push?action=notify — send push notification (server-to-server, service key auth)
+ */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+  const action = req.query.action as string
+
+  if (action === 'notify' && req.method === 'POST') {
+    return handleNotify(req, res)
   }
 
-  // Authenticate: accept hub service role key or forum client credentials
+  if (action === 'subscribe') {
+    return handleSubscribe(req, res)
+  }
+
+  return res.status(400).json({ error: 'Missing or invalid action query param' })
+}
+
+async function handleSubscribe(req: VercelRequest, res: VercelResponse) {
+  const user = await getAuthenticatedUser(req, res)
+  if (!user) return
+
+  const supabase = getHubSupabase()
+
+  if (req.method === 'POST') {
+    const { endpoint, keys } = req.body as {
+      endpoint?: string
+      keys?: { p256dh?: string; auth?: string }
+    }
+
+    if (!endpoint || !keys?.p256dh || !keys?.auth) {
+      return res.status(400).json({ error: 'Missing subscription fields' })
+    }
+
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .upsert(
+        { user_id: user.id, endpoint, p256dh: keys.p256dh, auth: keys.auth },
+        { onConflict: 'user_id,endpoint' }
+      )
+
+    if (error) return res.status(500).json({ error: error.message })
+    return res.json({ ok: true })
+  }
+
+  if (req.method === 'DELETE') {
+    const { endpoint } = req.body as { endpoint?: string }
+    if (!endpoint) return res.status(400).json({ error: 'Missing endpoint' })
+
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('endpoint', endpoint)
+
+    if (error) return res.status(500).json({ error: error.message })
+    return res.json({ ok: true })
+  }
+
+  return res.status(405).json({ error: 'Method not allowed' })
+}
+
+async function handleNotify(req: VercelRequest, res: VercelResponse) {
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing authorization' })
@@ -22,11 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const token = authHeader.slice(7)
   const serviceKey = process.env.HUB_SUPABASE_SERVICE_ROLE_KEY
 
-  // Simple shared-secret auth: the forum sends the hub's service role key
-  // (configured in the forum's env as HUB_PUSH_SECRET)
-  // OR a valid forum client_secret
   if (token !== serviceKey) {
-    // Check if it's a valid forum client_secret
     const supabase = getHubSupabase()
     const { data: client } = await supabase
       .from('forumline_oauth_clients')
@@ -54,7 +108,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const supabase = getHubSupabase()
 
-  // Resolve the hub user_id from forumline_id if needed
   let targetUserId = user_id
   if (!targetUserId && forumline_id) {
     const { data: profile } = await supabase
@@ -63,9 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq('id', forumline_id)
       .single()
 
-    if (!profile) {
-      return res.status(404).json({ error: 'User not found' })
-    }
+    if (!profile) return res.status(404).json({ error: 'User not found' })
     targetUserId = profile.id
   }
 
@@ -73,7 +124,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing user_id or forumline_id' })
   }
 
-  // Check if forum is muted for this user
+  // Check if forum is muted
   if (forum_domain) {
     const { data: forum } = await supabase
       .from('forumline_forums')
@@ -95,7 +146,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // Get all push subscriptions for this user
   const { data: subscriptions } = await supabase
     .from('push_subscriptions')
     .select('endpoint, p256dh, auth')
@@ -113,15 +163,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   for (const sub of subscriptions) {
     try {
       await webpush.sendNotification(
-        {
-          endpoint: sub.endpoint,
-          keys: { p256dh: sub.p256dh, auth: sub.auth },
-        },
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
         payload
       )
       sent++
     } catch (err: any) {
-      // 410 Gone or 404 = subscription expired, clean it up
       if (err.statusCode === 410 || err.statusCode === 404) {
         staleEndpoints.push(sub.endpoint)
       } else {
@@ -130,7 +176,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // Clean up stale subscriptions
   if (staleEndpoints.length > 0) {
     await supabase
       .from('push_subscriptions')
