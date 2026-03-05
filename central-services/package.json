@@ -9,8 +9,9 @@
   },
   "dependencies": {
     "@johnvondrashek/forumline-central-services-client": "^0.2.0",
-    "@johnvondrashek/forumline-protocol": "^0.2.0",
+    "@johnvondrashek/forumline-protocol": "^0.3.2",
     "@johnvondrashek/forumline-react": "^0.2.0",
+    "@johnvondrashek/forumline-server-sdk": "^0.3.1",
     "@supabase/supabase-js": "^2.98.0",
     "@tanstack/react-query": "^5.62.16",
     "jsonwebtoken": "^9.0.2",
