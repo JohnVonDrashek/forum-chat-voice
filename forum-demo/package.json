@@ -20,7 +20,7 @@
   "dependencies": {
     "@johnvondrashek/forumline-central-services-client": "0.2.0",
     "@johnvondrashek/forumline-protocol": "0.3.2",
-    "@johnvondrashek/forumline-react": "0.3.0",
+    "@johnvondrashek/forumline-react": "0.3.1",
     "@johnvondrashek/forumline-server-sdk": "0.3.2",
     "@dicebear/avataaars": "^9.3.2",
     "@dicebear/core": "^9.3.2",

@@ -82,9 +82,15 @@ interface ForumManifest {
 }
 
 async function fetchManifest(url: string): Promise<ForumManifest> {
-  const manifestUrl = url.includes('/.well-known/forumline-manifest.json')
-    ? url
-    : `${url.replace(/\/$/, '')}/.well-known/forumline-manifest.json`
+  // Ensure the URL has a protocol — without it, fetch() treats it as a relative path
+  let normalized = url.trim()
+  if (!/^https?:\/\//i.test(normalized)) {
+    normalized = `https://${normalized}`
+  }
+
+  const manifestUrl = normalized.includes('/.well-known/forumline-manifest.json')
+    ? normalized
+    : `${normalized.replace(/\/$/, '')}/.well-known/forumline-manifest.json`
 
   const resp = await fetch(manifestUrl)
   if (!resp.ok) throw new Error(`Forum returned HTTP ${resp.status}: not a valid Forumline forum`)
