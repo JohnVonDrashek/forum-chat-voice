@@ -8,11 +8,12 @@ on:
       - 'central-services/**'
       - 'packages/**'
       - 'package-lock.json'
+      - 'Dockerfile.central-services'
 
 jobs:
   deploy:
-    uses: ./.github/workflows/deploy.yml
+    uses: ./.github/workflows/deploy-fly.yml
     with:
-      project-id: prj_bIR1T3sDDe3bhKQjLHH7WGlXuKCu
       working-directory: central-services
-    secrets: inherit
+    secrets:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

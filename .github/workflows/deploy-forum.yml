@@ -8,11 +8,12 @@ on:
       - 'forum-demo/**'
       - 'packages/**'
       - 'package-lock.json'
+      - 'Dockerfile.forum-demo'
 
 jobs:
   deploy:
-    uses: ./.github/workflows/deploy.yml
+    uses: ./.github/workflows/deploy-fly.yml
     with:
-      project-id: prj_Q6NCsZIw3eRbYLQFMTkLon3wZ3Nk
       working-directory: forum-demo
-    secrets: inherit
+    secrets:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

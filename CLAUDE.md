@@ -14,12 +14,12 @@ Do NOT deploy npm packages manually. There are Github actions for that.
 
 Do NOT link 
 
-Both projects deploy via GitHub Actions on push to main. Do NOT deploy via Vercel CLI or Vercel dashboard.
+Both projects deploy via GitHub Actions on push to main. Do NOT deploy via Vercel CLI, Vercel dashboard, or `flyctl deploy` manually.
 
 - **Forumline Demo** (demo.forumline.net): `.github/workflows/deploy-forum.yml` — triggers on `forum-demo/` or `packages/` changes
-- **Forumline Central Services** (app.forumline.net): `.github/workflows/deploy-hub.yml` — triggers only on `central-services/` changes
+- **Forumline Central Services** (app.forumline.net): `.github/workflows/deploy-hub.yml` — triggers on `central-services/` or `packages/` changes
 
-Both use the `VERCEL_TOKEN` GitHub secret.
+Both deploy to Fly.io using Docker. The `FLY_API_TOKEN` GitHub secret is required.
 
 ## Testing
 
@@ -40,7 +40,7 @@ packages/
 
 npm workspaces are configured at root. Run `npm install` from root to link all packages.
 
-**CRITICAL — Do NOT remove `forum-demo` from npm workspaces or try to change the workspace/hoisting configuration.** Past attempts to fix Vercel deploy issues by removing forum-demo from workspaces, adding `file:` deps, changing `--install-strategy`, adding symlink scripts, etc. all failed and wasted hours. The current setup works. If Vercel serverless functions crash, the problem is almost certainly a runtime bug (e.g. malformed env vars, missing null checks), NOT a package resolution issue. Debug the actual error before touching workspaces.
+**CRITICAL — Do NOT remove `forum-demo` from npm workspaces or try to change the workspace/hoisting configuration.**
 
 ### Package Details
 
@@ -49,8 +49,14 @@ npm workspaces are configured at root. Run `npm install` from root to link all p
 - **@forumline/central-services-client** — Headless HTTP client for cross-forum DMs (conversations, messages, profiles)
 - **@forumline/react** — `ForumProvider`, `HubProvider`, `ForumRail`, `ForumWebview`, `useNativeNotifications`, `isTauri` utilities
 
-## Vercel
-The Vercel CLI token is stored in macOS Keychain under `vercel-token`.
+## Fly.io
+
+Both apps run as Docker containers on Fly.io. Each app has a Hono HTTP server (`server/index.ts`) that wraps existing Vercel-style API handlers via the `vercel-compat.ts` adapter.
+
+- Dockerfiles at repo root: `Dockerfile.forum-demo`, `Dockerfile.central-services`
+- Fly config: `forum-demo/fly.toml`, `central-services/fly.toml`
+- Local dev: `docker compose up --build` or `npm run dev:server` in each app directory
+- Server build: `npm run build:server` (uses esbuild)
 
 ## Supabase
 The Supabase personal access token is stored in macOS Keychain under `supabase-access-token`.
@@ -60,4 +66,4 @@ The Supabase personal access token is stored in macOS Keychain under `supabase-a
 - React 19 + Vite + TailwindCSS
 - Supabase (auth, database, realtime)
 - LiveKit (voice rooms)
-- Deployed on Vercel
+- Hono HTTP server + Docker on Fly.io

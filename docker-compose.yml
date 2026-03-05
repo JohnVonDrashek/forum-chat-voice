@@ -1,0 +1,26 @@
+services:
+  forum-demo:
+    build:
+      context: .
+      dockerfile: Dockerfile.forum-demo
+      args:
+        GITHUB_PACKAGES_TOKEN: ${GITHUB_PACKAGES_TOKEN}
+    ports:
+      - "3000:3000"
+    env_file:
+      - forum-demo/.env.local
+    environment:
+      - PORT=3000
+
+  central-services:
+    build:
+      context: .
+      dockerfile: Dockerfile.central-services
+      args:
+        GITHUB_PACKAGES_TOKEN: ${GITHUB_PACKAGES_TOKEN}
+    ports:
+      - "3001:3000"
+    env_file:
+      - central-services/.env.local
+    environment:
+      - PORT=3000
