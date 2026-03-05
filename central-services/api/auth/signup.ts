@@ -69,6 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       id: data.user.id,
       username,
       display_name: display_name || username,
+      avatar_url: `https://api.dicebear.com/9.x/avataaars/svg?seed=${data.user.id}&size=256`,
     })
 
   if (profileError) {

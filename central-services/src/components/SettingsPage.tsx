@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { useForum, useHub } from '@johnvondrashek/forumline-react'
 import { hubSupabase } from '../App'
 import HubAuth from './HubAuth'
+import Avatar from './Avatar'
 import Button from './ui/Button'
 import Card from './ui/Card'
 
@@ -15,6 +16,19 @@ export default function SettingsPage({ hubSession, onClose }: SettingsPageProps)
   const { forums, removeForum } = useForum()
   const { isHubConnected } = useHub()
   const [removingDomain, setRemovingDomain] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!hubSession) return
+    hubSupabase
+      .from('hub_profiles')
+      .select('avatar_url')
+      .eq('id', hubSession.user.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.avatar_url) setAvatarUrl(data.avatar_url)
+      })
+  }, [hubSession])
 
   const handleRemoveForum = async (domain: string) => {
     setRemovingDomain(domain)
@@ -53,9 +67,11 @@ export default function SettingsPage({ hubSession, onClose }: SettingsPageProps)
           {isHubConnected && hubSession ? (
             <div className="mt-4">
               <div className="flex items-center gap-3 rounded-lg bg-slate-700/50 p-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-white">
-                  {(hubSession.user.user_metadata?.username || hubSession.user.email || '?')[0].toUpperCase()}
-                </div>
+                <Avatar
+                  avatarUrl={avatarUrl}
+                  seed={hubSession.user.user_metadata?.username || hubSession.user.email || undefined}
+                  size={40}
+                />
                 <div className="flex-1">
                   <p className="font-medium text-white">
                     {hubSession.user.user_metadata?.username || hubSession.user.email}
