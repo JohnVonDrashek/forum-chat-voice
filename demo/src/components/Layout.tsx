@@ -6,7 +6,7 @@ import Header from './Header'
 import Sidebar from './Sidebar'
 import MobileSidebar from './MobileSidebar'
 import ErrorBoundary from './ErrorBoundary'
-import { ForumRail, ForumWebview, useForum, useNativeNotifications, useHub } from '@johnvondrashek/forumline-react'
+import { ForumWebview, useForum, useNativeNotifications, useHub } from '@johnvondrashek/forumline-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { queryKeys, fetchers, queryOptions } from '../lib/queries'
@@ -147,9 +147,6 @@ export default function Layout() {
 
   return (
     <div className="flex min-h-screen min-h-[100dvh]">
-      {/* Forum rail — only visible in Tauri desktop app */}
-      <ForumRail />
-
       <div className="flex-1 bg-slate-900">
         <a
           href="#main-content"
