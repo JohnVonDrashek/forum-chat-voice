@@ -1,4 +1,5 @@
 {
+  "installCommand": "echo 'skipping — already installed by CI'",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
