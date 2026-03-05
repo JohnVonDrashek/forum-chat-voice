@@ -155,7 +155,7 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
         )}
 
         {view === 'dms' && (
-          <DmPanel onClose={() => setView('forums')} />
+          <DmPanel onClose={() => setView('forums')} onGoToSettings={() => setView('settings')} />
         )}
 
         {activeForum && (
@@ -200,7 +200,7 @@ export default function AppLayout({ hubSession }: AppLayoutProps) {
         )}
 
         {view === 'forums' && !activeForum && (
-          <WelcomePage hubSession={hubSession} isHubConnected={isHubConnected} />
+          <WelcomePage hubSession={hubSession} isHubConnected={isHubConnected} onGoToSettings={() => setView('settings')} />
         )}
       </div>
 

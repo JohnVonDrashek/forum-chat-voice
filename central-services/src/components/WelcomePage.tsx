@@ -5,9 +5,10 @@ import MobileForumList from './MobileForumList'
 interface WelcomePageProps {
   hubSession: Session | null
   isHubConnected: boolean
+  onGoToSettings: () => void
 }
 
-export default function WelcomePage({ hubSession, isHubConnected }: WelcomePageProps) {
+export default function WelcomePage({ hubSession, isHubConnected, onGoToSettings }: WelcomePageProps) {
   const { forums } = useForum()
 
   return (
@@ -41,9 +42,12 @@ export default function WelcomePage({ hubSession, isHubConnected }: WelcomePageP
               </span>
             </div>
             {!isHubConnected && (
-              <p className="mt-2 text-xs text-slate-500">
-                Sign in via Settings to enable cross-forum DMs
-              </p>
+              <button
+                onClick={onGoToSettings}
+                className="mt-2 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+              >
+                Sign in to enable cross-forum DMs
+              </button>
             )}
           </div>
 

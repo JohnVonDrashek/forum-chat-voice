@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useHub } from '@johnvondrashek/forumline-react'
-import HubAuth from './HubAuth'
 import DmConversationList from './DmConversationList'
 import DmMessageView from './DmMessageView'
 import DmNewMessage from './DmNewMessage'
@@ -9,9 +8,10 @@ type DmView = 'list' | 'conversation' | 'new'
 
 interface DmPanelProps {
   onClose: () => void
+  onGoToSettings: () => void
 }
 
-export default function DmPanel({ onClose }: DmPanelProps) {
+export default function DmPanel({ onClose, onGoToSettings }: DmPanelProps) {
   const { isHubConnected } = useHub()
   const [view, setView] = useState<DmView>('list')
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null)
@@ -62,7 +62,15 @@ export default function DmPanel({ onClose }: DmPanelProps) {
       <div className="flex-1 overflow-hidden">
         {!isHubConnected ? (
           <div className="flex h-full items-center justify-center p-6">
-            <HubAuth />
+            <div className="text-center">
+              <p className="text-slate-400">Sign in to send direct messages across forums</p>
+              <button
+                onClick={onGoToSettings}
+                className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 transition-colors"
+              >
+                Sign in via Settings
+              </button>
+            </div>
           </div>
         ) : view === 'new' ? (
           <DmNewMessage onSelectUser={handleSelectConversation} />
