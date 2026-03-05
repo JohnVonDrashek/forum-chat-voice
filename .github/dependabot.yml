@@ -9,11 +9,11 @@ updates:
         patterns: ["*"]
 
   - package-ecosystem: npm
-    directory: /demo
+    directory: /forum-demo
     schedule:
       interval: weekly
     groups:
-      demo-dependencies:
+      forum-demo-dependencies:
         patterns: ["*"]
 
   - package-ecosystem: npm

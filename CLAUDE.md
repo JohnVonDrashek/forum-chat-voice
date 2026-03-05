@@ -10,7 +10,7 @@ Do NOT use local dev server for testing. Use Playwright to interact with the pro
 
 Both projects deploy via GitHub Actions on push to main. Do NOT deploy via Vercel CLI or Vercel dashboard.
 
-- **Forumline Demo** (forum-chat-voice.vercel.app): `.github/workflows/deploy-forum.yml` — triggers on `demo/` or `packages/` changes
+- **Forumline Demo** (forum-chat-voice.vercel.app): `.github/workflows/deploy-forum.yml` — triggers on `forum-demo/` or `packages/` changes
 - **Forumline Central Services** (forumline-hub.vercel.app): `.github/workflows/deploy-hub.yml` — triggers only on `central-services/` changes
 
 Both use the `VERCEL_TOKEN` GitHub secret.
@@ -22,7 +22,7 @@ Do NOT ignore bugs that you see even if they are unrelated to your changes. Jot 
 ## Monorepo Structure
 
 ```
-demo/              — Forumline Demo web app (Vite + React)
+forum-demo/        — Forumline Demo web app (Vite + React)
 central-services/  — Forumline Central Services (identity service)
 native-app/        — Tauri native app (desktop, iOS, Android)
 packages/

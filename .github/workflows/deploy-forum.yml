@@ -5,12 +5,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'demo/**'
+      - 'forum-demo/**'
 
 jobs:
   deploy:
     uses: ./.github/workflows/deploy.yml
     with:
       project-id: prj_Q6NCsZIw3eRbYLQFMTkLon3wZ3Nk
-      working-directory: demo
+      working-directory: forum-demo
     secrets: inherit
