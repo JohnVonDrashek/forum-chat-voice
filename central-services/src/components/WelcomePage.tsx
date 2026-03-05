@@ -44,9 +44,9 @@ export default function WelcomePage({ hubSession, isHubConnected, onGoToSettings
             {!isHubConnected && (
               <button
                 onClick={onGoToSettings}
-                className="mt-2 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 transition-colors"
               >
-                Sign in to enable cross-forum DMs
+                Sign in
               </button>
             )}
           </div>

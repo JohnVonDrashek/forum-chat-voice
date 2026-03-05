@@ -68,7 +68,7 @@ export default function DmPanel({ onClose, onGoToSettings }: DmPanelProps) {
                 onClick={onGoToSettings}
                 className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 transition-colors"
               >
-                Sign in via Settings
+                Sign in
               </button>
             </div>
           </div>
