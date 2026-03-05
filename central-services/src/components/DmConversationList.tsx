@@ -20,6 +20,19 @@ export default function DmConversationList({ onSelectConversation }: DmConversat
     refetchInterval: 30_000,
   })
 
+  // Prefetch messages for all visible conversations so clicking feels instant
+  useEffect(() => {
+    if (!hubClient || conversations.length === 0) return
+
+    conversations.forEach((conversation) => {
+      queryClient.prefetchQuery({
+        queryKey: ['hub', 'dm', 'messages', conversation.recipientId],
+        queryFn: () => hubClient.getMessages(conversation.recipientId),
+        staleTime: 5_000,
+      })
+    })
+  }, [conversations, hubClient, queryClient])
+
   useEffect(() => {
     if (!hubSupabase) return
 
