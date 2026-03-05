@@ -8,20 +8,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (linkToken) {
     // "Connect from Settings" flow — verify the user's session and set a link cookie
-    const supabaseUrl = process.env.VITE_SUPABASE_URL!
-    const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY!
+    const supabaseUrl = (process.env.VITE_SUPABASE_URL || '').trim()
+    const supabaseAnonKey = (process.env.VITE_SUPABASE_ANON_KEY || '').trim()
     const sb = createClient(supabaseUrl, supabaseAnonKey)
     const { data: { user }, error } = await sb.auth.getUser(linkToken)
 
     if (error || !user) {
-      const siteUrl = process.env.VITE_SITE_URL || 'https://demo.forumline.net'
+      const siteUrl = (process.env.VITE_SITE_URL || 'https://demo.forumline.net').trim()
       return res.redirect(302, `${siteUrl}/settings?error=invalid_session`)
     }
 
     // Build the hub authorize URL manually (same as SDK) so we can set both cookies
-    const hubUrl = process.env.FORUMLINE_HUB_URL!
-    const clientId = process.env.FORUMLINE_CLIENT_ID!
-    const siteUrl = process.env.VITE_SITE_URL || 'https://demo.forumline.net'
+    const hubUrl = (process.env.FORUMLINE_HUB_URL || '').trim()
+    const clientId = (process.env.FORUMLINE_CLIENT_ID || '').trim()
+    const siteUrl = (process.env.VITE_SITE_URL || 'https://demo.forumline.net').trim()
     const state = crypto.randomBytes(16).toString('hex')
 
     const authUrl = new URL(`${hubUrl}/api/oauth/authorize`)
@@ -36,10 +36,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.redirect(302, authUrl.toString())
   }
 
-  const hubUrl = process.env.FORUMLINE_HUB_URL!
-  const clientId = process.env.FORUMLINE_CLIENT_ID!
-  const clientSecret = process.env.FORUMLINE_CLIENT_SECRET!
-  const siteUrl = process.env.VITE_SITE_URL || 'https://demo.forumline.net'
+  // .trim() all env vars — Vercel env vars can have trailing newlines which
+  // break URL construction (e.g. redirect_uri gets \n embedded in it, causing
+  // the hub authorize POST to fail and the function to crash with FUNCTION_INVOCATION_FAILED)
+  const hubUrl = (process.env.FORUMLINE_HUB_URL || '').trim()
+  const clientId = (process.env.FORUMLINE_CLIENT_ID || '').trim()
+  const clientSecret = (process.env.FORUMLINE_CLIENT_SECRET || '').trim()
+  const siteUrl = (process.env.VITE_SITE_URL || 'https://demo.forumline.net').trim()
 
   // If hub_token is provided, do the entire OAuth exchange server-side.
   // This avoids redirecting the browser to the hub (which has X-Frame-Options: deny
