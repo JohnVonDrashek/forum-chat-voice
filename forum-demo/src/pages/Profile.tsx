@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth'
 import Avatar from '../components/Avatar'
 import Card from '../components/ui/Card'
 import Skeleton from '../components/ui/Skeleton'
-import { formatTimeAgo } from '../lib/dateFormatters'
+import { formatRelativeTime } from '../lib/dateFormatters'
 import { queryKeys, queryOptions } from '../lib/queries'
 import { useDataProvider } from '../lib/data-provider'
 
@@ -239,7 +239,7 @@ export default function ProfilePage() {
                       </div>
                       <h3 className="mt-1 font-medium text-white">{thread.title}</h3>
                       <p className="mt-1 text-sm text-slate-400">
-                        {formatTimeAgo(thread.created_at)} · {thread.post_count} {thread.post_count === 1 ? 'reply' : 'replies'}
+                        {formatRelativeTime(thread.created_at)} · {thread.post_count} {thread.post_count === 1 ? 'reply' : 'replies'}
                       </p>
                     </div>
                   </Link>
@@ -268,7 +268,7 @@ export default function ProfilePage() {
                     className="block rounded-xl border border-slate-700 bg-slate-800/50 p-4 transition-colors hover:bg-slate-700/50"
                   >
                     <div className="flex items-center gap-2 text-sm text-slate-400">
-                      <span>{formatTimeAgo(post.created_at)}</span>
+                      <span>{formatRelativeTime(post.created_at)}</span>
                       {post.reply_to_id && (
                         <>
                           <span>·</span>

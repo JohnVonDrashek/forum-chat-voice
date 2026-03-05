@@ -9,10 +9,9 @@ interface MobileSidebarProps {
   categories: Category[]
   channels: ChatChannel[]
   rooms: VoiceRoom[]
-  unreadDmCount: number
 }
 
-export default function MobileSidebar({ isOpen, onClose, categories, channels, rooms, unreadDmCount }: MobileSidebarProps) {
+export default function MobileSidebar({ isOpen, onClose, categories, channels, rooms }: MobileSidebarProps) {
   const location = useLocation()
   const sidebarRef = useRef<HTMLDivElement>(null)
 
@@ -117,7 +116,6 @@ export default function MobileSidebar({ isOpen, onClose, categories, channels, r
             categories={categories}
             channels={channels}
             rooms={rooms}
-            unreadDmCount={unreadDmCount}
             mobile
           />
         </nav>

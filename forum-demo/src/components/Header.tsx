@@ -6,7 +6,7 @@ import Avatar from '../components/Avatar'
 import { supabase } from '../lib/supabase'
 import { useDataProvider } from '../lib/data-provider'
 import Skeleton from '../components/ui/Skeleton'
-import { formatNotificationTime } from '../lib/dateFormatters'
+import { formatRelativeTime } from '../lib/dateFormatters'
 import { queryKeys, queryOptions } from '../lib/queries'
 import type { Notification as DBNotification } from '../types'
 
@@ -277,7 +277,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                               {notification.title}
                             </span>
                             <span className="shrink-0 text-xs text-slate-500">
-                              {formatNotificationTime(notification.timestamp)}
+                              {formatRelativeTime(notification.timestamp)}
                             </span>
                           </div>
                           <p className="mt-0.5 text-sm text-slate-400 line-clamp-2">

@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth'
 import Avatar from '../components/Avatar'
 import Card from '../components/ui/Card'
 import Skeleton from '../components/ui/Skeleton'
-import { formatTimeAgo } from '../lib/dateFormatters'
+import { formatRelativeTime } from '../lib/dateFormatters'
 import { queryKeys, queryOptions } from '../lib/queries'
 import { useDataProvider } from '../lib/data-provider'
 
@@ -251,7 +251,7 @@ export default function Admin() {
                             {u.is_admin ? 'Admin' : 'User'}
                           </span>
                         </td>
-                        <td className="hidden px-4 py-3 text-sm text-slate-400 md:table-cell">{formatTimeAgo(u.created_at)}</td>
+                        <td className="hidden px-4 py-3 text-sm text-slate-400 md:table-cell">{formatRelativeTime(u.created_at)}</td>
                       </tr>
                     ))}
                   </tbody>

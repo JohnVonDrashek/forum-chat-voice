@@ -70,9 +70,3 @@ export function formatDateLabel(date: string): string {
   }
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
-
-// Backward-compatible aliases — use formatRelativeTime and formatTime instead
-export const formatTimeAgo = (date: string) => formatRelativeTime(date)
-export const formatShortTimeAgo = (date: Date) => formatRelativeTime(date, { short: true })
-export const formatNotificationTime = (date: Date) => formatRelativeTime(date)
-export const formatMessageTime = (date: Date) => formatTime(date)

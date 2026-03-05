@@ -6,7 +6,7 @@ import Card from '../components/ui/Card'
 import Skeleton from '../components/ui/Skeleton'
 import { queryKeys, queryOptions } from '../lib/queries'
 import { useDataProvider } from '../lib/data-provider'
-import { formatTimeAgo } from '../lib/dateFormatters'
+import { formatRelativeTime } from '../lib/dateFormatters'
 
 export default function Home() {
   const dp = useDataProvider()
@@ -122,7 +122,7 @@ export default function Home() {
                       {thread.author.display_name || thread.author.username}
                     </span>
                     <span className="hidden sm:inline">·</span>
-                    <span>{formatTimeAgo(thread.created_at)}</span>
+                    <span>{formatRelativeTime(thread.created_at)}</span>
                     <span>·</span>
                     <span>{thread.post_count} {thread.post_count === 1 ? 'reply' : 'replies'}</span>
                   </div>
@@ -131,7 +131,7 @@ export default function Home() {
                 {/* Activity - hidden on mobile */}
                 <div className="hidden shrink-0 text-right text-sm sm:block">
                   <div className="text-slate-400">Last activity</div>
-                  <div className="text-slate-300">{formatTimeAgo(thread.last_post_at || thread.updated_at)}</div>
+                  <div className="text-slate-300">{formatRelativeTime(thread.last_post_at || thread.updated_at)}</div>
                 </div>
               </Link>
             ))}

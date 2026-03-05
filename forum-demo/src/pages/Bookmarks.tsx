@@ -7,7 +7,7 @@ import Avatar from '../components/Avatar'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Skeleton from '../components/ui/Skeleton'
-import { formatTimeAgo, formatDate } from '../lib/dateFormatters'
+import { formatRelativeTime, formatDate } from '../lib/dateFormatters'
 import { queryKeys, queryOptions } from '../lib/queries'
 
 export default function Bookmarks() {
@@ -170,7 +170,7 @@ export default function Bookmarks() {
                     <span>·</span>
                     <span>{formatDate(bookmark.thread.created_at)}</span>
                     <span className="hidden sm:inline">·</span>
-                    <span className="hidden sm:inline">Saved {formatTimeAgo(bookmark.created_at)}</span>
+                    <span className="hidden sm:inline">Saved {formatRelativeTime(bookmark.created_at)}</span>
                   </div>
                 </div>
 

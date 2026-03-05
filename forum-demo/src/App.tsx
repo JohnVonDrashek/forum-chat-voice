@@ -25,7 +25,6 @@ const Profile = lazy(() => import('./pages/Profile'))
 const Chat = lazy(() => import('./pages/Chat'))
 const Search = lazy(() => import('./pages/Search'))
 const Voice = lazy(() => import('./pages/Voice'))
-const DirectMessages = lazy(() => import('./pages/DirectMessages'))
 const Bookmarks = lazy(() => import('./pages/Bookmarks'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Admin = lazy(() => import('./pages/Admin'))
@@ -91,8 +90,6 @@ export default function App({ authProvider }: { authProvider: ForumAuthProvider 
           <Route path="search" element={<Suspense fallback={<PageFallback />}><Search /></Suspense>} />
           <Route path="voice" element={<Suspense fallback={<PageFallback />}><Voice /></Suspense>} />
           <Route path="voice/:roomId" element={<Suspense fallback={<PageFallback />}><Voice /></Suspense>} />
-          <Route path="dm" element={<RequireAuth><Suspense fallback={<PageFallback />}><DirectMessages /></Suspense></RequireAuth>} />
-          <Route path="dm/:recipientId" element={<RequireAuth><Suspense fallback={<PageFallback />}><DirectMessages /></Suspense></RequireAuth>} />
           <Route path="bookmarks" element={<RequireAuth><Suspense fallback={<PageFallback />}><Bookmarks /></Suspense></RequireAuth>} />
           <Route path="settings" element={<RequireAuth><Suspense fallback={<PageFallback />}><Settings /></Suspense></RequireAuth>} />
           <Route path="admin" element={<RequireAdmin><Suspense fallback={<PageFallback />}><Admin /></Suspense></RequireAdmin>} />

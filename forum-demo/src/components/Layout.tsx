@@ -6,7 +6,7 @@ import Header from './Header'
 import Sidebar from './Sidebar'
 import MobileSidebar from './MobileSidebar'
 import ErrorBoundary from './ErrorBoundary'
-import { ForumWebview, useForum, useNativeNotifications, useHub } from '@johnvondrashek/forumline-react'
+import { ForumWebview, useForum, useNativeNotifications } from '@johnvondrashek/forumline-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { queryKeys, queryOptions } from '../lib/queries'
@@ -17,14 +17,7 @@ export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user } = useAuth()
   const { activeForum } = useForum()
-  const { hubClient, hubSupabase, hubUserId, isHubConnected } = useHub()
   useNativeNotifications(user, supabase)
-  useNativeNotifications(
-    isHubConnected && hubUserId ? { id: hubUserId } : null,
-    hubSupabase || supabase,
-    { table: 'hub_direct_messages' }
-  )
-  const [unreadDmCount, setUnreadDmCount] = useState(0)
   const queryClient = useQueryClient()
 
   // Use React Query for sidebar data - cached globally, instant on tab switch!
@@ -105,40 +98,6 @@ export default function Layout() {
     })
   }, [channels, queryClient])
 
-  // Hub-based unread DM count
-  useEffect(() => {
-    if (!isHubConnected || !hubClient) {
-      setUnreadDmCount(0)
-      return
-    }
-
-    const fetchUnread = async () => {
-      try {
-        const conversations = await hubClient.getConversations()
-        const total = conversations.reduce((sum, c) => sum + c.unreadCount, 0)
-        setUnreadDmCount(total)
-      } catch (error) {
-        console.error('[FLD:Layout] Failed to fetch hub unread DM count:', error)
-      }
-    }
-
-    fetchUnread()
-
-    if (!hubSupabase) return
-
-    // Subscribe to hub DMs to update unread badge in real-time
-    const sub = hubSupabase
-      .channel('layout-hub-dm-unread')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'hub_direct_messages' },
-        () => fetchUnread()
-      )
-      .subscribe()
-
-    return () => { sub.unsubscribe() }
-  }, [isHubConnected, hubClient, hubSupabase])
-
   const handleMenuClick = useCallback(() => {
     setMobileMenuOpen(true)
   }, [])
@@ -175,7 +134,6 @@ export default function Layout() {
               categories={categories}
               channels={channels}
               rooms={rooms}
-              unreadDmCount={unreadDmCount}
             />
 
             <div className="flex">
@@ -183,8 +141,7 @@ export default function Layout() {
                 categories={categories}
                 channels={channels}
                 rooms={rooms}
-                unreadDmCount={unreadDmCount}
-              />
+                />
               <main id="main-content" role="main" className="flex-1 p-4 sm:p-6">
                 <ErrorBoundary>
                   <Outlet />

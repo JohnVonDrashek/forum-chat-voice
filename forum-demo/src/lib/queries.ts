@@ -52,10 +52,6 @@ export const queryKeys = {
   // Notifications
   notifications: (userId: string) => ['notifications', userId] as const,
 
-  // Hub DMs
-  hubDmConversations: ['hub', 'dm', 'conversations'] as const,
-  hubDmMessages: (recipientId: string) => ['hub', 'dm', 'messages', recipientId] as const,
-  hubProfileSearch: (query: string) => ['hub', 'profiles', 'search', query] as const,
 }
 
 // ============================================================================
@@ -81,7 +77,7 @@ export const queryOptions = {
     gcTime: 1000 * 60 * 2, // 2 minutes
   },
 
-  // Chat/DM - very fresh, but real-time handles most updates
+  // Chat - very fresh, but real-time handles most updates
   realtime: {
     staleTime: 1000 * 10, // 10 seconds
     gcTime: 1000 * 60, // 1 minute

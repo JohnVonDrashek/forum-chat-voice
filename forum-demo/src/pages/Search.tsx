@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import Avatar from '../components/Avatar'
 import Card from '../components/ui/Card'
 import Skeleton from '../components/ui/Skeleton'
-import { formatTimeAgo } from '../lib/dateFormatters'
+import { formatRelativeTime } from '../lib/dateFormatters'
 import { useDebounce } from '../lib/hooks'
 import { queryKeys, queryOptions } from '../lib/queries'
 import { useDataProvider } from '../lib/data-provider'
@@ -204,7 +204,7 @@ export default function Search() {
                         <div className="mt-1 flex items-center gap-2 text-sm text-slate-400">
                           <span>{highlightMatch(thread.author.display_name || thread.author.username, searchInput)}</span>
                           <span>·</span>
-                          <span>{formatTimeAgo(thread.created_at)}</span>
+                          <span>{formatRelativeTime(thread.created_at)}</span>
                           <span>·</span>
                           <span>{thread.post_count} replies</span>
                         </div>
@@ -238,7 +238,7 @@ export default function Search() {
                             {highlightMatch(post.author.display_name || post.author.username, searchInput)}
                           </span>
                           <span className="text-slate-500">·</span>
-                          <span className="text-slate-400">{formatTimeAgo(post.created_at)}</span>
+                          <span className="text-slate-400">{formatRelativeTime(post.created_at)}</span>
                         </div>
                         <p className="mt-2 text-slate-300 line-clamp-2">
                           {highlightMatch(post.content, searchInput)}
