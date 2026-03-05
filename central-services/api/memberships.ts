@@ -87,7 +87,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Failed to fetch memberships' })
   }
 
-  const mapped = (memberships || []).map((m: any) => ({
+  const mapped = (memberships || []).filter((m: any) => m.forumline_forums).map((m: any) => ({
     forum_domain: m.forumline_forums.domain,
     forum_name: m.forumline_forums.name,
     forum_icon_url: m.forumline_forums.icon_url,
