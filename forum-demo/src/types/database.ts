@@ -315,6 +315,66 @@ export type Database = {
           }
         ]
       }
+      channel_follows: {
+        Row: {
+          id: string
+          user_id: string
+          category_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          category_id: string
+          created_at?: string
+        }
+        Update: {}
+        Relationships: [
+          {
+            foreignKeyName: "channel_follows_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_follows_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          id: string
+          user_id: string
+          category: string
+          enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          category: string
+          enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       voice_presence: {
         Row: {
           id: string

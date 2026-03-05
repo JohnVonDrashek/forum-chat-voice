@@ -32,7 +32,7 @@ export function useNotificationReporter(userId: string | null) {
             id: string
             type: string
             title: string
-            body: string
+            message: string
             created_at: string
             read: boolean
             link: string
@@ -42,7 +42,7 @@ export function useNotificationReporter(userId: string | null) {
             id: row.id,
             type: row.type as ForumNotification['type'],
             title: row.title,
-            body: row.body,
+            body: row.message,
             timestamp: row.created_at,
             read: row.read,
             link: row.link || '',

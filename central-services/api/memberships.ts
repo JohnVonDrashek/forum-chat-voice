@@ -48,6 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       id,
       joined_at,
       forum_authed_at,
+      notifications_muted,
       forumline_forums (
         domain,
         name,
@@ -67,6 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     forum_icon_url: m.forumline_forums.icon_url,
     joined_at: m.joined_at,
     forum_authed_at: m.forum_authed_at,
+    notifications_muted: m.notifications_muted ?? false,
   }))
 
   return res.status(200).json(mapped)

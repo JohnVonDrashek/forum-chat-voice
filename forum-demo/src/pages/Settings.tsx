@@ -117,29 +117,6 @@ export default function Settings() {
     })
   }, [profile, user, resetProfile, resetAccount])
 
-  // Notification state - persisted to localStorage
-  const [emailNotifs, setEmailNotifs] = useState(() => {
-    const saved = localStorage.getItem('emailNotifs')
-    return saved ? JSON.parse(saved) : {
-      replies: true,
-      mentions: true,
-      likes: false,
-      follows: true,
-      directMessages: true,
-      newsletter: false,
-    }
-  })
-  const [pushNotifs, setPushNotifs] = useState(() => {
-    const saved = localStorage.getItem('pushNotifs')
-    return saved ? JSON.parse(saved) : {
-      replies: true,
-      mentions: true,
-      likes: true,
-      follows: false,
-      directMessages: true,
-    }
-  })
-
   // Appearance state - persisted to localStorage
   const [theme, setTheme] = useState<'dark' | 'light' | 'system'>(() => {
     const saved = localStorage.getItem('theme')
@@ -196,11 +173,6 @@ export default function Settings() {
             confirmPassword: '',
           })
         }
-      }
-
-      if (activeTab === 'notifications') {
-        localStorage.setItem('emailNotifs', JSON.stringify(emailNotifs))
-        localStorage.setItem('pushNotifs', JSON.stringify(pushNotifs))
       }
 
       if (activeTab === 'appearance') {
@@ -363,12 +335,7 @@ export default function Settings() {
           )}
 
           {activeTab === 'notifications' && (
-            <NotificationsTab
-              emailNotifs={emailNotifs}
-              setEmailNotifs={setEmailNotifs}
-              pushNotifs={pushNotifs}
-              setPushNotifs={setPushNotifs}
-            />
+            <NotificationsTab />
           )}
 
           {activeTab === 'appearance' && (
@@ -391,16 +358,18 @@ export default function Settings() {
             />
           )}
 
-          {/* Save Button */}
-          <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-700 pt-6">
-            <button
-              onClick={handleSave}
-              disabled={saveMutation.isPending}
-              className="rounded-lg bg-indigo-600 px-6 py-2 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
-            >
-              {saveMutation.isPending ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
+          {/* Save Button — hidden on notifications tab (auto-saves per toggle) */}
+          {activeTab !== 'notifications' && (
+            <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-700 pt-6">
+              <button
+                onClick={handleSave}
+                disabled={saveMutation.isPending}
+                className="rounded-lg bg-indigo-600 px-6 py-2 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+              >
+                {saveMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          )}
         </Card>
       </div>
 

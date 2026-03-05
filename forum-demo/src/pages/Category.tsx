@@ -1,7 +1,8 @@
 import { Link, useParams } from 'react-router-dom'
 import { useEffect } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
+import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
@@ -9,6 +10,11 @@ import Skeleton from '../components/ui/Skeleton'
 import { queryKeys, queryOptions } from '../lib/queries'
 import { useDataProvider } from '../lib/data-provider'
 import { formatRelativeTime } from '../lib/dateFormatters'
+
+async function getAccessToken(): Promise<string> {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.access_token ?? ''
+}
 
 export default function Category() {
   const dp = useDataProvider()
@@ -30,6 +36,49 @@ export default function Category() {
     queryFn: () => dp.getThreadsByCategory(categorySlug!),
     ...queryOptions.threads,
     enabled: !!categorySlug,
+  })
+
+  // Channel follow state
+  const { data: followedCategories = [] } = useQuery({
+    queryKey: ['channel-follows'],
+    queryFn: async () => {
+      const token = await getAccessToken()
+      const res = await fetch('/api/channel-follows', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return []
+      return res.json() as Promise<string[]>
+    },
+    enabled: !!user,
+    staleTime: 30_000,
+  })
+
+  const isFollowing = category ? followedCategories.includes(category.id) : false
+
+  const followMutation = useMutation({
+    mutationFn: async ({ categoryId, follow }: { categoryId: string; follow: boolean }) => {
+      const token = await getAccessToken()
+      const res = await fetch('/api/channel-follows', {
+        method: follow ? 'POST' : 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ category_id: categoryId }),
+      })
+      if (!res.ok) throw new Error('Failed to update follow')
+    },
+    onMutate: async ({ categoryId, follow }) => {
+      await queryClient.cancelQueries({ queryKey: ['channel-follows'] })
+      const prev = queryClient.getQueryData<string[]>(['channel-follows'])
+      queryClient.setQueryData<string[]>(['channel-follows'], (old = []) =>
+        follow ? [...old, categoryId] : old.filter(id => id !== categoryId)
+      )
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['channel-follows'], ctx.prev)
+    },
   })
 
   const loading = categoryLoading || threadsLoading
@@ -135,12 +184,28 @@ export default function Category() {
           )}
         </div>
         {user && (
-          <Link
-            to={`/c/${categorySlug}/new`}
-            className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500"
-          >
-            New Thread
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => followMutation.mutate({ categoryId: category.id, follow: !isFollowing })}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                isFollowing
+                  ? 'bg-slate-700 text-white hover:bg-slate-600'
+                  : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+              }`}
+              title={isFollowing ? 'Unfollow this category' : 'Follow to get notified about new threads'}
+            >
+              <svg className="h-4 w-4" fill={isFollowing ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {isFollowing ? 'Following' : 'Follow'}
+            </button>
+            <Link
+              to={`/c/${categorySlug}/new`}
+              className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500"
+            >
+              New Thread
+            </Link>
+          </div>
         )}
       </div>
 
