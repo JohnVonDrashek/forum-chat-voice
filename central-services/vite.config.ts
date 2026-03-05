@@ -13,14 +13,13 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     base: '/',
     resolve: {
-      // In dev mode, alias to package source for hot reload.
-      // In production, use built packages from node_modules (deploy workflow
-      // builds packages before `vercel build` to keep them in sync).
-      alias: mode === 'development' ? {
+      // Always resolve to package source — ensures Vite bundles the latest
+      // code from the monorepo rather than stale dist files.
+      alias: {
         '@johnvondrashek/forumline-protocol': path.resolve(__dirname, '../packages/protocol/src/index.ts'),
         '@johnvondrashek/forumline-central-services-client': path.resolve(__dirname, '../packages/central-services-client/src/index.ts'),
         '@johnvondrashek/forumline-react': path.resolve(__dirname, '../packages/react/src/index.ts'),
-      } : {},
+      },
     },
     clearScreen: false,
     server: {
