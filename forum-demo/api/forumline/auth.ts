@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import crypto from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { getForumlineServer } from '../_lib/forumline-server.js'
-import { adaptRequest, adaptResponse } from '../_lib/vercel-adapter.js'
+import { adaptRequest } from '../_lib/vercel-adapter.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const linkToken = req.query.link_token as string | undefined
@@ -59,8 +59,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const authorizeResponse = await fetch(authorizeUrl.toString(), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ access_token: hubToken }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: hubToken }),
         redirect: 'manual', // Don't follow the redirect — we need to extract the code
       })
 
