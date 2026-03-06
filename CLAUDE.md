@@ -61,12 +61,14 @@ Both apps run as Docker containers on Fly.io. Each app has a Hono HTTP server (`
 - Local dev: `docker compose up --build` or `npm run dev:server` in each app directory
 - Server build: `npm run build:server` (uses esbuild)
 
-## Supabase
-The Supabase personal access token is stored in macOS Keychain under `supabase-access-token`.
-
 ## Stack
 
 - React 19 + Vite + TailwindCSS
-- Supabase (auth, database, realtime)
+- Go API server (Chi router) for forum data + auth proxy
+- Fly Postgres (forum database)
+- GoTrue (self-hosted auth on Fly.io)
+- Cloudflare R2 (avatar/image storage)
+- SSE realtime via Postgres LISTEN/NOTIFY
 - LiveKit (voice rooms)
 - Hono HTTP server + Docker on Fly.io
+- Supabase used only by Central Services (hub) — forum has no Supabase dependency

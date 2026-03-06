@@ -11,10 +11,11 @@ Traditional forums lack real-time interaction. Chat apps lack structure. Forumli
 ## Stack
 
 - **Frontend** — React 19, Vite, TailwindCSS
-- **Backend** — Supabase (auth, Postgres, realtime subscriptions)
+- **Forum Backend** — Go API server, Fly Postgres, GoTrue (self-hosted auth), Cloudflare R2 (avatars), SSE realtime
+- **Hub Backend** — Supabase (auth, Postgres, realtime)
 - **Voice** — LiveKit
 - **Native** — Tauri (desktop, iOS, Android)
-- **Deploy** — Vercel + GitHub Actions
+- **Deploy** — Fly.io + Docker + GitHub Actions
 
 ## Monorepo Layout
 

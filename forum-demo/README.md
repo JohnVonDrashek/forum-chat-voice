@@ -1,6 +1,6 @@
 # Forumline Demo
 
-A modern community platform combining threaded forums, real-time chat, and voice rooms — built with React, Supabase, and LiveKit.
+A modern community platform combining threaded forums, real-time chat, and voice rooms — built with React, Go, and LiveKit.
 
 **Live:** https://demo.forumline.net
 
@@ -24,11 +24,15 @@ Most forum software treats chat and voice as afterthoughts. Forumline Demo is a 
 |-------|-----------|
 | UI | React 19, TypeScript, TailwindCSS 4 |
 | Build | Vite 7 |
-| Database & Auth | Supabase (PostgreSQL, Auth, Realtime, Storage) |
+| API Server | Go (Chi router) |
+| Database | Fly Postgres |
+| Auth | GoTrue (self-hosted on Fly.io) |
+| Storage | Cloudflare R2 (avatars, images) |
+| Realtime | SSE via Postgres LISTEN/NOTIFY |
 | Voice | LiveKit |
 | Data fetching | TanStack Query |
 | Forms | React Hook Form + Zod |
-| Hosting | Vercel (serverless functions + static) |
+| Hosting | Fly.io (Docker) |
 | Federation | `@johnvondrashek/forumline-*` packages |
 
 ## Setup
@@ -45,13 +49,11 @@ Required env vars in `.env.local`:
 
 | Variable | Purpose |
 |----------|---------|
-| `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-side Supabase access (API routes) |
+| `VITE_SUPABASE_URL` | Base URL for GoTrue auth requests (routed through Go proxy) |
+| `VITE_SUPABASE_ANON_KEY` | GoTrue anon JWT key |
 | `VITE_LIVEKIT_URL` | LiveKit server URL |
-| `LIVEKIT_API_KEY` | LiveKit API key (API routes) |
-| `LIVEKIT_API_SECRET` | LiveKit API secret (API routes) |
-| `VITE_SITE_URL` | Production URL for auth redirects (optional, defaults to `window.location.origin`) |
+| `LIVEKIT_API_KEY` | LiveKit API key (server-side) |
+| `LIVEKIT_API_SECRET` | LiveKit API secret (server-side) |
 
 For Forumline federation (optional):
 
@@ -77,13 +79,19 @@ In dev mode, Vite aliases resolve `@johnvondrashek/forumline-*` packages to thei
 
 ## API Routes
 
-Serverless functions in `api/` deployed as Vercel Functions:
+Go API handlers served via the Hono server on Fly.io. Auth endpoints proxy to GoTrue (`/auth/v1/*`), data endpoints query Fly Postgres directly.
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
+| `/auth/v1/*` | * | GoTrue proxy (login, signup, token refresh, etc.) |
 | `/api/auth/signup` | POST | Create account with username validation |
+| `/api/avatars/upload` | POST | Upload avatar/image to Cloudflare R2 |
 | `/api/livekit` | POST | Generate LiveKit room token |
 | `/api/livekit` | GET | List active rooms and participants |
+| `/api/threads` | GET | List threads (with category/search filters) |
+| `/api/posts` | GET | List posts for a thread |
+| `/api/chat/messages` | GET | List chat channel messages |
+| `/api/stream/*` | GET | SSE realtime streams (chat, threads, voice presence) |
 | `/api/forumline/auth` | GET | Initiate Forumline OAuth flow |
 | `/api/forumline/auth/callback` | GET | Handle OAuth callback |
 | `/api/forumline/notifications` | GET | Fetch user notifications |
@@ -91,6 +99,6 @@ Serverless functions in `api/` deployed as Vercel Functions:
 
 ## Deployment
 
-Pushes to `main` trigger deployment via GitHub Actions (`.github/workflows/deploy-forum.yml`). Do not deploy via Vercel CLI or dashboard.
+Pushes to `main` trigger deployment via GitHub Actions (`.github/workflows/deploy-forum.yml`). Do not deploy via Vercel CLI, dashboard, or `flyctl deploy` manually.
 
-Production runs on Vercel with Node.js 20.x serverless functions.
+Production runs on Fly.io as a Docker container (Hono server serving static assets + Go API).
