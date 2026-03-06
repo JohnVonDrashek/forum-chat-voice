@@ -49,11 +49,8 @@ Required env vars in `.env.local`:
 
 | Variable | Purpose |
 |----------|---------|
-| `VITE_SUPABASE_URL` | Base URL for GoTrue auth requests (routed through Go proxy) |
-| `VITE_SUPABASE_ANON_KEY` | GoTrue anon JWT key |
+| `VITE_AUTH_ANON_KEY` | GoTrue anon JWT key |
 | `VITE_LIVEKIT_URL` | LiveKit server URL |
-| `LIVEKIT_API_KEY` | LiveKit API key (server-side) |
-| `LIVEKIT_API_SECRET` | LiveKit API secret (server-side) |
 
 For Forumline federation (optional):
 

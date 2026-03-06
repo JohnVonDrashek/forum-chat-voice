@@ -14,7 +14,7 @@ import type {
 } from './auth-provider'
 
 const STORAGE_KEY = 'gotrue-session'
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+const anonKey = import.meta.env.VITE_AUTH_ANON_KEY || ''
 
 interface GoTrueSession {
   access_token: string
