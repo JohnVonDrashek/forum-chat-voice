@@ -17,8 +17,24 @@ COPY central-services/package.json central-services/package.json
 ARG GITHUB_PACKAGES_TOKEN
 RUN GITHUB_PACKAGES_TOKEN=${GITHUB_PACKAGES_TOKEN} npm ci
 
+# Vite build-time env vars (public keys only — baked into frontend bundle)
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_LIVEKIT_URL
+ARG VITE_HUB_URL
+ARG VITE_HUB_SUPABASE_URL
+ARG VITE_HUB_SUPABASE_ANON_KEY
+ARG VITE_SITE_URL
+
 # Build packages + forum-demo frontend
-RUN npx turbo run build --filter=./forum-demo...
+RUN VITE_SUPABASE_URL=${VITE_SUPABASE_URL} \
+    VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY} \
+    VITE_LIVEKIT_URL=${VITE_LIVEKIT_URL} \
+    VITE_HUB_URL=${VITE_HUB_URL} \
+    VITE_HUB_SUPABASE_URL=${VITE_HUB_SUPABASE_URL} \
+    VITE_HUB_SUPABASE_ANON_KEY=${VITE_HUB_SUPABASE_ANON_KEY} \
+    VITE_SITE_URL=${VITE_SITE_URL} \
+    npx turbo run build --filter=./forum-demo...
 
 # Build the Hono server
 RUN cd forum-demo && npm run build:server
