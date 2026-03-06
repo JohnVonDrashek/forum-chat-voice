@@ -8,9 +8,6 @@
     ".": "./src/index.ts"
   },
   "files": ["src"],
-  "peerDependencies": {
-    "@supabase/supabase-js": "^2"
-  },
   "dependencies": {
     "@johnvondrashek/forumline-central-services-client": "*",
     "@johnvondrashek/forumline-protocol": "*"

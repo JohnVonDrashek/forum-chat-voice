@@ -8,8 +8,6 @@ export const hubAuth = new GoTrueAuthClient()
 
 export const forumStore: ForumStore = createForumStore()
 export const hubStore: HubStore = createHubStore({
-  hubSupabaseUrl: '',
-  hubSupabaseAnonKey: '',
   hubUrl: '',
 })
 

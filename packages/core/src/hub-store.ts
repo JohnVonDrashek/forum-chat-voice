@@ -1,17 +1,13 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { CentralServicesClient } from '@johnvondrashek/forumline-central-services-client'
 import { createStore, type Store } from './store.js'
 
 export interface HubState {
   hubClient: CentralServicesClient | null
-  hubSupabase: SupabaseClient | null
   hubUserId: string | null
   isHubConnected: boolean
 }
 
 export interface HubStoreOptions {
-  hubSupabaseUrl: string
-  hubSupabaseAnonKey: string
   hubUrl: string
   hubTokenEndpoint?: string
   heartbeatInterval?: number
@@ -25,15 +21,12 @@ export interface HubStore extends Store<HubState> {
 
 export function createHubStore(options: HubStoreOptions): HubStore {
   const {
-    hubSupabaseUrl,
-    hubSupabaseAnonKey,
     hubUrl,
     heartbeatInterval = 30000,
   } = options
 
   const store = createStore<HubState>({
     hubClient: null,
-    hubSupabase: null,
     hubUserId: null,
     isHubConnected: false,
   })
@@ -47,7 +40,6 @@ export function createHubStore(options: HubStoreOptions): HubStore {
     }
     store.set({
       hubClient: null,
-      hubSupabase: null,
       hubUserId: null,
       isHubConnected: false,
     })
@@ -58,22 +50,9 @@ export function createHubStore(options: HubStoreOptions): HubStore {
       const token = session.access_token
 
       const client = new CentralServicesClient(hubUrl, token)
-      const hubSb = hubSupabaseUrl
-        ? createClient(hubSupabaseUrl, hubSupabaseAnonKey, {
-            global: {
-              headers: { Authorization: `Bearer ${token}` },
-            },
-            auth: {
-              persistSession: false,
-              autoRefreshToken: false,
-              storageKey: 'forumline-hub-store',
-            },
-          })
-        : null
 
       store.set({
         hubClient: client,
-        hubSupabase: hubSb,
         hubUserId: session.user_id,
         isHubConnected: true,
       })

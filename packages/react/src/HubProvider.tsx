@@ -1,10 +1,8 @@
 import { createContext, useContext, useEffect, useState, useRef, useCallback, type ReactNode } from 'react'
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { CentralServicesClient } from '@johnvondrashek/forumline-central-services-client'
 
 interface HubContextType {
   hubClient: CentralServicesClient | null
-  hubSupabase: SupabaseClient | null
   hubUserId: string | null
   isHubConnected: boolean
   reconnect: () => void
@@ -12,7 +10,6 @@ interface HubContextType {
 
 const HubContext = createContext<HubContextType>({
   hubClient: null,
-  hubSupabase: null,
   hubUserId: null,
   isHubConnected: false,
   reconnect: () => {},
@@ -25,10 +22,6 @@ export function useHub() {
 interface HubProviderProps {
   /** The current authenticated user, or null if logged out. */
   user: { id: string } | null
-  /** Supabase URL for the hub project (for Realtime subscriptions). */
-  hubSupabaseUrl: string
-  /** Supabase anon key for the hub project. */
-  hubSupabaseAnonKey: string
   /** Base URL of the hub API (e.g. 'https://app.forumline.net'). */
   hubUrl: string
   /** Endpoint to fetch the hub access token. Defaults to '/api/forumline/auth/hub-token'. */
@@ -41,12 +34,14 @@ interface HubProviderProps {
    */
   directSession?: { access_token: string; user_id: string } | null
   children: ReactNode
+  /** @deprecated No longer used. Supabase has been removed from the hub. */
+  hubSupabaseUrl?: string
+  /** @deprecated No longer used. Supabase has been removed from the hub. */
+  hubSupabaseAnonKey?: string
 }
 
 export function HubProvider({
   user,
-  hubSupabaseUrl,
-  hubSupabaseAnonKey,
   hubUrl,
   hubTokenEndpoint = '/api/forumline/auth/hub-token',
   heartbeatInterval = 30000,
@@ -54,7 +49,6 @@ export function HubProvider({
   children,
 }: HubProviderProps) {
   const [hubClient, setHubClient] = useState<CentralServicesClient | null>(null)
-  const [hubSupabase, setHubSupabase] = useState<SupabaseClient | null>(null)
   const [hubUserId, setHubUserId] = useState<string | null>(null)
   const [isHubConnected, setIsHubConnected] = useState(false)
   const initRef = useRef(false)
@@ -68,28 +62,22 @@ export function HubProvider({
     lastTokenRef.current = directSession.access_token
     const client = new CentralServicesClient(hubUrl, directSession.access_token)
     setHubClient(client)
-
-    const hubSb = createClient(hubSupabaseUrl, hubSupabaseAnonKey, {
-      global: {
-        headers: { Authorization: `Bearer ${directSession.access_token}` },
-      },
-    })
-    setHubSupabase(hubSb)
-  }, [directSession, isHubConnected, hubUrl, hubSupabaseUrl, hubSupabaseAnonKey])
+  }, [directSession, isHubConnected, hubUrl])
 
   useEffect(() => {
     if (!user || initRef.current) return
-    if (!hubSupabaseUrl || !hubSupabaseAnonKey) return
 
     initRef.current = true
 
     const init = async () => {
       try {
         let token: string
+        let userId: string | null = null
 
         if (directSession) {
           // Desktop app / hub: use the session token directly
           token = directSession.access_token
+          userId = directSession.user_id
         } else {
           // Web forum: fetch the hub access token from our server-side cookie
           const res = await fetch(hubTokenEndpoint, { credentials: 'include' })
@@ -101,6 +89,7 @@ export function HubProvider({
           }
 
           token = data.hub_access_token
+          userId = data.user_id || null
         }
 
         lastTokenRef.current = token
@@ -108,29 +97,7 @@ export function HubProvider({
         // Create hub DM client
         const client = new CentralServicesClient(hubUrl, token)
         setHubClient(client)
-
-        // Create hub Supabase client for Realtime
-        const hubSb = createClient(hubSupabaseUrl, hubSupabaseAnonKey, {
-          global: {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        })
-        setHubSupabase(hubSb)
-
-        // Get the hub user ID
-        if (directSession) {
-          setHubUserId(directSession.user_id)
-        } else {
-          try {
-            const { data: { user: hubUser } } = await hubSb.auth.getUser(token)
-            if (hubUser) {
-              setHubUserId(hubUser.id)
-            }
-          } catch {
-            // If getUser fails, we can still use the client for API calls
-          }
-        }
-
+        setHubUserId(userId)
         setIsHubConnected(true)
         console.log('[FLD:Hub] Connected to hub for cross-forum DMs')
       } catch (err) {
@@ -139,11 +106,10 @@ export function HubProvider({
     }
 
     init()
-  }, [user, hubSupabaseUrl, hubSupabaseAnonKey, hubUrl, hubTokenEndpoint, directSession])
+  }, [user, hubUrl, hubTokenEndpoint, directSession])
 
   const teardown = useCallback(() => {
     setHubClient(null)
-    setHubSupabase(null)
     setHubUserId(null)
     setIsHubConnected(false)
   }, [])
@@ -161,7 +127,7 @@ export function HubProvider({
   }, [user, reconnect])
 
   // Heartbeat: poll hub-token endpoint to detect revocation
-  // Skip when using directSession (Supabase handles its own session refresh)
+  // Skip when using directSession
   useEffect(() => {
     if (!isHubConnected || !user || !heartbeatInterval || directSession) return
 
@@ -182,7 +148,7 @@ export function HubProvider({
   }, [isHubConnected, user, heartbeatInterval, hubTokenEndpoint, teardown, directSession])
 
   return (
-    <HubContext.Provider value={{ hubClient, hubSupabase, hubUserId, isHubConnected, reconnect }}>
+    <HubContext.Provider value={{ hubClient, hubUserId, isHubConnected, reconnect }}>
       {children}
     </HubContext.Provider>
   )

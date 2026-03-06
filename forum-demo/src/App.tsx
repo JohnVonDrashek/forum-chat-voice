@@ -30,8 +30,6 @@ const Settings = lazy(() => import('./pages/Settings'))
 const Admin = lazy(() => import('./pages/Admin'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
-const HUB_SUPABASE_URL = import.meta.env.VITE_HUB_SUPABASE_URL as string
-const HUB_SUPABASE_ANON_KEY = import.meta.env.VITE_HUB_SUPABASE_ANON_KEY as string
 const HUB_URL = (import.meta.env.VITE_HUB_URL as string) || 'https://app.forumline.net'
 
 function PageFallback() {
@@ -55,8 +53,6 @@ function AuthenticatedProviders({ children }: { children: React.ReactNode }) {
     <ErrorBoundary>
       <HubProvider
         user={user}
-        hubSupabaseUrl={HUB_SUPABASE_URL}
-        hubSupabaseAnonKey={HUB_SUPABASE_ANON_KEY}
         hubUrl={HUB_URL}
       >
         <ForumProvider>

@@ -46,3 +46,6 @@ native-app/gen/
 
 # Test screenshots
 *.png
+
+# Wrangler local state
+.wrangler/

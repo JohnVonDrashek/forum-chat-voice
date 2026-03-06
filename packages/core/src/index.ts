@@ -6,4 +6,3 @@ export { createForumWebview, type ForumWebviewOptions, type ForumWebviewInstance
 export { createForumRail, type ForumRailOptions, type ForumRailInstance } from './forum-rail.js'
 export { isTauri, openExternal, getTauriNotification, getTauriAutostart, getTauriShell } from './tauri.js'
 export { parseDeepLink, setupDeepLinkListener, type DeepLinkTarget } from './deep-link.js'
-export { setupNativeNotifications } from './notifications.js'
