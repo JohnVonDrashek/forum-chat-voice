@@ -129,6 +129,9 @@ func NewRouter(pool *pgxpool.Pool, sseHub *shared.SSEHub, cfg *Config) *chi.Mux 
 		r.Delete("/api/voice-presence", h.HandleClearVoicePresence)
 		r.Get("/api/voice-presence/stream", h.HandleVoicePresenceStream)
 
+		// Avatars
+		r.Post("/api/avatars/upload", h.HandleAvatarUpload)
+
 		// Admin
 		r.Get("/api/admin/stats", h.HandleAdminStats)
 		r.Get("/api/admin/users", h.HandleAdminUsers)

@@ -61,7 +61,10 @@ export function AuthProvider({ children, authProvider }: { children: ReactNode; 
     }
 
     // Generate and upload a default DiceBear avatar
-    const avatarUrl = await uploadDefaultAvatar(rawUser.id, 'user')
+    const session = await authProvider.getSession()
+    const avatarUrl = session?.access_token
+      ? await uploadDefaultAvatar(rawUser.id, 'user', session.access_token)
+      : null
     if (avatarUrl) {
       await dp.updateProfile(rawUser.id, { avatar_url: avatarUrl })
     }

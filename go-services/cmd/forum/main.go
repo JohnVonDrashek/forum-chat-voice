@@ -63,6 +63,11 @@ func main() {
 		LiveKitURL:        os.Getenv("LIVEKIT_URL"),
 		LiveKitAPIKey:     os.Getenv("LIVEKIT_API_KEY"),
 		LiveKitAPISecret:  os.Getenv("LIVEKIT_API_SECRET"),
+		R2AccountID:       os.Getenv("R2_ACCOUNT_ID"),
+		R2AccessKeyID:     os.Getenv("R2_ACCESS_KEY_ID"),
+		R2SecretAccessKey: os.Getenv("R2_SECRET_ACCESS_KEY"),
+		R2BucketName:      os.Getenv("R2_BUCKET_NAME"),
+		R2PublicURL:       os.Getenv("R2_PUBLIC_URL"),
 	}
 
 	// Router

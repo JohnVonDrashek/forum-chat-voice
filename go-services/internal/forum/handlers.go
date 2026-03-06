@@ -30,6 +30,11 @@ type Config struct {
 	LiveKitURL           string
 	LiveKitAPIKey        string
 	LiveKitAPISecret     string
+	R2AccountID          string
+	R2AccessKeyID        string
+	R2SecretAccessKey    string
+	R2BucketName         string
+	R2PublicURL          string
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {

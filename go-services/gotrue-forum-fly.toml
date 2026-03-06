@@ -1,0 +1,51 @@
+# fly.toml app configuration file generated for forumline-forum-auth on 2026-03-06T14:26:04-06:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'forumline-forum-auth'
+primary_region = 'iad'
+
+[build]
+  image = 'supabase/gotrue:v2.186.0'
+
+[env]
+  API_EXTERNAL_URL = 'https://forumline-forum-auth.fly.dev'
+  GOTRUE_API_HOST = '0.0.0.0'
+  GOTRUE_API_PORT = '8080'
+  GOTRUE_DB_DRIVER = 'postgres'
+  GOTRUE_DISABLE_SIGNUP = 'false'
+  GOTRUE_EXTERNAL_EMAIL_ENABLED = 'true'
+  GOTRUE_JWT_ADMIN_ROLES = 'service_role'
+  GOTRUE_JWT_AUD = 'authenticated'
+  GOTRUE_JWT_DEFAULT_GROUP_NAME = 'authenticated'
+  GOTRUE_JWT_EXP = '3600'
+  GOTRUE_MAILER_AUTOCONFIRM = 'true'
+  GOTRUE_SITE_URL = 'https://demo.forumline.net'
+  GOTRUE_SMTP_ADMIN_EMAIL = 'noreply@forumline.net'
+  GOTRUE_SMTP_HOST = 'smtp.resend.com'
+  GOTRUE_SMTP_PORT = '465'
+  GOTRUE_SMTP_USER = 'resend'
+
+[[services]]
+  protocol = 'tcp'
+  internal_port = 8080
+
+  [[services.ports]]
+    port = 80
+    handlers = ['http']
+
+  [[services.ports]]
+    port = 443
+    handlers = ['tls', 'http']
+
+  [[services.http_checks]]
+    interval = '10s'
+    timeout = '2s'
+    path = '/health'
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 1024

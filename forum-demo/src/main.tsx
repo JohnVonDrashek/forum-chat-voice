@@ -5,13 +5,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 import { DataProviderProvider } from './lib/data-provider'
 import { ApiForumDataProvider } from './lib/api-data-provider'
-import { SupabaseAuthProvider } from './lib/supabase-auth-provider'
+import { GoTrueAuthProvider } from './lib/gotrue-auth-provider'
 import './index.css'
 
 console.log('[FLD:App] Starting Forumline Demo...')
 
 // Initialize providers
-const authProvider = new SupabaseAuthProvider()
+const authProvider = new GoTrueAuthProvider()
 const dataProvider = new ApiForumDataProvider(
   () => authProvider.getSession().then(s => s?.access_token ?? null)
 )

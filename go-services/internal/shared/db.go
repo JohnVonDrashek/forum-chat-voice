@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -20,10 +19,6 @@ func NewDBPool(ctx context.Context) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse DATABASE_URL: %w", err)
 	}
-
-	// Use simple protocol to avoid prepared statement conflicts with
-	// Supabase's PgBouncer in transaction pooling mode.
-	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 
 	// Keep minimum connections alive to avoid cold-start latency
 	config.MinConns = 2

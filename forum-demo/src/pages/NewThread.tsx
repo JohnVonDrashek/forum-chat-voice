@@ -26,7 +26,7 @@ export default function NewThread() {
   const dp = useDataProvider()
   const { categorySlug } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, getAccessToken } = useAuth()
   const { data: category } = useQuery({
     queryKey: queryKeys.category(categorySlug!),
     queryFn: () => dp.getCategory(categorySlug!),
@@ -75,13 +75,14 @@ export default function NewThread() {
       })
 
       // Upload thread image
+      const token = await getAccessToken() ?? ''
       if (threadImageBlob) {
-        const imageUrl = await uploadAvatar(threadImageBlob, `thread/${thread.id}/custom.png`)
+        const imageUrl = await uploadAvatar(threadImageBlob, `thread/${thread.id}/custom.png`, token)
         if (imageUrl) {
           await dp.updateThread(thread.id, { image_url: imageUrl })
         }
       } else {
-        const imageUrl = await uploadDefaultAvatar(thread.id, 'thread')
+        const imageUrl = await uploadDefaultAvatar(thread.id, 'thread', token)
         if (imageUrl) {
           await dp.updateThread(thread.id, { image_url: imageUrl })
         }

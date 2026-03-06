@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import Avatar from '../Avatar'
 import ImageCropModal from '../ImageCropModal'
 import { uploadAvatar } from '../../lib/avatars'
+import { useAuth } from '../../lib/auth'
 import { useDataProvider } from '../../lib/data-provider'
 import { queryKeys } from '../../lib/queries'
 import { useQueryClient } from '@tanstack/react-query'
@@ -30,6 +31,7 @@ export default function ThreadHeader({
   currentUserId,
 }: ThreadHeaderProps) {
   const dp = useDataProvider()
+  const { getAccessToken } = useAuth()
   const queryClient = useQueryClient()
   const threadImageInputRef = useRef<HTMLInputElement>(null)
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
@@ -144,7 +146,8 @@ export default function ThreadHeader({
             setCropImageSrc(null)
             setAvatarUploading(true)
             try {
-              const imageUrl = await uploadAvatar(blob, `thread/${thread.id}/custom.png`)
+              const token = await getAccessToken() ?? ''
+              const imageUrl = await uploadAvatar(blob, `thread/${thread.id}/custom.png`, token)
               if (imageUrl) {
                 await dp.updateThread(thread.id, { image_url: imageUrl })
                 // Update cache

@@ -6,8 +6,7 @@ import Header from './Header'
 import Sidebar from './Sidebar'
 import MobileSidebar from './MobileSidebar'
 import ErrorBoundary from './ErrorBoundary'
-import { ForumWebview, useForum, useNativeNotifications } from '@johnvondrashek/forumline-react'
-import { supabase } from '../lib/supabase'
+import { ForumWebview, useForum } from '@johnvondrashek/forumline-react'
 import { useAuth } from '../lib/auth'
 import { queryKeys, queryOptions } from '../lib/queries'
 import { useDataProvider } from '../lib/data-provider'
@@ -17,7 +16,6 @@ export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user } = useAuth()
   const { activeForum } = useForum()
-  useNativeNotifications(user, supabase)
   const queryClient = useQueryClient()
 
   // Use React Query for sidebar data - cached globally, instant on tab switch!

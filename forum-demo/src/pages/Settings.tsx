@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../lib/auth'
 import { useHub } from '@johnvondrashek/forumline-react'
-import { supabase } from '../lib/supabase'
 import { useDataProvider } from '../lib/data-provider'
 import { uploadAvatar } from '../lib/avatars'
 import ImageCropModal from '../components/ImageCropModal'
@@ -48,7 +47,7 @@ const accountSchema = z.object({
 
 export default function Settings() {
   const dp = useDataProvider()
-  const { user, profile } = useAuth()
+  const { user, profile, updatePassword, getAccessToken } = useAuth()
   const { reconnect } = useHub()
   const [activeTab, setActiveTab] = useState<Tab>('profile')
 
@@ -164,8 +163,8 @@ export default function Settings() {
       if (activeTab === 'account' && data) {
         const accountData = data as AccountFormData
         if (accountData.newPassword) {
-          const { error: pwError } = await supabase.auth.updateUser({ password: accountData.newPassword })
-          if (pwError) throw new Error(pwError.message)
+          const { error: pwError } = await updatePassword(accountData.newPassword)
+          if (pwError) throw pwError
           resetAccount({
             email: accountData.email,
             currentPassword: '',
@@ -384,7 +383,8 @@ export default function Settings() {
             saveMutation.reset()
             const file = new File([blob], 'avatar.png', { type: 'image/png' })
             const path = `user/${user.id}/custom.png`
-            const url = await uploadAvatar(file, path)
+            const token = await getAccessToken()
+            const url = token ? await uploadAvatar(file, path, token) : null
             if (url) {
               await dp.updateProfile(user.id, { avatar_url: url })
               setAvatarUrl(url)

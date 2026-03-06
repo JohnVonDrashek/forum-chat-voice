@@ -2,7 +2,6 @@ import { Link, useParams } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
-import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
@@ -11,15 +10,10 @@ import { queryKeys, queryOptions } from '../lib/queries'
 import { useDataProvider } from '../lib/data-provider'
 import { formatRelativeTime } from '../lib/dateFormatters'
 
-async function getAccessToken(): Promise<string> {
-  const { data } = await supabase.auth.getSession()
-  return data.session?.access_token ?? ''
-}
-
 export default function Category() {
   const dp = useDataProvider()
   const { categorySlug } = useParams()
-  const { user } = useAuth()
+  const { user, getAccessToken } = useAuth()
   const queryClient = useQueryClient()
 
   // Use React Query for category data - cached!

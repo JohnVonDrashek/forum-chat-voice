@@ -1,9 +1,6 @@
 import { createAvatar } from '@dicebear/core'
 import * as avataaars from '@dicebear/avataaars'
 import * as shapes from '@dicebear/shapes'
-import { supabase } from './supabase'
-
-const BUCKET = 'avatars'
 
 /**
  * Generate a DiceBear SVG string for a given seed.
@@ -50,36 +47,44 @@ function svgToPngBlob(svgString: string, size: number = 256): Promise<Blob> {
 }
 
 /**
- * Upload a file (Blob/File) to Supabase Storage and return the public URL.
+ * Upload a file to R2 via the Go avatar upload endpoint.
+ * Returns the public URL or null on failure.
  */
-export async function uploadAvatar(file: Blob | File, path: string): Promise<string | null> {
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, file, { upsert: true, contentType: file.type || 'image/png' })
+export async function uploadAvatar(file: Blob | File, path: string, accessToken: string): Promise<string | null> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('path', path)
 
-  if (error) {
-    console.error('Avatar upload failed:', error.message)
+  const res = await fetch('/api/avatars/upload', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: formData,
+  })
+
+  if (!res.ok) {
+    console.error('Avatar upload failed:', res.status, await res.text())
     return null
   }
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
-  return data.publicUrl
+  const data = await res.json()
+  return data.url
 }
 
 /**
- * Generate a DiceBear avatar PNG and upload it to Supabase Storage.
+ * Generate a DiceBear avatar PNG and upload it.
  * Returns the public URL or null on failure.
  */
 export async function uploadDefaultAvatar(
   seed: string,
-  type: 'user' | 'thread'
+  type: 'user' | 'thread',
+  accessToken: string
 ): Promise<string | null> {
   try {
     const svg = generateSvg(seed, type)
     const pngBlob = await svgToPngBlob(svg)
     const folder = type === 'user' ? 'user' : 'thread'
     const path = `${folder}/${seed}/default.png`
-    return await uploadAvatar(pngBlob, path)
+    return await uploadAvatar(pngBlob, path, accessToken)
   } catch (err) {
     console.error('Failed to generate default avatar:', err)
     return null

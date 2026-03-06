@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../lib/auth'
 
 type NotificationCategory = 'reply' | 'mention' | 'chat_mention' | 'dm'
 
@@ -15,12 +15,8 @@ const CATEGORIES: { key: NotificationCategory; label: string }[] = [
   { key: 'dm', label: 'Direct messages' },
 ]
 
-async function getAccessToken(): Promise<string> {
-  const { data } = await supabase.auth.getSession()
-  return data.session?.access_token ?? ''
-}
-
 export default function NotificationsTab() {
+  const { getAccessToken } = useAuth()
   const queryClient = useQueryClient()
 
   const { data: prefs = [], isLoading } = useQuery({
