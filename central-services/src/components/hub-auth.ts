@@ -1,13 +1,13 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { GoTrueAuthClient } from '../lib/gotrue-auth.js'
 import { createButton, createInput } from './ui.js'
 
 type AuthMode = 'signin' | 'signup' | 'forgot'
 
 interface HubAuthOptions {
-  supabase: SupabaseClient
+  auth: GoTrueAuthClient
 }
 
-export function createHubAuth({ supabase }: HubAuthOptions) {
+export function createHubAuth({ auth }: HubAuthOptions) {
   let mode: AuthMode = 'signin'
   let email = ''
   let password = ''
@@ -127,31 +127,15 @@ export function createHubAuth({ supabase }: HubAuthOptions) {
 
       try {
         if (mode === 'forgot') {
-          const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.origin + '/reset-password',
-          })
+          const { error: resetError } = await auth.resetPasswordForEmail(email)
           if (resetError) throw resetError
           resetSent = true
         } else if (mode === 'signin') {
-          const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+          const { error: signInError } = await auth.signIn(email, password)
           if (signInError) throw signInError
         } else {
-          const { data, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-            options: { data: { username } },
-          })
+          const { error: signUpError } = await auth.signUp(email, password, username)
           if (signUpError) throw signUpError
-          if (data.user && data.session) {
-            await fetch('/api/profiles', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${data.session.access_token}`,
-              },
-              body: JSON.stringify({ username }),
-            })
-          }
         }
       } catch (err) {
         error = err instanceof Error ? err.message : String(err)

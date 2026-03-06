@@ -28,14 +28,10 @@ ARG GITHUB_PACKAGES_TOKEN
 RUN GITHUB_PACKAGES_TOKEN=${GITHUB_PACKAGES_TOKEN} npm ci
 
 # Vite build-time env vars (public keys only — baked into frontend bundle)
-ARG VITE_HUB_SUPABASE_URL
-ARG VITE_HUB_SUPABASE_ANON_KEY
 ARG VITE_VAPID_PUBLIC_KEY
 
 # Build packages + central-services frontend
-RUN VITE_HUB_SUPABASE_URL=${VITE_HUB_SUPABASE_URL} \
-    VITE_HUB_SUPABASE_ANON_KEY=${VITE_HUB_SUPABASE_ANON_KEY} \
-    VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY} \
+RUN VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY} \
     npx turbo run build --filter=./central-services...
 
 # ---- Production stage ----

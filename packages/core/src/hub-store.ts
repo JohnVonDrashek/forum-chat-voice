@@ -58,16 +58,18 @@ export function createHubStore(options: HubStoreOptions): HubStore {
       const token = session.access_token
 
       const client = new CentralServicesClient(hubUrl, token)
-      const hubSb = createClient(hubSupabaseUrl, hubSupabaseAnonKey, {
-        global: {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          storageKey: 'forumline-hub-store',
-        },
-      })
+      const hubSb = hubSupabaseUrl
+        ? createClient(hubSupabaseUrl, hubSupabaseAnonKey, {
+            global: {
+              headers: { Authorization: `Bearer ${token}` },
+            },
+            auth: {
+              persistSession: false,
+              autoRefreshToken: false,
+              storageKey: 'forumline-hub-store',
+            },
+          })
+        : null
 
       store.set({
         hubClient: client,

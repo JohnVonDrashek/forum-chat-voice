@@ -1,12 +1,12 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { GoTrueAuthClient } from '../lib/gotrue-auth.js'
 import { createButton, createInput } from './ui.js'
 
 interface ResetPasswordOptions {
-  supabase: SupabaseClient
+  auth: GoTrueAuthClient
   onComplete: () => void
 }
 
-export function createResetPassword({ supabase, onComplete }: ResetPasswordOptions) {
+export function createResetPassword({ auth, onComplete }: ResetPasswordOptions) {
   let password = ''
   let confirmPassword = ''
   let error: string | null = null
@@ -102,7 +102,7 @@ export function createResetPassword({ supabase, onComplete }: ResetPasswordOptio
       render()
 
       try {
-        const { error: updateError } = await supabase.auth.updateUser({ password })
+        const { error: updateError } = await auth.updateUser({ password })
         if (updateError) throw updateError
         success = true
         render()

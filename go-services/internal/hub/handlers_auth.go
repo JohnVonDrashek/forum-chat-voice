@@ -53,11 +53,14 @@ func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var gotrueResp struct {
-		AccessToken string `json:"access_token"`
-		ExpiresAt   int64  `json:"expires_at"`
-		User        struct {
-			ID    string `json:"id"`
-			Email string `json:"email"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int64  `json:"expires_in"`
+		ExpiresAt    int64  `json:"expires_at"`
+		User         struct {
+			ID           string                 `json:"id"`
+			Email        string                 `json:"email"`
+			UserMetadata map[string]interface{} `json:"user_metadata"`
 		} `json:"user"`
 	}
 	if err := json.Unmarshal(respBody, &gotrueResp); err != nil {
@@ -77,12 +80,16 @@ func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"user": map[string]string{
-			"id":    gotrueResp.User.ID,
-			"email": gotrueResp.User.Email,
+		"user": map[string]interface{}{
+			"id":            gotrueResp.User.ID,
+			"email":         gotrueResp.User.Email,
+			"user_metadata": gotrueResp.User.UserMetadata,
 		},
 		"session": map[string]interface{}{
-			"expires_at": gotrueResp.ExpiresAt,
+			"access_token":  gotrueResp.AccessToken,
+			"refresh_token": gotrueResp.RefreshToken,
+			"expires_in":    gotrueResp.ExpiresIn,
+			"expires_at":    gotrueResp.ExpiresAt,
 		},
 	})
 }
@@ -163,11 +170,14 @@ func (h *Handlers) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var gotrueResp struct {
-		AccessToken string `json:"access_token"`
-		ExpiresAt   int64  `json:"expires_at"`
-		User        struct {
-			ID    string `json:"id"`
-			Email string `json:"email"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int64  `json:"expires_in"`
+		ExpiresAt    int64  `json:"expires_at"`
+		User         struct {
+			ID           string                 `json:"id"`
+			Email        string                 `json:"email"`
+			UserMetadata map[string]interface{} `json:"user_metadata"`
 		} `json:"user"`
 	}
 	if err := json.Unmarshal(respBody, &gotrueResp); err != nil {
@@ -183,10 +193,12 @@ func (h *Handlers) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	// Create hub profile
 	avatarURL := fmt.Sprintf("https://api.dicebear.com/9.x/avataaars/svg?seed=%s&size=256", gotrueResp.User.ID)
 	_, err = h.Pool.Exec(ctx,
-		`INSERT INTO hub_profiles (id, username, display_name, avatar_url) VALUES ($1, $2, $3, $4)`,
+		`INSERT INTO hub_profiles (id, username, display_name, avatar_url) VALUES ($1, $2, $3, $4)
+		 ON CONFLICT (id) DO NOTHING`,
 		gotrueResp.User.ID, body.Username, displayName, avatarURL,
 	)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create hub profile for user %s: %v\n", gotrueResp.User.ID, err)
 		// Rollback: delete auth user via GoTrue admin API
 		deleteGoTrueUser(gotrueResp.User.ID)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create profile"})
@@ -205,12 +217,16 @@ func (h *Handlers) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	})
 
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
-		"user": map[string]string{
-			"id":    gotrueResp.User.ID,
-			"email": gotrueResp.User.Email,
+		"user": map[string]interface{}{
+			"id":            gotrueResp.User.ID,
+			"email":         gotrueResp.User.Email,
+			"user_metadata": gotrueResp.User.UserMetadata,
 		},
 		"session": map[string]interface{}{
-			"expires_at": gotrueResp.ExpiresAt,
+			"access_token":  gotrueResp.AccessToken,
+			"refresh_token": gotrueResp.RefreshToken,
+			"expires_in":    gotrueResp.ExpiresIn,
+			"expires_at":    gotrueResp.ExpiresAt,
 		},
 	})
 }

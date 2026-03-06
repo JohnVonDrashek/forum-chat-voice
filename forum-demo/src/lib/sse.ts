@@ -27,10 +27,13 @@ export function useSSE(
       let fullUrl = url!
       if (getAccessToken) {
         const token = await getAccessToken()
-        if (token) {
-          const sep = fullUrl.includes('?') ? '&' : '?'
-          fullUrl = `${fullUrl}${sep}access_token=${encodeURIComponent(token)}`
+        if (!token) {
+          // No auth token — retry later instead of connecting unauthenticated
+          reconnectTimer = setTimeout(connect, 3000)
+          return
         }
+        const sep = fullUrl.includes('?') ? '&' : '?'
+        fullUrl = `${fullUrl}${sep}access_token=${encodeURIComponent(token)}`
       }
 
       es = new EventSource(fullUrl)

@@ -44,8 +44,6 @@ jobs:
           --config go-services/fly.toml
           --dockerfile Dockerfile.go-hub
           --build-arg GITHUB_PACKAGES_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          --build-arg VITE_HUB_SUPABASE_URL=${{ secrets.VITE_HUB_SUPABASE_URL }}
-          --build-arg VITE_HUB_SUPABASE_ANON_KEY=${{ secrets.VITE_HUB_SUPABASE_ANON_KEY }}
           --build-arg VITE_VAPID_PUBLIC_KEY=${{ secrets.VITE_VAPID_PUBLIC_KEY }}
           --remote-only
         env:

@@ -1,17 +1,17 @@
-import type { Session, SupabaseClient } from '@supabase/supabase-js'
+import type { GoTrueAuthClient, HubSession } from '../lib/gotrue-auth.js'
 import type { ForumStore, HubStore } from '@johnvondrashek/forumline-core'
 import { createHubAuth } from './hub-auth.js'
 import { createAvatar, createButton, createCard } from './ui.js'
 
 interface SettingsPageOptions {
-  hubSession: Session | null
+  hubSession: HubSession | null
   forumStore: ForumStore
   hubStore: HubStore
-  supabase: SupabaseClient
+  auth: GoTrueAuthClient
   onClose: () => void
 }
 
-export function createSettingsPage({ hubSession, forumStore, hubStore, supabase, onClose }: SettingsPageOptions) {
+export function createSettingsPage({ hubSession, forumStore, hubStore, auth, onClose }: SettingsPageOptions) {
   let memberships: { forum_domain: string; notifications_muted: boolean }[] = []
   let removingDomain: string | null = null
   let avatarUrl: string | null = null
@@ -64,14 +64,14 @@ export function createSettingsPage({ hubSession, forumStore, hubStore, supabase,
       profileRow.className = 'settings-profile-row'
       profileRow.appendChild(createAvatar({
         avatarUrl,
-        seed: hubSession.user.user_metadata?.username || hubSession.user.email || undefined,
+        seed: hubSession.user.user_metadata?.username as string || hubSession.user.email || undefined,
         size: 40,
       }))
       const info = document.createElement('div')
       info.className = 'flex-1'
       const name = document.createElement('p')
       name.className = 'font-medium text-white'
-      name.textContent = hubSession.user.user_metadata?.username || hubSession.user.email || ''
+      name.textContent = (hubSession.user.user_metadata?.username as string) || hubSession.user.email || ''
       const emailEl = document.createElement('p')
       emailEl.className = 'text-sm text-muted'
       emailEl.textContent = hubSession.user.email || ''
@@ -80,11 +80,11 @@ export function createSettingsPage({ hubSession, forumStore, hubStore, supabase,
       profileRow.appendChild(createButton({
         text: 'Sign Out',
         variant: 'secondary',
-        onClick: () => supabase.auth.signOut(),
+        onClick: () => auth.signOut(),
       }))
       hubContentArea.appendChild(profileRow)
     } else {
-      const { el: authEl } = createHubAuth({ supabase })
+      const { el: authEl } = createHubAuth({ auth })
       hubContentArea.appendChild(authEl)
     }
   }
@@ -218,7 +218,7 @@ export function createSettingsPage({ hubSession, forumStore, hubStore, supabase,
 
   async function fetchMemberships() {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const session = auth.getSession()
       if (!session) return
       const res = await fetch('/api/memberships', {
         headers: { Authorization: `Bearer ${session.access_token}` },
@@ -236,12 +236,15 @@ export function createSettingsPage({ hubSession, forumStore, hubStore, supabase,
     const userId = hubSession?.user?.id
     if (!userId) return
     try {
-      const { data } = await supabase
-        .from('hub_profiles')
-        .select('avatar_url')
-        .eq('id', userId)
-        .single()
-      if (data?.avatar_url) {
+      const session = auth.getSession()
+      if (!session) return
+      // Use the identity endpoint to get profile info including avatar
+      const res = await fetch('/api/identity', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.avatar_url) {
         avatarUrl = data.avatar_url
         renderHubContent()
       }
@@ -257,7 +260,7 @@ export function createSettingsPage({ hubSession, forumStore, hubStore, supabase,
     if (entry) updateMuteButton(entry.muteBtn, forumDomain)
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const session = auth.getSession()
       if (!session) throw new Error('No session')
       const res = await fetch('/api/memberships', {
         method: 'PUT',

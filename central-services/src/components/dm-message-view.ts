@@ -2,6 +2,7 @@ import type { HubStore } from '@johnvondrashek/forumline-core'
 import type { HubDirectMessage } from '@johnvondrashek/forumline-protocol'
 import { createAvatar, createButton, createInput, createSpinner } from './ui.js'
 import { formatMessageTime } from '../lib/dateFormatters.js'
+import { hubAuth } from '../app.js'
 
 interface DmMessageViewOptions {
   hubStore: HubStore
@@ -14,7 +15,7 @@ export function createDmMessageView({ hubStore, recipientId }: DmMessageViewOpti
   let recipientAvatarUrl: string | null = null
   let newMessage = ''
   let sending = false
-  let pollInterval: ReturnType<typeof setInterval> | null = null
+  let eventSource: EventSource | null = null
   let markedRead = false
   let initialLoad = true
 
@@ -239,13 +240,33 @@ export function createDmMessageView({ hubStore, recipientId }: DmMessageViewOpti
 
   fetchMessages()
 
-  // Poll for new messages
-  pollInterval = setInterval(fetchMessages, 15_000)
+  // SSE for real-time DM updates
+  function connectSSE() {
+    const session = hubAuth.getSession()
+    if (!session) return
+    const { hubUserId } = hubStore.get()
+    if (!hubUserId) return
+
+    const url = `/api/dms/${hubUserId}/stream?access_token=${encodeURIComponent(session.access_token)}`
+    eventSource = new EventSource(url)
+    eventSource.onmessage = () => {
+      // Any SSE message means DMs changed — refetch
+      fetchMessages()
+    }
+    eventSource.onerror = () => {
+      eventSource?.close()
+      eventSource = null
+      // Reconnect after 5 seconds
+      setTimeout(connectSSE, 5000)
+    }
+  }
+  connectSSE()
 
   return {
     el,
     destroy() {
-      if (pollInterval) clearInterval(pollInterval)
+      eventSource?.close()
+      eventSource = null
     },
   }
 }

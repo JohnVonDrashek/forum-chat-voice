@@ -1,7 +1,6 @@
-import type { Session } from '@supabase/supabase-js'
+import type { GoTrueAuthClient, HubSession } from '../lib/gotrue-auth.js'
 import type { ForumNotification } from '@johnvondrashek/forumline-protocol'
 import { createForumWebview, isTauri, getTauriNotification, setupDeepLinkListener, type ForumStore, type HubStore, type DeepLinkTarget } from '@johnvondrashek/forumline-core'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { createWelcomePage } from './welcome-page.js'
 import { createDmPanel } from './dm-panel.js'
 import { createSettingsPage } from './settings-page.js'
@@ -9,9 +8,9 @@ import { createMobileTabBar, type AppView } from './mobile-tab-bar.js'
 import type { ForumWebviewInstance } from '@johnvondrashek/forumline-core'
 
 /** Persist auth state change to hub DB */
-async function updateForumAuthState(supabase: SupabaseClient, forumDomain: string, authed: boolean) {
+async function updateForumAuthState(auth: GoTrueAuthClient, forumDomain: string, authed: boolean) {
   try {
-    const { data: { session } } = await supabase.auth.getSession()
+    const session = auth.getSession()
     if (!session) return
     await fetch('/api/memberships', {
       method: 'POST',
@@ -27,13 +26,13 @@ async function updateForumAuthState(supabase: SupabaseClient, forumDomain: strin
 }
 
 interface AppLayoutOptions {
-  hubSession: Session
+  hubSession: HubSession
   forumStore: ForumStore
   hubStore: HubStore
-  supabase: SupabaseClient
+  auth: GoTrueAuthClient
 }
 
-export function createAppLayout({ hubSession, forumStore, hubStore, supabase }: AppLayoutOptions) {
+export function createAppLayout({ hubSession, forumStore, hubStore, auth }: AppLayoutOptions) {
   let view: AppView = 'forums'
   let authedForums: Set<string> | null = null
   let mutedForums = new Set<string>()
@@ -104,10 +103,10 @@ export function createAppLayout({ hubSession, forumStore, hubStore, supabase }: 
   // ---- Memberships fetch ----
   async function fetchMemberships() {
     try {
-      const { data: { session: freshSession } } = await supabase.auth.getSession()
-      if (!freshSession) return
+      const session = auth.getSession()
+      if (!session) return
       const res = await fetch('/api/memberships', {
-        headers: { Authorization: `Bearer ${freshSession.access_token}` },
+        headers: { Authorization: `Bearer ${session.access_token}` },
       })
       if (!res.ok) return
       const memberships: { forum_domain: string; forum_authed_at: string | null; notifications_muted?: boolean }[] = await res.json()
@@ -179,13 +178,13 @@ export function createAppLayout({ hubSession, forumStore, hubStore, supabase }: 
         if (cancelled) return
 
         const sub = subscription.toJSON()
-        const { data: { session: pushSession } } = await supabase.auth.getSession()
-        if (!pushSession) return
+        const session = auth.getSession()
+        if (!session) return
         await fetch('/api/push?action=subscribe', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${pushSession.access_token}`,
+            Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({ endpoint: sub.endpoint, keys: sub.keys }),
         })
@@ -284,11 +283,11 @@ export function createAppLayout({ hubSession, forumStore, hubStore, supabase }: 
         initialPath: deepLinkPath,
         onAuthed: (domain) => {
           authedForums?.add(domain)
-          updateForumAuthState(supabase, domain, true)
+          updateForumAuthState(auth, domain, true)
         },
         onSignedOut: (domain) => {
           authedForums?.delete(domain)
-          updateForumAuthState(supabase, domain, false)
+          updateForumAuthState(auth, domain, false)
         },
         onUnreadCounts: (domain, counts) => forumStore.setUnreadCounts(domain, counts),
         onNotification: handleForumNotification,
@@ -302,11 +301,10 @@ export function createAppLayout({ hubSession, forumStore, hubStore, supabase }: 
       if (needsAuth) {
         const wv = webviewInstance
         const af = activeForum
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          if (session && wv === webviewInstance) {
-            wv.setAuthUrl(`${af.api_base}/auth?hub_token=${session.access_token}`)
-          }
-        })
+        const session = auth.getSession()
+        if (session && wv === webviewInstance) {
+          wv.setAuthUrl(`${af.api_base}/auth?hub_token=${session.access_token}`)
+        }
       }
 
       deepLinkPath = null
@@ -332,7 +330,7 @@ export function createAppLayout({ hubSession, forumStore, hubStore, supabase }: 
           hubSession,
           forumStore,
           hubStore,
-          supabase,
+          auth,
           onClose: () => { view = 'forums'; switchView() },
         })
         mainArea.appendChild(settingsChild.el)

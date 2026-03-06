@@ -1,10 +1,10 @@
-import type { Session } from '@supabase/supabase-js'
+import type { HubSession } from '../lib/gotrue-auth.js'
 import type { ForumStore, HubStore } from '@johnvondrashek/forumline-core'
 import { createMobileForumList } from './mobile-forum-list.js'
 import { createButton } from './ui.js'
 
 interface WelcomePageOptions {
-  hubSession: Session | null
+  hubSession: HubSession | null
   forumStore: ForumStore
   hubStore: HubStore
   onGoToSettings: () => void

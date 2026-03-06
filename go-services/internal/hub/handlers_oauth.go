@@ -270,7 +270,7 @@ func (h *Handlers) HandleOAuthToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate hub access token via GoTrue magic link
-	hubAccessToken := generateHubAccessToken(ctx, h.Pool, authUserID)
+	hubAccessToken := generateHubAccessToken(authUserID)
 
 	response := map[string]interface{}{
 		"identity_token": tokenStr,
@@ -285,13 +285,28 @@ func (h *Handlers) HandleOAuthToken(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, response)
 }
 
-// generateHubAccessToken creates a GoTrue session for the user via magic link.
-// This is best-effort — if it fails, DMs won't work but identity federation still does.
-func generateHubAccessToken(_ interface{}, _ interface{}, _ string) string {
-	// This requires GoTrue admin API. For now, return empty.
-	// The forum frontend can still use the identity token for federation.
-	// Hub access token generation will be implemented when GoTrue admin endpoints are configured.
-	return ""
+// generateHubAccessToken mints a JWT for the user signed with JWT_SECRET.
+// This token is valid for authenticated hub API endpoints (DMs, memberships, etc.).
+// Best-effort — if it fails, DMs won't work but identity federation still does.
+func generateHubAccessToken(userID string) string {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return ""
+	}
+
+	now := time.Now()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Subject:   userID,
+		IssuedAt:  jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
+		Issuer:    "forumline-hub",
+	})
+
+	tokenStr, err := token.SignedString([]byte(secret))
+	if err != nil {
+		return ""
+	}
+	return tokenStr
 }
 
 func sha256Hex(s string) string {
