@@ -1,0 +1,291 @@
+package hub
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strings"
+
+	"github.com/johnvondrashek/forumline/go-services/internal/shared"
+)
+
+// HandleLogin delegates to GoTrue for auth, then sets the hub_pending_auth cookie.
+func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+	if body.Email == "" || body.Password == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "email and password are required"})
+		return
+	}
+
+	// Call GoTrue
+	gotrueURL := os.Getenv("GOTRUE_URL")
+	payload, _ := json.Marshal(map[string]string{
+		"email":    body.Email,
+		"password": body.Password,
+	})
+
+	resp, err := http.Post(
+		gotrueURL+"/token?grant_type=password",
+		"application/json",
+		bytes.NewReader(payload),
+	)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "auth service unavailable"})
+		return
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != 200 {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Invalid email or password"})
+		return
+	}
+
+	var gotrueResp struct {
+		AccessToken string `json:"access_token"`
+		ExpiresAt   int64  `json:"expires_at"`
+		User        struct {
+			ID    string `json:"id"`
+			Email string `json:"email"`
+		} `json:"user"`
+	}
+	if err := json.Unmarshal(respBody, &gotrueResp); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to parse auth response"})
+		return
+	}
+
+	// Set httpOnly cookie for OAuth authorize flow
+	http.SetCookie(w, &http.Cookie{
+		Name:     "hub_pending_auth",
+		Value:    gotrueResp.AccessToken,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   true,
+		MaxAge:   60,
+	})
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"user": map[string]string{
+			"id":    gotrueResp.User.ID,
+			"email": gotrueResp.User.Email,
+		},
+		"session": map[string]interface{}{
+			"expires_at": gotrueResp.ExpiresAt,
+		},
+	})
+}
+
+// HandleSignup delegates to GoTrue, then creates hub_profile.
+func (h *Handlers) HandleSignup(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Email       string `json:"email"`
+		Password    string `json:"password"`
+		Username    string `json:"username"`
+		DisplayName string `json:"display_name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	if body.Email == "" || body.Password == "" || body.Username == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "email, password, and username are required"})
+		return
+	}
+
+	// Validate username (3-30 chars, alphanumeric + underscore/hyphen)
+	if len(body.Username) < 3 || len(body.Username) > 30 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Username must be 3-30 characters"})
+		return
+	}
+
+	if len(body.Password) < 6 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Password must be at least 6 characters"})
+		return
+	}
+
+	ctx := r.Context()
+
+	// Check username uniqueness
+	var exists bool
+	err := h.Pool.QueryRow(ctx,
+		"SELECT EXISTS(SELECT 1 FROM hub_profiles WHERE username = $1)", body.Username,
+	).Scan(&exists)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+		return
+	}
+	if exists {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "Username already taken"})
+		return
+	}
+
+	// Call GoTrue signup
+	gotrueURL := os.Getenv("GOTRUE_URL")
+	displayName := body.DisplayName
+	if displayName == "" {
+		displayName = body.Username
+	}
+
+	payload, _ := json.Marshal(map[string]interface{}{
+		"email":    body.Email,
+		"password": body.Password,
+		"data": map[string]string{
+			"username":     body.Username,
+			"display_name": displayName,
+		},
+	})
+
+	resp, err := http.Post(gotrueURL+"/signup", "application/json", bytes.NewReader(payload))
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "auth service unavailable"})
+		return
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != 200 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Signup failed"})
+		return
+	}
+
+	var gotrueResp struct {
+		AccessToken string `json:"access_token"`
+		ExpiresAt   int64  `json:"expires_at"`
+		User        struct {
+			ID    string `json:"id"`
+			Email string `json:"email"`
+		} `json:"user"`
+	}
+	if err := json.Unmarshal(respBody, &gotrueResp); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to parse auth response"})
+		return
+	}
+
+	if gotrueResp.User.ID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Signup failed — check email confirmation settings"})
+		return
+	}
+
+	// Create hub profile
+	avatarURL := fmt.Sprintf("https://api.dicebear.com/9.x/avataaars/svg?seed=%s&size=256", gotrueResp.User.ID)
+	_, err = h.Pool.Exec(ctx,
+		`INSERT INTO hub_profiles (id, username, display_name, avatar_url) VALUES ($1, $2, $3, $4)`,
+		gotrueResp.User.ID, body.Username, displayName, avatarURL,
+	)
+	if err != nil {
+		// Rollback: delete auth user via GoTrue admin API
+		deleteGoTrueUser(gotrueResp.User.ID)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create profile"})
+		return
+	}
+
+	// Set httpOnly cookie for OAuth authorize flow
+	http.SetCookie(w, &http.Cookie{
+		Name:     "hub_pending_auth",
+		Value:    gotrueResp.AccessToken,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   true,
+		MaxAge:   60,
+	})
+
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"user": map[string]string{
+			"id":    gotrueResp.User.ID,
+			"email": gotrueResp.User.Email,
+		},
+		"session": map[string]interface{}{
+			"expires_at": gotrueResp.ExpiresAt,
+		},
+	})
+}
+
+// HandleLogout clears auth cookies.
+func (h *Handlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		return
+	}
+
+	// Clear cookies
+	http.SetCookie(w, &http.Cookie{
+		Name:     "hub_pending_auth",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   true,
+		MaxAge:   -1,
+	})
+
+	writeJSON(w, http.StatusOK, map[string]string{"ok": "true"})
+}
+
+// HandleSession returns the current user from the JWT.
+func (h *Handlers) HandleSession(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		return
+	}
+
+	tokenStr := extractTokenFromRequest(r)
+	if tokenStr == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "missing authorization"})
+		return
+	}
+
+	claims, err := shared.ValidateJWT(tokenStr)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid token"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"user": map[string]string{
+			"id":    claims.Subject,
+			"email": claims.Email,
+		},
+	})
+}
+
+func deleteGoTrueUser(userID string) {
+	gotrueURL := os.Getenv("GOTRUE_URL")
+	serviceKey := os.Getenv("GOTRUE_SERVICE_ROLE_KEY")
+	if gotrueURL == "" || serviceKey == "" {
+		return
+	}
+
+	req, _ := http.NewRequest(http.MethodDelete, gotrueURL+"/admin/users/"+userID, nil)
+	req.Header.Set("Authorization", "Bearer "+serviceKey)
+	req.Header.Set("Content-Type", "application/json")
+	http.DefaultClient.Do(req)
+}
+
+func extractTokenFromRequest(r *http.Request) string {
+	auth := r.Header.Get("Authorization")
+	if strings.HasPrefix(auth, "Bearer ") {
+		return strings.TrimPrefix(auth, "Bearer ")
+	}
+	if cookie, err := r.Cookie("sb-access-token"); err == nil {
+		return cookie.Value
+	}
+	if token := r.URL.Query().Get("access_token"); token != "" {
+		return token
+	}
+	return ""
+}

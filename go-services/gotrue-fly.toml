@@ -1,0 +1,36 @@
+app = "forumline-auth"
+primary_region = "iad"
+
+[build]
+  image = "supabase/gotrue:v2.186.0"
+
+[env]
+  GOTRUE_API_HOST = "0.0.0.0"
+  GOTRUE_API_PORT = "8080"
+  GOTRUE_SITE_URL = "https://app.forumline.net"
+  API_EXTERNAL_URL = "https://forumline-auth.fly.dev"
+  GOTRUE_DB_DRIVER = "postgres"
+  GOTRUE_DISABLE_SIGNUP = "false"
+  GOTRUE_EXTERNAL_EMAIL_ENABLED = "true"
+  GOTRUE_MAILER_AUTOCONFIRM = "true"
+  GOTRUE_JWT_DEFAULT_GROUP_NAME = "authenticated"
+  GOTRUE_JWT_ADMIN_ROLES = "service_role"
+  GOTRUE_JWT_AUD = "authenticated"
+  GOTRUE_JWT_EXP = "3600"
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [[services.http_checks]]
+    interval = 10000
+    timeout = 2000
+    path = "/health"
