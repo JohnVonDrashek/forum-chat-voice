@@ -1,6 +1,6 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useRef, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+import { useSSE } from '../../lib/sse'
 import { queryKeys } from '../../lib/queries'
 import Avatar from '../Avatar'
 import Card from '../ui/Card'
@@ -47,58 +47,31 @@ export default function PostList({
     currentPage * POSTS_PER_PAGE
   )
 
-  // Set up real-time subscription for new posts
-  useEffect(() => {
+  // Set up SSE subscription for new posts
+  const sseUrl = `/api/threads/${thread.id}/stream`
+  const handleSSE = useCallback((data: unknown) => {
+    const post = data as PostWithAuthor
+    if (!post?.id) return
+
     const threadId = thread.id
+    const currentPosts = queryClient.getQueryData<PostWithAuthor[]>(queryKeys.posts(threadId)) ?? []
+    const known = currentPosts.some(p => p.id === post.id)
+      || pendingPostsRef.current.some(p => p.id === post.id)
+    if (known) return
 
-    console.log('[FLD:Thread] Subscribing to realtime for thread:', threadId)
-    const subscription = supabase
-        .channel(`thread:${threadId}`)
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'posts', filter: `thread_id=eq.${threadId}` },
-          async (payload) => {
-            // Fetch the new post with author
-            const { data, error } = await supabase
-              .from('posts')
-              .select('*, author:profiles(*)')
-              .eq('id', payload.new.id)
-              .single()
-            if (error) {
-              console.error('[FLD:Thread] Failed to fetch new realtime post:', error)
-              return
-            }
-            if (data) {
-              const post = data as PostWithAuthor
-              const currentPosts = queryClient.getQueryData<PostWithAuthor[]>(queryKeys.posts(threadId)) ?? []
-              const known = currentPosts.some(p => p.id === post.id)
-                || pendingPostsRef.current.some(p => p.id === post.id)
-              if (known) return
-
-              if (autoUpdateRef.current) {
-                // Add directly to cache
-                queryClient.setQueryData<PostWithAuthor[]>(
-                  queryKeys.posts(threadId),
-                  (old = []) => old.some(p => p.id === post.id) ? old : [...old, post]
-                )
-              } else {
-                // Buffer in pending posts
-                onSetPendingPosts(prev => {
-                  if (prev.some(p => p.id === post.id)) return prev
-                  return [...prev, post]
-                })
-              }
-            }
-          }
-        )
-        .subscribe((status) => {
-          console.log('[FLD:Thread] Subscription status:', status)
-        })
-
-    return () => {
-      subscription.unsubscribe()
+    if (autoUpdateRef.current) {
+      queryClient.setQueryData<PostWithAuthor[]>(
+        queryKeys.posts(threadId),
+        (old = []) => old.some(p => p.id === post.id) ? old : [...old, post]
+      )
+    } else {
+      onSetPendingPosts(prev => {
+        if (prev.some(p => p.id === post.id)) return prev
+        return [...prev, post]
+      })
     }
   }, [thread.id, queryClient, onSetPendingPosts])
+  useSSE(sseUrl, handleSSE)
 
   const loadPendingPosts = useCallback(() => {
     if (pendingPosts.length === 0) return

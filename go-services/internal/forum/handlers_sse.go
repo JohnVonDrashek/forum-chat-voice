@@ -87,6 +87,73 @@ func (h *Handlers) HandleChatStream(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HandlePostStream handles GET /api/threads/{id}/stream (SSE).
+// Streams new posts for a specific thread, enriched with author profile.
+func (h *Handlers) HandlePostStream(w http.ResponseWriter, r *http.Request) {
+	threadID := chi.URLParam(r, "id")
+
+	client := &shared.SSEClient{
+		Channel: "post_changes",
+		Filter:  map[string]string{"thread_id": threadID},
+		Send:    make(chan []byte, 32),
+		Done:    make(chan struct{}),
+	}
+
+	h.SSEHub.Register(client)
+	defer func() {
+		h.SSEHub.Unregister(client)
+		close(client.Done)
+	}()
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+	w.WriteHeader(http.StatusOK)
+
+	fmt.Fprint(w, ":connected\n\n")
+	flusher.Flush()
+
+	heartbeat := time.NewTicker(30 * time.Second)
+	defer heartbeat.Stop()
+
+	ctx := r.Context()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-heartbeat.C:
+			fmt.Fprint(w, ":heartbeat\n\n")
+			flusher.Flush()
+		case data := <-client.Send:
+			var raw map[string]interface{}
+			if err := json.Unmarshal(data, &raw); err != nil {
+				continue
+			}
+
+			authorID, _ := raw["author_id"].(string)
+			if authorID != "" {
+				row := h.Pool.QueryRow(ctx,
+					`SELECT `+profileColumns+` FROM profiles WHERE id = $1`, authorID)
+				p, err := scanProfile(row.Scan)
+				if err == nil {
+					raw["author"] = p
+				}
+			}
+
+			enriched, _ := json.Marshal(raw)
+			fmt.Fprintf(w, "data: %s\n\n", enriched)
+			flusher.Flush()
+		}
+	}
+}
+
 // HandleVoicePresenceStream handles GET /api/voice-presence/stream (SSE).
 // Streams voice presence changes (join/leave/update).
 func (h *Handlers) HandleVoicePresenceStream(w http.ResponseWriter, r *http.Request) {

@@ -75,3 +75,25 @@ CREATE TRIGGER trg_voice_presence_change
   AFTER INSERT OR UPDATE OR DELETE ON voice_presence
   FOR EACH ROW
   EXECUTE FUNCTION notify_voice_presence_change();
+
+-- pg_notify trigger for post inserts (thread realtime updates).
+CREATE OR REPLACE FUNCTION notify_post_insert()
+RETURNS trigger AS $$
+BEGIN
+  PERFORM pg_notify('post_changes', json_build_object(
+    'id', NEW.id,
+    'thread_id', NEW.thread_id,
+    'author_id', NEW.author_id,
+    'content', NEW.content,
+    'reply_to_id', NEW.reply_to_id,
+    'created_at', NEW.created_at
+  )::text);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_post_insert ON posts;
+CREATE TRIGGER trg_post_insert
+  AFTER INSERT ON posts
+  FOR EACH ROW
+  EXECUTE FUNCTION notify_post_insert();

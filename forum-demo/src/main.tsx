@@ -4,7 +4,6 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 import { DataProviderProvider } from './lib/data-provider'
-import { SupabaseForumDataProvider } from './lib/supabase-data-provider'
 import { ApiForumDataProvider } from './lib/api-data-provider'
 import { SupabaseAuthProvider } from './lib/supabase-auth-provider'
 import './index.css'
@@ -13,11 +12,9 @@ console.log('[FLD:App] Starting Forumline Demo...')
 
 // Initialize providers
 const authProvider = new SupabaseAuthProvider()
-const useApiProvider = import.meta.env.VITE_USE_API_PROVIDER === 'true'
-const dataProvider = useApiProvider
-  ? new ApiForumDataProvider(() => authProvider.getSession().then(s => s?.access_token ?? null))
-  : new SupabaseForumDataProvider()
-if (useApiProvider) console.log('[FLD:App] Using Go API data provider')
+const dataProvider = new ApiForumDataProvider(
+  () => authProvider.getSession().then(s => s?.access_token ?? null)
+)
 
 // Create a client with sensible defaults
 const queryClient = new QueryClient({

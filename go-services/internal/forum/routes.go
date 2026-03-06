@@ -76,8 +76,9 @@ func NewRouter(pool *pgxpool.Pool, sseHub *shared.SSEHub, cfg *Config) *chi.Mux 
 	r.Get("/api/users/{id}/threads", h.HandleUserThreads)
 	r.Get("/api/search/threads", h.HandleSearchThreads)
 
-	// Posts (public reads)
+	// Posts (public reads + stream)
 	r.Get("/api/threads/{id}/posts", h.HandlePosts)
+	r.Get("/api/threads/{id}/stream", h.HandlePostStream)
 	r.Get("/api/users/{id}/posts", h.HandleUserPosts)
 	r.Get("/api/search/posts", h.HandleSearchPosts)
 
