@@ -37,11 +37,26 @@ services:
       GOTRUE_DISABLE_SIGNUP: "false"
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
       GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_MAILER_URLPATHS_RECOVERY: "/reset-password"
+      GOTRUE_SMTP_HOST: "postfix"
+      GOTRUE_SMTP_PORT: "587"
+      GOTRUE_SMTP_ADMIN_EMAIL: "noreply@forumline.net"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 5s
       timeout: 5s
       retries: 10
+
+  postfix:
+    image: boky/postfix:latest
+    environment:
+      ALLOWED_SENDER_DOMAINS: "forumline.net"
+      POSTFIX_myhostname: "mail.forumline.net"
+    # Emails will be delivered to the real recipient addresses.
+    # For local testing, use Mailpit instead:
+    #   image: axllent/mailpit
+    #   ports: ["8025:8025", "1025:1025"]
+    # Then set GOTRUE_SMTP_HOST=mailpit, GOTRUE_SMTP_PORT=1025
 
   init-db:
     image: postgres:17-alpine

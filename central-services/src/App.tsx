@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createClient, type Session } from '@supabase/supabase-js'
 import { ForumProvider, HubProvider } from '@johnvondrashek/forumline-react'
 import AppLayout from './components/AppLayout'
+import ResetPassword from './components/ResetPassword'
 
 const hubSupabaseUrl = import.meta.env.VITE_HUB_SUPABASE_URL
 const hubSupabaseAnonKey = import.meta.env.VITE_HUB_SUPABASE_ANON_KEY
@@ -28,6 +29,7 @@ export { hubSupabase }
 export default function App() {
   const [hubSession, setHubSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
 
   useEffect(() => {
     hubSupabase.auth.getSession().then(({ data: { session } }) => {
@@ -35,8 +37,11 @@ export default function App() {
       setLoading(false)
     })
 
-    const { data: { subscription } } = hubSupabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = hubSupabase.auth.onAuthStateChange((event, session) => {
       setHubSession(session)
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true)
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -48,6 +53,10 @@ export default function App() {
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-600 border-t-indigo-500" />
       </div>
     )
+  }
+
+  if (passwordRecovery) {
+    return <ResetPassword onComplete={() => setPasswordRecovery(false)} />
   }
 
   const directSession = hubSession

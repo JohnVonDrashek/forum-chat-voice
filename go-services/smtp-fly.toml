@@ -1,0 +1,25 @@
+app = "forumline-smtp"
+primary_region = "iad"
+
+[build]
+  image = "boky/postfix:latest"
+
+[env]
+  ALLOWED_SENDER_DOMAINS = "forumline.net"
+  POSTFIX_myhostname = "mail.forumline.net"
+  DKIM_AUTOGENERATE = "1"
+  DKIM_SELECTOR = "mail"
+  # Trust Fly internal IPv6 network so GoTrue can relay without auth
+  POSTFIX_mynetworks = "127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fdaa::/16"
+
+[mounts]
+  source = "smtp_data"
+  destination = "/etc/opendkim/keys"
+
+# Internal-only — no public ports needed.
+# GoTrue connects via forumline-smtp.internal:587 on Fly's private network.
+[[services]]
+  internal_port = 587
+  protocol = "tcp"
+  auto_stop_machines = false
+  auto_start_machines = true
