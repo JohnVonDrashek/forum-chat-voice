@@ -41,7 +41,7 @@ export function createDmMessageView({ hubStore, recipientId }: DmMessageViewOpti
   const messageList = document.createElement('div')
   messageList.style.display = 'flex'
   messageList.style.flexDirection = 'column'
-  messageList.style.gap = '1rem'
+  messageList.style.gap = '0.25rem'
 
   // Empty state
   const emptyState = document.createElement('div')
