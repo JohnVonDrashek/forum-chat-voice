@@ -10,19 +10,11 @@
   },
   "dependencies": {
     "@johnvondrashek/forumline-central-services-client": "*",
+    "@johnvondrashek/forumline-core": "*",
     "@johnvondrashek/forumline-protocol": "*",
-    "@johnvondrashek/forumline-react": "*",
-    "@supabase/supabase-js": "^2.98.0",
-    "@tanstack/react-query": "^5.62.16",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "@supabase/supabase-js": "^2.98.0"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^4.3.4",
-    "tailwindcss": "^4.0.0",
     "typescript": "^5.9.3",
     "vite": "^6.0.0"
   }

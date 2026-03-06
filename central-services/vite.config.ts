@@ -1,7 +1,5 @@
 import path from 'path'
 import { defineConfig, loadEnv } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -10,7 +8,6 @@ export default defineConfig(({ mode }) => {
   const hubSupabaseAnonKey = (env.VITE_HUB_SUPABASE_ANON_KEY || env.HUB_SUPABASE_ANON_KEY || '').trim()
 
   return {
-    plugins: [react(), tailwindcss()],
     base: '/',
     resolve: {
       // Always resolve to package source — ensures Vite bundles the latest
@@ -18,7 +15,7 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@johnvondrashek/forumline-protocol': path.resolve(__dirname, '../packages/protocol/src/index.ts'),
         '@johnvondrashek/forumline-central-services-client': path.resolve(__dirname, '../packages/central-services-client/src/index.ts'),
-        '@johnvondrashek/forumline-react': path.resolve(__dirname, '../packages/react/src/index.ts'),
+        '@johnvondrashek/forumline-core': path.resolve(__dirname, '../packages/core/src/index.ts'),
       },
     },
     clearScreen: false,
@@ -36,9 +33,7 @@ export default defineConfig(({ mode }) => {
         external: (id) => id.startsWith('@tauri-apps/'),
         output: {
           manualChunks: {
-            'vendor-react': ['react', 'react-dom'],
             'vendor-supabase': ['@supabase/supabase-js'],
-            'vendor-query': ['@tanstack/react-query'],
           },
         },
       },

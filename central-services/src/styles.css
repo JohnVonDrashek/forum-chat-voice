@@ -1,0 +1,1048 @@
+/* ============================================================================
+   Forumline Central Services — Vanilla CSS
+   ============================================================================ */
+
+/* Reset / Base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --color-primary: #6366f1;
+  --color-primary-hover: #818cf8;
+  --color-primary-dark: #4f46e5;
+  --color-primary-20: rgba(99, 102, 241, 0.2);
+  --color-primary-50: rgba(99, 102, 241, 0.5);
+
+  --color-bg: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-bg-tertiary: #334155;
+
+  --color-surface: rgba(30, 41, 59, 0.5);  /* slate-800/50 */
+  --color-surface-solid: #1e293b;
+
+  --color-text: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  --color-text-dim: #64748b;
+  --color-text-faint: #475569;
+
+  --color-border: #334155;
+  --color-border-light: #475569;
+
+  --color-red: #ef4444;
+  --color-red-hover: #dc2626;
+  --color-green: #4ade80;
+  --color-green-bg: rgba(74, 222, 128, 0.2);
+  --color-white: #ffffff;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-full: 9999px;
+
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.5rem;
+  --space-2xl: 2rem;
+
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: var(--font-sans);
+  overflow: hidden;
+  height: 100vh;
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+}
+
+#root {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background-color: var(--color-bg-secondary); }
+::-webkit-scrollbar-thumb { background-color: var(--color-text-faint); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background-color: var(--color-text-dim); }
+
+/* ============================================================================
+   Utilities
+   ============================================================================ */
+
+.hidden { display: none !important; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-1 { flex: 1 1 0%; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.gap-sm { gap: var(--space-sm); }
+.gap-md { gap: var(--space-md); }
+.gap-lg { gap: var(--space-lg); }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+.w-full { width: 100%; }
+.min-w-0 { min-width: 0; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.overflow-y-auto { overflow-y: auto; }
+.overflow-hidden { overflow: hidden; }
+.min-h-0 { min-height: 0; }
+.relative { position: relative; }
+.shrink-0 { flex-shrink: 0; }
+
+.mt-sm { margin-top: var(--space-sm); }
+.mt-md { margin-top: var(--space-md); }
+.mt-lg { margin-top: var(--space-lg); }
+.mt-xl { margin-top: var(--space-xl); }
+.mb-md { margin-top: var(--space-md); }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.p-lg { padding: var(--space-lg); }
+.px-lg { padding-left: var(--space-lg); padding-right: var(--space-lg); }
+.py-md { padding-top: var(--space-md); padding-bottom: var(--space-md); }
+
+.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.text-xs { font-size: 0.75rem; line-height: 1rem; }
+.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+.text-2xl { font-size: 1.5rem; line-height: 2rem; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+.uppercase { text-transform: uppercase; }
+.tracking-wider { letter-spacing: 0.05em; }
+
+.text-white { color: var(--color-white); }
+.text-primary { color: var(--color-primary); }
+.text-muted { color: var(--color-text-muted); }
+.text-dim { color: var(--color-text-dim); }
+.text-faint { color: var(--color-text-faint); }
+.text-error { color: var(--color-red); }
+.text-green { color: var(--color-green); }
+.text-secondary { color: var(--color-text-secondary); }
+
+/* ============================================================================
+   Spinner
+   ============================================================================ */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--color-text-faint);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner--sm {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--color-bg);
+}
+
+/* ============================================================================
+   Buttons
+   ============================================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, opacity 0.15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+.btn--primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+}
+
+.btn--secondary {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-white);
+}
+.btn--secondary:hover:not(:disabled) {
+  background-color: var(--color-text-faint);
+}
+
+.btn--danger {
+  background-color: var(--color-red);
+  color: var(--color-white);
+}
+.btn--danger:hover:not(:disabled) {
+  background-color: var(--color-red-hover);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+}
+.btn--ghost:hover:not(:disabled) {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-white);
+}
+
+.btn--small {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.btn--white {
+  background-color: var(--color-white);
+  color: var(--color-primary);
+}
+.btn--white:hover:not(:disabled) {
+  background-color: #eef2ff;
+}
+
+.btn--link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+}
+.btn--link:hover {
+  color: var(--color-primary-hover);
+}
+
+.btn--link-muted {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+.btn--link-muted:hover {
+  color: var(--color-text-secondary);
+}
+
+.btn--icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.375rem;
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s, color 0.15s;
+}
+.btn--icon:hover {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-white);
+}
+
+/* ============================================================================
+   Inputs
+   ============================================================================ */
+
+.input {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-white);
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+/* ============================================================================
+   Cards
+   ============================================================================ */
+
+.card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .card { padding: 1.5rem; }
+}
+
+/* ============================================================================
+   Avatars
+   ============================================================================ */
+
+.avatar {
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatar--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background-color: var(--color-border-light);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.avatar--placeholder svg {
+  width: 50%;
+  height: 50%;
+}
+
+/* ============================================================================
+   Badge
+   ============================================================================ */
+
+.badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-white);
+  position: absolute;
+}
+
+.badge--red {
+  background-color: var(--color-red);
+  bottom: -2px;
+  right: -2px;
+}
+
+.badge--primary {
+  background-color: var(--color-primary);
+}
+
+.badge--inline {
+  position: static;
+}
+
+/* ============================================================================
+   Icons
+   ============================================================================ */
+
+.icon-sm { width: 1rem; height: 1rem; }
+.icon-md { width: 1.5rem; height: 1.5rem; }
+.icon-lg { width: 2rem; height: 2rem; }
+.icon-xl { width: 2.5rem; height: 2.5rem; }
+
+/* ============================================================================
+   Modal
+   ============================================================================ */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+}
+
+.modal-backdrop__overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 28rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface-solid);
+  padding: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modal__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-white);
+}
+
+.modal__subtitle {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.modal__input {
+  margin-top: 1rem;
+}
+
+.modal__actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* ============================================================================
+   Auth Form
+   ============================================================================ */
+
+.auth-page {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg);
+  padding: 1rem;
+}
+
+.auth-form {
+  width: 100%;
+  max-width: 24rem;
+}
+
+.auth-form__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-white);
+}
+
+.auth-form__subtitle {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.auth-form__fields {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ============================================================================
+   Forum Rail (desktop sidebar)
+   ============================================================================ */
+
+.forum-rail {
+  display: flex;
+  width: 72px;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  border-right: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  padding: 0.75rem 0;
+}
+
+.forum-rail__icon {
+  position: relative;
+  display: flex;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-2xl);
+  border: none;
+  cursor: pointer;
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  transition: border-radius 0.2s, background-color 0.2s, color 0.2s;
+}
+
+.forum-rail__icon:hover {
+  border-radius: var(--radius-xl);
+}
+
+.forum-rail__icon--active {
+  border-radius: var(--radius-xl);
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.forum-rail__icon--text {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-white);
+}
+
+.forum-rail__icon--add {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-green);
+}
+.forum-rail__icon--add:hover {
+  background-color: #16a34a;
+  color: var(--color-white);
+}
+
+.forum-rail__icon--bottom {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-muted);
+}
+.forum-rail__icon--bottom:hover {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-white);
+}
+
+.forum-rail__forum-img {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+}
+
+.forum-rail__active-indicator {
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 40px;
+  border-radius: 0 var(--radius-full) var(--radius-full) 0;
+  background-color: var(--color-white);
+}
+
+.forum-rail__divider {
+  width: 32px;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-border);
+  margin: 0 auto;
+}
+
+.forum-rail__spacer {
+  flex: 1;
+}
+
+/* ============================================================================
+   Tab Bar (mobile bottom nav)
+   ============================================================================ */
+
+.tab-bar {
+  display: flex;
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab-bar__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-faint);
+  font-family: inherit;
+  transition: color 0.15s;
+}
+
+.tab-bar__item--active {
+  color: var(--color-primary);
+}
+
+.tab-bar__label {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* ============================================================================
+   Webview
+   ============================================================================ */
+
+.webview-container {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.webview-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--color-primary);
+  padding: 0.5rem 1rem;
+}
+
+.webview-banner__text {
+  font-size: 0.875rem;
+  color: var(--color-white);
+}
+
+.webview-iframe-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.webview-spinner-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background-color: var(--color-bg);
+}
+
+.webview-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--color-text-faint);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.webview-spinner__text {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.webview-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* ============================================================================
+   DM Bubbles
+   ============================================================================ */
+
+.dm-bubble {
+  max-width: 75%;
+  border-radius: 1rem;
+  padding: 0.5rem 1rem;
+}
+
+.dm-bubble--mine {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.dm-bubble--theirs {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+}
+
+.dm-row {
+  display: flex;
+}
+
+.dm-row--mine {
+  justify-content: flex-end;
+}
+
+.dm-row--theirs {
+  justify-content: flex-start;
+}
+
+.dm-time {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-text-faint);
+}
+
+/* ============================================================================
+   Forum Header Bar
+   ============================================================================ */
+
+.forum-header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+}
+
+.forum-header__back {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+.forum-header__back:hover {
+  color: var(--color-white);
+}
+
+.forum-header__share {
+  padding: 0.625rem 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: color 0.15s;
+}
+
+.forum-header__share:hover {
+  color: var(--color-white);
+}
+
+/* ============================================================================
+   Settings page header bar
+   ============================================================================ */
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+  padding: 1rem;
+}
+
+/* ============================================================================
+   DM panel header
+   ============================================================================ */
+
+.dm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.75rem 1rem;
+}
+
+/* ============================================================================
+   Conversation list item
+   ============================================================================ */
+
+.conversation-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+  transition: background-color 0.15s;
+}
+
+.conversation-item:hover {
+  background-color: var(--color-bg-secondary);
+}
+
+/* ============================================================================
+   Forum list card
+   ============================================================================ */
+
+.forum-card {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: var(--radius-xl);
+  padding: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+  transition: background-color 0.15s;
+  background-color: var(--color-surface);
+}
+
+.forum-card:hover {
+  background-color: rgba(51, 65, 85, 0.5);
+}
+
+.forum-card--active {
+  background-color: var(--color-primary-20);
+  box-shadow: inset 0 0 0 1px var(--color-primary-50);
+}
+
+.forum-card__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.forum-card__icon-fallback {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg-tertiary);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-white);
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+   Add forum button (dashed border)
+   ============================================================================ */
+
+.add-forum-btn {
+  margin-top: 0.75rem;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-xl);
+  border: 1px dashed var(--color-border-light);
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.add-forum-btn:hover {
+  border-color: #22c55e;
+  color: #4ade80;
+}
+
+/* ============================================================================
+   Welcome page
+   ============================================================================ */
+
+.welcome-icon {
+  margin: 0 auto 1.5rem;
+  display: flex;
+  width: 80px;
+  height: 80px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-2xl);
+  background-color: var(--color-primary-20);
+}
+
+.welcome-status {
+  margin-top: 1.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  padding: 1rem;
+}
+
+.status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.status-dot--connected { background-color: var(--color-green); }
+.status-dot--disconnected { background-color: var(--color-text-faint); }
+
+/* ============================================================================
+   Settings row (forum item in settings)
+   ============================================================================ */
+
+.settings-forum-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: var(--radius-lg);
+  background-color: rgba(51, 65, 85, 0.5);
+  padding: 0.75rem;
+}
+
+.settings-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: var(--radius-lg);
+  background-color: rgba(51, 65, 85, 0.5);
+  padding: 0.75rem;
+}
+
+/* ============================================================================
+   Empty state
+   ============================================================================ */
+
+.empty-state {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.empty-state__icon {
+  margin: 0 auto 1rem;
+  display: flex;
+  width: 64px;
+  height: 64px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg-tertiary);
+}
+
+/* ============================================================================
+   DM compose bar
+   ============================================================================ */
+
+.compose-bar {
+  display: flex;
+  gap: 0.5rem;
+  border-top: 1px solid var(--color-border);
+  padding: 1rem;
+}
+
+.compose-bar .input {
+  flex: 1;
+}
+
+/* ============================================================================
+   Success check icon (for reset sent, password updated, etc.)
+   ============================================================================ */
+
+.success-icon {
+  margin-bottom: 1rem;
+  display: flex;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background-color: var(--color-green-bg);
+}
+
+.success-icon svg {
+  width: 24px;
+  height: 24px;
+  color: var(--color-green);
+}
+
+/* ============================================================================
+   Layout containers
+   ============================================================================ */
+
+.app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+.app-main {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.page-scroll {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background-color: var(--color-bg);
+}
+
+.page-content {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 42rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .page-content { padding: 1.5rem; }
+}
+
+/* ============================================================================
+   Message view header (recipient info)
+   ============================================================================ */
+
+.message-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.75rem 1rem;
+}

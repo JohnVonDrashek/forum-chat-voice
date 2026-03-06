@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-LOCKFILE_DIRS=("." "forum-demo" "central-services")
+LOCKFILE_DIRS=("." "forum-demo")
 
 missing=()
 
