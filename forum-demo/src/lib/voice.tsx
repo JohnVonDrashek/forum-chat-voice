@@ -228,13 +228,23 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
   }, [user])
 
-  // Delete presence when leaving
-  const deletePresence = useCallback(async () => {
+  // Delete presence when leaving — fire-and-forget with keepalive so it
+  // works during page navigation and component unmount.
+  const deletePresence = useCallback(() => {
     if (!user) return
-    try {
-      await dp.clearVoicePresence(user.id)
-    } catch (err) {
-      console.error('Failed to delete voice presence:', err)
+    const token = accessTokenRef.current
+    if (token) {
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/voice_presence?user_id=eq.${user.id}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${token}`,
+        },
+        keepalive: true,
+      }).catch(() => {})
+    } else {
+      // Fallback: use data provider if we still have a valid session
+      dp.clearVoicePresence(user.id).catch(() => {})
     }
   }, [user])
 
@@ -262,11 +272,11 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     setScreenShareTrack(null)
     setScreenShareParticipant(null)
     setConnectError(null)
+    // Delete presence — must happen before clearing accessTokenRef
+    deletePresence()
+
     connectedRoomSlugRef.current = null
     accessTokenRef.current = null
-
-    // Delete presence from Supabase
-    deletePresence()
   }, [deletePresence])
 
   const joinRoom = useCallback(async (slug: string, name: string) => {
@@ -502,39 +512,23 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
   }, [fetchVoicePresence])
 
-  // Graceful disconnect on page unload
+  // Graceful disconnect on page unload / unmount
   useEffect(() => {
     const handleUnload = () => {
+      deletePresence()
       if (livekitRoomRef.current) {
         livekitRoomRef.current.disconnect()
       }
-      // Note: Can't await deletePresence here, but Supabase will clean up stale records
-      // We could use navigator.sendBeacon for a more reliable cleanup
-      if (user && accessTokenRef.current) {
-        // Fire-and-forget delete via fetch with keepalive
-        fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/voice_presence?user_id=eq.${user.id}`, {
-          method: 'DELETE',
-          headers: {
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${accessTokenRef.current}`,
-          },
-          keepalive: true,
-        }).catch(() => {})
-      }
     }
     window.addEventListener('beforeunload', handleUnload)
-    return () => window.removeEventListener('beforeunload', handleUnload)
-  }, [user])
-
-  // Cleanup on unmount
-  useEffect(() => {
     return () => {
+      window.removeEventListener('beforeunload', handleUnload)
       if (livekitRoomRef.current) {
         livekitRoomRef.current.disconnect()
         livekitRoomRef.current = null
       }
     }
-  }, [])
+  }, [deletePresence])
 
   const getAvatarUrl = useCallback((identity: string) => {
     return avatarCache[identity] ?? undefined
