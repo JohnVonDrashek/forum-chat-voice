@@ -38,6 +38,7 @@ func main() {
 	sseHub.Listen(ctx, "chat_message_changes")
 	sseHub.Listen(ctx, "voice_presence_changes")
 	sseHub.Listen(ctx, "post_changes")
+	sseHub.StartListening(ctx)
 
 	// Config
 	domain := os.Getenv("FORUM_DOMAIN")

@@ -21,12 +21,13 @@ type SSEClient struct {
 }
 
 // SSEHub manages LISTEN/NOTIFY subscriptions and fans out to SSE clients.
-// Uses direct pgx connections (not pooled) for LISTEN to bypass PgBouncer
-// transaction mode, which doesn't support LISTEN/NOTIFY.
+// Uses a single direct pgx connection for all LISTEN channels to minimize
+// Postgres backend processes on memory-constrained instances.
 type SSEHub struct {
 	mu        sync.RWMutex
 	clients   map[string][]*SSEClient // channel -> clients
 	listenDSN string                  // direct Postgres DSN for LISTEN connections
+	channels  []string                // channels to listen on
 }
 
 func NewSSEHub(listenDSN string) *SSEHub {
@@ -36,21 +37,25 @@ func NewSSEHub(listenDSN string) *SSEHub {
 	}
 }
 
-// Listen starts a goroutine that listens on the given Postgres channel
-// and fans out notifications to registered clients. Automatically reconnects
-// on connection failure. Uses a direct connection (not from pool) to avoid
-// PgBouncer transaction mode limitations with LISTEN/NOTIFY.
+// Listen registers a channel to be listened on. Call StartListening after
+// all channels are registered to open a single multiplexed connection.
 func (h *SSEHub) Listen(ctx context.Context, channel string) {
+	h.channels = append(h.channels, channel)
+}
+
+// StartListening opens a single Postgres connection and LISTENs on all
+// registered channels. Automatically reconnects on failure.
+func (h *SSEHub) StartListening(ctx context.Context) {
 	go func() {
 		for {
 			if ctx.Err() != nil {
 				return
 			}
-			h.listenOnce(ctx, channel)
+			h.listenAll(ctx)
 			if ctx.Err() != nil {
 				return
 			}
-			log.Printf("SSEHub: reconnecting to channel %s in 3s...", channel)
+			log.Printf("SSEHub: reconnecting all channels in 3s...")
 			select {
 			case <-ctx.Done():
 				return
@@ -60,21 +65,23 @@ func (h *SSEHub) Listen(ctx context.Context, channel string) {
 	}()
 }
 
-func (h *SSEHub) listenOnce(ctx context.Context, channel string) {
+func (h *SSEHub) listenAll(ctx context.Context) {
 	conn, err := pgx.Connect(ctx, h.listenDSN)
 	if err != nil {
-		log.Printf("SSEHub: failed to connect for LISTEN %s: %v", channel, err)
+		log.Printf("SSEHub: failed to connect for LISTEN: %v", err)
 		return
 	}
 	defer conn.Close(ctx)
 
-	_, err = conn.Exec(ctx, fmt.Sprintf("LISTEN %s", channel))
-	if err != nil {
-		log.Printf("SSEHub: LISTEN %s failed: %v", channel, err)
-		return
+	for _, channel := range h.channels {
+		_, err = conn.Exec(ctx, fmt.Sprintf("LISTEN %s", channel))
+		if err != nil {
+			log.Printf("SSEHub: LISTEN %s failed: %v", channel, err)
+			return
+		}
 	}
 
-	log.Printf("SSEHub: listening on channel %s", channel)
+	log.Printf("SSEHub: listening on %d channels via single connection", len(h.channels))
 
 	for {
 		notification, err := conn.WaitForNotification(ctx)
@@ -82,11 +89,11 @@ func (h *SSEHub) listenOnce(ctx context.Context, channel string) {
 			if ctx.Err() != nil {
 				return // context cancelled, clean shutdown
 			}
-			log.Printf("SSEHub: WaitForNotification error on %s: %v", channel, err)
+			log.Printf("SSEHub: WaitForNotification error: %v", err)
 			return
 		}
 
-		h.broadcast(channel, []byte(notification.Payload))
+		h.broadcast(notification.Channel, []byte(notification.Payload))
 	}
 }
 

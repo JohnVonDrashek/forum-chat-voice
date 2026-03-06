@@ -20,8 +20,8 @@ func NewDBPool(ctx context.Context) (*pgxpool.Pool, error) {
 		return nil, fmt.Errorf("parse DATABASE_URL: %w", err)
 	}
 
-	// Keep minimum connections alive to avoid cold-start latency
-	config.MinConns = 2
+	// Keep one connection alive to avoid cold-start latency
+	config.MinConns = 1
 	// LISTEN connections use direct pgx.Conn (not from pool), so pool
 	// only needs enough connections for concurrent API queries.
 	config.MaxConns = 5
