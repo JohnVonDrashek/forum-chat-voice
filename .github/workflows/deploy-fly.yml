@@ -24,7 +24,7 @@ jobs:
         if: inputs.working-directory == 'go-forum'
         run: >-
           flyctl deploy
-          --config forum-demo/fly.toml
+          --config fly.toml
           --dockerfile Dockerfile.go-forum
           --remote-only
         env:

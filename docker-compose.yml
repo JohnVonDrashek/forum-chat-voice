@@ -6,7 +6,7 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - forum-demo/.env.local
+      - .env.local
     environment:
       - PORT=3000
 

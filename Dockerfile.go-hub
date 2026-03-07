@@ -20,8 +20,6 @@ COPY .npmrc ./
 # Copy all workspace packages (needed for dependency resolution)
 COPY packages/ packages/
 COPY central-services/ central-services/
-# forum-demo is in workspaces but not needed for this build
-COPY forum-demo/package.json forum-demo/package.json
 
 # Install all dependencies
 ARG GITHUB_PACKAGES_TOKEN

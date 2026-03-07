@@ -5,7 +5,7 @@
   "identifier": "net.forumline.app",
   "build": {
     "frontendDist": "https://app.forumline.net",
-    "devUrl": "http://localhost:5173"
+    "devUrl": "http://localhost:5174"
   },
   "app": {
     "windows": [

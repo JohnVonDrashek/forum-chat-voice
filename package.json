@@ -2,7 +2,7 @@
   "name": "forumline",
   "private": true,
   "packageManager": "npm@10.8.2",
-  "workspaces": ["packages/*", "forum-demo", "central-services"],
+  "workspaces": ["packages/protocol", "packages/server-sdk", "packages/central-services-client", "packages/core", "central-services"],
   "scripts": {
     "tauri": "tauri",
     "tauri:dev": "TAURI_DIR=native-app tauri dev",
