@@ -95,3 +95,26 @@ async function boot() {
 }
 
 boot()
+
+// ---- Forumline protocol: respond to parent iframe messages ----
+if (window.parent !== window) {
+  function sendAuthState() {
+    const { user } = authStore.get()
+    window.parent.postMessage({ type: 'forumline:auth_state', signedIn: !!user }, '*')
+  }
+
+  window.addEventListener('message', (e) => {
+    if (e.data?.type === 'forumline:request_auth_state') {
+      sendAuthState()
+    }
+  })
+
+  // Notify parent we're ready once auth is resolved
+  authStore.subscribe(() => {
+    const { loading } = authStore.get()
+    if (!loading) {
+      window.parent.postMessage({ type: 'forumline:ready' }, '*')
+      sendAuthState()
+    }
+  })
+}
