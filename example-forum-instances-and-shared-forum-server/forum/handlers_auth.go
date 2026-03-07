@@ -304,11 +304,15 @@ func gotrueAdminGetUser(gotrueURL, serviceKey, userID string) (email string, err
 	return result.Email, nil
 }
 
+// gotrueListedUser represents a user returned from GoTrue admin list.
+type gotrueListedUser struct {
+	ID           string                 `json:"id"`
+	Email        string                 `json:"email"`
+	UserMetadata map[string]interface{} `json:"user_metadata"`
+}
+
 // gotrueAdminListUsers retrieves all users from GoTrue admin API.
-func gotrueAdminListUsers(gotrueURL, serviceKey string) ([]struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
-}, error) {
+func gotrueAdminListUsers(gotrueURL, serviceKey string) ([]gotrueListedUser, error) {
 	adminReq, _ := http.NewRequest(http.MethodGet, gotrueURL+"/admin/users", nil)
 	adminReq.Header.Set("Authorization", "Bearer "+serviceKey)
 	adminReq.Header.Set("Content-Type", "application/json")
@@ -320,10 +324,7 @@ func gotrueAdminListUsers(gotrueURL, serviceKey string) ([]struct {
 	defer resp.Body.Close()
 
 	var result struct {
-		Users []struct {
-			ID    string `json:"id"`
-			Email string `json:"email"`
-		} `json:"users"`
+		Users []gotrueListedUser `json:"users"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, err

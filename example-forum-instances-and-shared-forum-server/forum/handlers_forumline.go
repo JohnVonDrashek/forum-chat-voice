@@ -1,6 +1,7 @@
 package forum
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -490,11 +491,27 @@ func (h *Handlers) createOrLinkUser(r *http.Request, identity *forumlineIdentity
 	}
 
 	if forumlineEmail != "" {
-		// Check if a local user with this email exists
+		// Check if a local GoTrue user with this email already exists
 		users, err := gotrueAdminListUsers(h.Config.GoTrueURL, h.Config.GoTrueServiceRoleKey)
 		if err == nil {
 			for _, u := range users {
 				if strings.EqualFold(u.Email, forumlineEmail) {
+					// User exists in GoTrue — check if they were created by a previous
+					// Forumline login (has forumline_id in metadata) or are a local account.
+					if meta, ok := u.UserMetadata["forumline_id"].(string); ok && meta == identity.ForumlineID {
+						// This GoTrue user was created by a previous Forumline login.
+						// Link the profile and return.
+						h.ensureProfileWithForumlineID(ctx, u.ID, identity)
+						return u.ID, nil
+					}
+					// Check if there's a profile without forumline_id that we can claim
+					var profileID string
+					err := h.Pool.QueryRow(ctx,
+						"SELECT id FROM profiles WHERE id = $1 AND (forumline_id IS NULL OR forumline_id = '')", u.ID).Scan(&profileID)
+					if err == nil && profileID != "" {
+						h.ensureProfileWithForumlineID(ctx, profileID, identity)
+						return profileID, nil
+					}
 					return "", fmt.Errorf("EMAIL_COLLISION: A local account with this email already exists. Sign in locally and connect Forumline from Settings.")
 				}
 			}
@@ -515,9 +532,7 @@ func (h *Handlers) createOrLinkUser(r *http.Request, identity *forumlineIdentity
 			return "", fmt.Errorf("failed to create local user: %w", err)
 		}
 
-		h.Pool.Exec(ctx,
-			"UPDATE profiles SET forumline_id = $1 WHERE id = $2",
-			identity.ForumlineID, newUserID)
+		h.ensureProfileWithForumlineID(ctx, newUserID, identity)
 		return newUserID, nil
 	}
 
@@ -536,10 +551,17 @@ func (h *Handlers) createOrLinkUser(r *http.Request, identity *forumlineIdentity
 		return "", fmt.Errorf("failed to create local user: %w", err)
 	}
 
-	h.Pool.Exec(ctx,
-		"UPDATE profiles SET forumline_id = $1 WHERE id = $2",
-		identity.ForumlineID, newUserID)
+	h.ensureProfileWithForumlineID(ctx, newUserID, identity)
 	return newUserID, nil
+}
+
+// ensureProfileWithForumlineID creates or updates a profile with the forumline_id set.
+func (h *Handlers) ensureProfileWithForumlineID(ctx context.Context, userID string, identity *forumlineIdentity) {
+	h.Pool.Exec(ctx,
+		`INSERT INTO profiles (id, username, display_name, forumline_id)
+		 VALUES ($1, $2, $3, $4)
+		 ON CONFLICT (id) DO UPDATE SET forumline_id = $4, display_name = $3`,
+		userID, identity.Username, identity.DisplayName, identity.ForumlineID)
 }
 
 // setForumlineCookies sets the standard set of Forumline httpOnly cookies.
