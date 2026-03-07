@@ -1,4 +1,4 @@
-module github.com/johnvondrashek/forumline/go-services
+module github.com/johnvondrashek/forumline/forumline-identity-and-federation-api
 
 go 1.25.5
 

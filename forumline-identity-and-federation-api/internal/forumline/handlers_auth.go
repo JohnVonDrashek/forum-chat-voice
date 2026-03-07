@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/johnvondrashek/forumline/go-services/internal/shared"
+	"github.com/johnvondrashek/forumline/forumline-identity-and-federation-api/internal/shared"
 )
 
 // HandleLogin delegates to GoTrue for auth, then sets the forumline_pending_auth cookie.

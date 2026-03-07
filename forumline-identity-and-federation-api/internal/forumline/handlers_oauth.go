@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/johnvondrashek/forumline/go-services/internal/shared"
+	"github.com/johnvondrashek/forumline/forumline-identity-and-federation-api/internal/shared"
 )
 
 // HandleOAuthAuthorize validates the OAuth client and either shows the login page

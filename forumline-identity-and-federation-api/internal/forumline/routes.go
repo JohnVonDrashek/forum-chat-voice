@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/johnvondrashek/forumline/go-services/internal/shared"
+	"github.com/johnvondrashek/forumline/forumline-identity-and-federation-api/internal/shared"
 )
 
 func NewRouter(pool *pgxpool.Pool, sseHub *shared.SSEHub) *chi.Mux {

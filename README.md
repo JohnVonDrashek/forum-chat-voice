@@ -29,7 +29,7 @@ Traditional forums lack real-time interaction. Chat apps lack structure. Forumli
 | `examples/forum/` | Shared Go forum handlers and routes |
 | `examples/shared/` | Shared Go infrastructure (db, auth, SSE, middleware) |
 | `forumline-identity-and-federation-web/` | Forumline app — identity & federation registry (Vite + vanilla TS) |
-| `go-services/` | Forumline Go API server (`cmd/forumline/`) |
+| `forumline-identity-and-federation-api/` | Forumline Go API server (`cmd/forumline/`) |
 | `desktop-and-mobile-tauri-apps/` | Tauri native app (desktop, iOS, Android) |
 | `packages/protocol/` | Federation types (zero-dependency) |
 | `packages/server-sdk/` | Protocol endpoint handler factories |
@@ -41,7 +41,7 @@ Traditional forums lack real-time interaction. Chat apps lack structure. Forumli
 pnpm install
 
 # Start local Postgres + GoTrue
-cd go-services && docker compose up -d
+cd forumline-identity-and-federation-api && docker compose up -d
 
 # Run the forum backend
 cd examples && go run ./forum-a/
@@ -50,7 +50,7 @@ cd examples && go run ./forum-a/
 cd examples/forum-a && pnpm dev
 
 # Run the forumline backend
-cd go-services && go run ./cmd/forumline/
+cd forumline-identity-and-federation-api && go run ./cmd/forumline/
 
 # Run the forumline frontend
 cd forumline-identity-and-federation-web && pnpm dev
@@ -72,7 +72,7 @@ pnpm format         # Prettier
 Both services are self-hosted on Proxmox LXCs with Docker Compose, exposed via Cloudflare Tunnel. Deploys are triggered automatically via GitHub Actions on push to `main`:
 
 - **Forum** → `examples/**` changes trigger [deploy-forum.yml](.github/workflows/deploy-forum.yml)
-- **Forumline App** → `go-services/**`, `forumline-identity-and-federation-web/**`, or `packages/**` changes trigger [deploy-forumline.yml](.github/workflows/deploy-forumline.yml)
+- **Forumline App** → `forumline-identity-and-federation-api/**`, `forumline-identity-and-federation-web/**`, or `packages/**` changes trigger [deploy-forumline.yml](.github/workflows/deploy-forumline.yml)
 
 ## License
 

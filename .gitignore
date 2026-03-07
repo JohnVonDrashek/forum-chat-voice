@@ -59,3 +59,4 @@ deploy/**/.env
 .project-context
 CLAUDE.md
 .claude/
+.playwright-cli/

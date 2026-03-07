@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'go-services/**'
+      - 'forumline-identity-and-federation-api/**'
       - 'forumline-identity-and-federation-web/src/**'
       - 'forumline-identity-and-federation-web/index.html'
       - 'forumline-identity-and-federation-web/vite.config.ts'
