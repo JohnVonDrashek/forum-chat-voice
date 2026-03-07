@@ -58,3 +58,4 @@ deploy/**/.env
 # Local project context (not committed)
 .project-context
 CLAUDE.md
+.claude/
