@@ -23,7 +23,7 @@ COPY central-services/ central-services/
 
 # Install all dependencies
 ARG GITHUB_PACKAGES_TOKEN
-RUN GITHUB_PACKAGES_TOKEN=${GITHUB_PACKAGES_TOKEN} npm ci
+RUN GITHUB_PACKAGES_TOKEN=${GITHUB_PACKAGES_TOKEN} npm install
 
 # Vite build-time env vars (public keys only — baked into frontend bundle)
 ARG VITE_VAPID_PUBLIC_KEY
