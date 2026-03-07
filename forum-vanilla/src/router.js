@@ -78,7 +78,7 @@ document.addEventListener('click', (e) => {
   const link = e.target.closest('a[href]')
   if (!link) return
   const href = link.getAttribute('href')
-  if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) return
+  if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('/api/') || href.startsWith('/auth/')) return
   if (link.target === '_blank') return
   e.preventDefault()
   navigate(href)
