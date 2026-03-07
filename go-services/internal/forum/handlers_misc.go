@@ -8,6 +8,19 @@ import (
 	"github.com/johnvondrashek/forumline/go-services/internal/shared"
 )
 
+// HandleManifest serves /.well-known/forumline-manifest.json for forum discovery.
+func (h *Handlers) HandleManifest(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"forumline_version": "1",
+		"name":              h.Config.Domain,
+		"domain":            h.Config.Domain,
+		"icon_url":          "",
+		"api_base":          h.Config.SiteURL + "/api/forumline",
+		"web_base":          h.Config.SiteURL,
+		"capabilities":      []string{"threads", "chat", "voice", "notifications"},
+	})
+}
+
 // HandleChannelFollows handles GET/POST/DELETE /api/channel-follows.
 func (h *Handlers) HandleChannelFollows(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())

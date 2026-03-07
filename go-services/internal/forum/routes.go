@@ -137,6 +137,9 @@ func NewRouter(pool *pgxpool.Pool, sseHub *shared.SSEHub, cfg *Config) *chi.Mux 
 		r.Get("/api/admin/users", h.HandleAdminUsers)
 	})
 
+	// Forumline manifest (discovery)
+	r.Get("/.well-known/forumline-manifest.json", h.HandleManifest)
+
 	// GoTrue reverse proxy — allows frontend to call /auth/v1/* same-origin
 	if cfg.GoTrueURL != "" {
 		target, _ := url.Parse(cfg.GoTrueURL)
