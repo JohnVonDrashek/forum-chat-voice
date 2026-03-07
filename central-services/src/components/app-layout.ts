@@ -119,6 +119,17 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
     } catch {
       authedForums = new Set()
     }
+
+    // If a webview is already open for a forum that needs auth, set the auth URL now
+    if (webviewInstance && webviewForumDomain) {
+      if (!authedForums.has(webviewForumDomain)) {
+        const { activeForum } = forumStore.get()
+        const session = auth.getSession()
+        if (activeForum && session) {
+          webviewInstance.setAuthUrl(`${activeForum.api_base}/auth?forumline_token=${session.access_token}`)
+        }
+      }
+    }
   }
 
   // ---- Notifications ----
