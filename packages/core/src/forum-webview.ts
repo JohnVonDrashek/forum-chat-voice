@@ -48,7 +48,7 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
     if (!authUrl) return
     loggingIn = true
     loading = true
-    spinner.style.display = ''
+    spinnerWrap.style.display = ''
     iframe.src = authUrl
     updateBanner()
   })
@@ -126,10 +126,8 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
     loading = false
     spinnerWrap.style.display = 'none'
 
-    if (loggingIn && onAuthed && !hasCalledAuthed) {
-      hasCalledAuthed = true
+    if (loggingIn) {
       loggingIn = false
-      onAuthed(forum.domain)
       updateBanner()
     }
 
