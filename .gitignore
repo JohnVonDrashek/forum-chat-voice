@@ -49,5 +49,8 @@ native-app/gen/
 # Test screenshots
 *.png
 
+# Decrypted deploy secrets (only .env.enc should be committed)
+deploy/**/.env
+
 # Wrangler local state
 .wrangler/

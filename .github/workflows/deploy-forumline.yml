@@ -14,11 +14,26 @@ on:
       - 'packages/**'
       - 'package-lock.json'
       - 'Dockerfile.go-forumline'
+      - 'deploy/forumline/**'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Install sops and age
+        run: |
+          curl -fsSL "https://dl.filippo.io/age/v1.2.0?for=linux/amd64" -o /tmp/age.tar.gz
+          tar -xzf /tmp/age.tar.gz -C /tmp && sudo mv /tmp/age/age /usr/local/bin/
+          curl -fsSL "https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64" -o /tmp/sops
+          chmod +x /tmp/sops && sudo mv /tmp/sops /usr/local/bin/sops
+
+      - name: Decrypt secrets
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: sops -d --input-type dotenv --output-type dotenv deploy/forumline/.env.enc > /tmp/forumline.env
+
       - name: Install cloudflared
         run: |
           curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb
@@ -40,4 +55,6 @@ jobs:
 
       - name: Deploy
         run: |
+          scp /tmp/forumline.env forumline-prod:/opt/forumline/.env
+          scp deploy/forumline/docker-compose.yml forumline-prod:/opt/forumline/docker-compose.yml
           ssh forumline-prod "cd /opt/forumline/repo && git pull origin main && cd /opt/forumline && docker compose up -d --build forumline && docker compose ps"

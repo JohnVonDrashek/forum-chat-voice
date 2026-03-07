@@ -1,0 +1,92 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - /opt/forumline/postgres-data:/var/lib/postgresql/data
+      - /opt/forumline/init-db/00-auth-schema.sql:/docker-entrypoint-initdb.d/00-auth-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  gotrue:
+    image: supabase/gotrue:v2.186.0
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: "0.0.0.0"
+      GOTRUE_API_PORT: "8080"
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres?sslmode=disable&search_path=auth"
+      GOTRUE_SITE_URL: "https://app.forumline.net"
+      API_EXTERNAL_URL: "https://app.forumline.net/auth/v1"
+      GOTRUE_JWT_SECRET: "${JWT_SECRET}"
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_JWT_AUD: "authenticated"
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: "authenticated"
+      GOTRUE_JWT_ADMIN_ROLES: "service_role"
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_SMTP_HOST: "smtp.resend.com"
+      GOTRUE_SMTP_PORT: "465"
+      GOTRUE_SMTP_USER: "resend"
+      GOTRUE_SMTP_PASS: "${RESEND_API_KEY}"
+      GOTRUE_SMTP_ADMIN_EMAIL: "noreply@forumline.net"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "127.0.0.1:9999:8080"
+
+  init-db:
+    image: postgres:17-alpine
+    depends_on:
+      gotrue:
+        condition: service_healthy
+    volumes:
+      - /opt/forumline/init-db/01-hub-tables.sql:/01-hub-tables.sql:ro
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    entrypoint: >
+      sh -c "
+        psql -h postgres -U postgres -d postgres -f /01-hub-tables.sql &&
+        echo Forumline DB init complete!
+      "
+
+  forumline:
+    build:
+      context: /opt/forumline/repo
+      dockerfile: Dockerfile.go-forumline
+      args:
+        GITHUB_PACKAGES_TOKEN: ${GITHUB_PACKAGES_TOKEN}
+        VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gotrue:
+        condition: service_healthy
+    environment:
+      PORT: "3000"
+      DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres?sslmode=disable"
+      GOTRUE_URL: "http://gotrue:8080"
+      JWT_SECRET: "${JWT_SECRET}"
+      FORUMLINE_JWT_SECRET: "${FORUMLINE_JWT_SECRET}"
+      VAPID_PUBLIC_KEY: "${VAPID_PUBLIC_KEY}"
+      VAPID_PRIVATE_KEY: "${VAPID_PRIVATE_KEY}"
+      VAPID_SUBJECT: "${VAPID_SUBJECT}"
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS}"
+    ports:
+      - "3000:3000"

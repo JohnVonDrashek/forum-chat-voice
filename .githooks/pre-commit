@@ -59,3 +59,28 @@ if [ ${#missing[@]} -gt 0 ]; then
   echo "then stage the lockfile(s) and retry."
   exit 1
 fi
+
+# --- SOPS encryption checks ---
+# Block any staged .env file that isn't .env.enc
+sops_errors=0
+for file in $(git diff --cached --name-only --diff-filter=ACM); do
+  basename=$(basename "$file")
+  if [[ "$basename" == .env || "$basename" == .env.* ]] && [[ "$basename" != *.env.enc ]]; then
+    echo "ERROR: Refusing to commit unencrypted env file: $file"
+    echo "       Use SOPS to encrypt it as a .env.enc file instead."
+    sops_errors=1
+  fi
+done
+
+# Verify staged .env.enc files contain SOPS metadata
+for file in $(git diff --cached --name-only --diff-filter=ACM | grep '\.env\.enc$' || true); do
+  if ! git show ":$file" | grep -q 'sops_version='; then
+    echo "ERROR: $file does not appear to be SOPS-encrypted (missing sops metadata)."
+    echo "       Encrypt it first: sops --config deploy/.sops.yaml --input-type dotenv --output-type dotenv -e -i $file"
+    sops_errors=1
+  fi
+done
+
+if [ "$sops_errors" -ne 0 ]; then
+  exit 1
+fi

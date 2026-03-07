@@ -12,11 +12,26 @@ on:
       - 'examples/forum-b/package.json'
       - 'Dockerfile.go-forum-b'
       - '.github/workflows/deploy-forum-b.yml'
+      - 'deploy/forum-b/**'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Install sops and age
+        run: |
+          curl -fsSL "https://dl.filippo.io/age/v1.2.0?for=linux/amd64" -o /tmp/age.tar.gz
+          tar -xzf /tmp/age.tar.gz -C /tmp && sudo mv /tmp/age/age /usr/local/bin/
+          curl -fsSL "https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64" -o /tmp/sops
+          chmod +x /tmp/sops && sudo mv /tmp/sops /usr/local/bin/sops
+
+      - name: Decrypt secrets
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: sops -d --input-type dotenv --output-type dotenv deploy/forum-b/.env.enc > /tmp/forum-b.env
+
       - name: Install cloudflared
         run: |
           curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb
@@ -38,4 +53,6 @@ jobs:
 
       - name: Deploy
         run: |
+          scp /tmp/forum-b.env forum-b-prod:/opt/forum-b/.env
+          scp deploy/forum-b/docker-compose.yml forum-b-prod:/opt/forum-b/docker-compose.yml
           ssh forum-b-prod "cd /opt/forum-b/repo && git pull origin main && cd /opt/forum-b && docker compose up -d --build forum && docker compose ps"
