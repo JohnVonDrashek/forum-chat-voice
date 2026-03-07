@@ -126,6 +126,10 @@ func spaHandler(apiHandler http.Handler) http.Handler {
 		// Try to serve the static file
 		path := filepath.Join(distDir, r.URL.Path)
 		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+			// Hashed assets can be cached forever; index.html must not be cached
+			if filepath.Base(r.URL.Path) == "index.html" {
+				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			}
 			fileServer.ServeHTTP(w, r)
 			return
 		}
@@ -136,7 +140,8 @@ func spaHandler(apiHandler http.Handler) http.Handler {
 			return
 		}
 
-		// SPA fallback — serve index.html
+		// SPA fallback — serve index.html (no-cache so deploys take effect immediately)
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		http.ServeFile(w, r, filepath.Join(distDir, "index.html"))
 	})
 }
