@@ -1,51 +1,32 @@
 # Deployment Guide
 
-Both apps deploy via **GitHub Actions** on push to `main` → **Fly.io**.
+Both apps deploy via **GitHub Actions** on push to `main` → **self-hosted Proxmox LXCs** via SSH through Cloudflare Tunnel.
 
 ## Production URLs
 
-- **Forum Demo**: https://demo.forumline.net (Go binary + SPA on Fly.io)
-- **Central Services**: https://app.forumline.net (Go binary on Fly.io)
-- **Voice**: LiveKit Cloud
-
-## Architecture
-
-- Go API server (Chi router) serves API routes + static SPA
-- Fly Postgres for forum data
-- Self-hosted GoTrue on Fly.io for auth
-- Cloudflare R2 for avatar/image storage
-- SSE realtime via Postgres LISTEN/NOTIFY
+- **Forum Demo**: https://demo.forumline.net
+- **Forumline App**: https://app.forumline.net
 
 ## CI/CD
 
 Both deploy via GitHub Actions workflows:
 
-- `.github/workflows/deploy-forum.yml` — triggers on `go-services/` or `packages/` changes
-- `.github/workflows/deploy-hub.yml` — triggers on `central-services/` or `packages/` changes
+- `.github/workflows/deploy-forum.yml` — triggers on `go-services/` or `examples/forum-a/` changes
+- `.github/workflows/deploy-hub.yml` — triggers on `go-services/`, `central-services/`, or `packages/` changes
 
 Required GitHub secrets:
-- `FLY_API_TOKEN`
-- `VITE_AUTH_ANON_KEY` — GoTrue anonymous JWT
-- `VITE_LIVEKIT_URL`
-- `VITE_HUB_URL`
-- `VITE_HUB_SUPABASE_URL`
-- `VITE_HUB_SUPABASE_ANON_KEY`
-- `VITE_SITE_URL`
+- `FORUM_SSH_KEY` — SSH key for production servers
 - `GITHUB_PACKAGES_TOKEN` (automatically provided)
 
-**Do NOT deploy manually** via Vercel CLI, Vercel dashboard, or `flyctl deploy`.
+**Do NOT deploy manually.** Do NOT run `flyctl deploy` or push Docker images directly.
 
 ## Local Development
 
 ```bash
-npm install        # from root — sets up workspaces
-cd forum-demo && npm run dev
+pnpm install                          # from root — sets up workspaces
+cd go-services && docker compose up -d  # start Postgres + GoTrue
+cd go-services && go run ./cmd/forum/   # start forum backend
+cd examples/forum-a && pnpm dev         # start forum frontend
 ```
 
-Create `forum-demo/.env.local` — see `forum-demo/.env.example` for required vars.
-
-## LiveKit Setup
-
-1. Create a LiveKit Cloud account at https://livekit.io
-2. Create a new project
-3. Copy the API credentials to your environment variables
+Create `examples/forum-a/.env.local` and `go-services/.env.local` — see `.env.example` in each directory.

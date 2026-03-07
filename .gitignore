@@ -22,7 +22,9 @@ Thumbs.db
 
 # Logs
 *.log
-npm-debug.log*
+
+# Prevent npm lockfiles (project uses pnpm)
+package-lock.json
 
 # TypeScript cache
 *.tsbuildinfo

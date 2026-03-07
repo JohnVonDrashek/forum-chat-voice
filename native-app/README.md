@@ -1,12 +1,12 @@
 # Forumline Desktop App
 
-Thin [Tauri v2](https://tauri.app/) shell that wraps the Forumline hub web app (`app.forumline.net`) in a native window with system tray, notifications, autostart, and deep link support.
+Thin [Tauri v2](https://tauri.app/) shell that wraps the Forumline web app (`app.forumline.net`) in a native window with system tray, notifications, autostart, and deep link support.
 
 ## Prerequisites
 
 - **Rust** — Install via [rustup](https://rustup.rs/)
 - **Tauri CLI** — `cargo install tauri-cli --version "^2"`
-- **Node.js 20+** and npm
+- **Node.js 20+** and pnpm
 - **Platform dependencies** — See [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)
 
 ## Development
@@ -15,8 +15,8 @@ Thin [Tauri v2](https://tauri.app/) shell that wraps the Forumline hub web app (
 
    ```bash
    cd central-services
-   npm install
-   npm run dev
+   pnpm install
+   pnpm dev
    ```
 
 2. In a separate terminal, start the Tauri app:
