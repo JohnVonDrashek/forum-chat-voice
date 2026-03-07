@@ -106,7 +106,7 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
             updateBanner()
           }
         } else {
-          if (loginAttempted && !hasCalledAuthed) {
+          if (loginAttempted && !hasCalledAuthed && !loggingIn) {
             showToast(`Login to ${forum.name} did not complete. The forum reported you are not signed in.`, 'error', 8000)
             loginAttempted = false
           }
@@ -150,7 +150,17 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
       }
 
       loggingIn = false
+      loginAttempted = false
       updateBanner()
+      // After auth redirect, delay the auth state check to give the forum
+      // time to restore the session from URL hash tokens
+      setTimeout(() => {
+        if (!hasCalledAuthed) {
+          loginAttempted = true
+          postToForum({ type: 'forumline:request_auth_state' })
+        }
+      }, 1500)
+      return
     }
 
     postToForum({ type: 'forumline:request_auth_state' })
