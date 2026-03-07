@@ -24,7 +24,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@johnvondrashek/forumline-protocol": "0.3.3",
+    "@johnvondrashek/forumline-protocol": "workspace:*",
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {

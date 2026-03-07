@@ -1,15 +1,14 @@
 {
   "name": "forumline",
   "private": true,
-  "packageManager": "npm@10.8.2",
-  "workspaces": ["packages/protocol", "packages/server-sdk", "packages/central-services-client", "packages/core", "central-services"],
+  "packageManager": "pnpm@10.6.5",
   "scripts": {
     "tauri": "tauri",
     "tauri:dev": "TAURI_DIR=native-app tauri dev",
     "tauri:build": "TAURI_DIR=native-app tauri build",
-    "dev:app": "npm run --prefix central-services dev",
+    "dev:app": "pnpm --filter forumline-central-services dev",
     "build": "turbo run build",
-    "clean": "npm run --workspaces --if-present clean",
+    "clean": "pnpm -r --if-present run clean",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

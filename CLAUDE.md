@@ -13,7 +13,7 @@ cd go-services && docker compose up -d
 cd go-services && export $(grep -v '^#' .env.local | xargs) && go run ./cmd/forum/
 
 # Start Vite dev server (port 5174, proxies /api + /auth to localhost:3000)
-cd examples/forum-a && npm run dev
+cd examples/forum-a && pnpm dev
 
 # Run Playwright tests locally
 cd examples/forum-a && npx playwright test
@@ -33,7 +33,7 @@ Do NOT ignore bugs that you see even if they are unrelated to your changes. Jot 
 
 ## Deployment
 
-Do NOT deploy npm packages manually. There are GitHub Actions for that.
+Do NOT deploy packages manually. There are GitHub Actions for that.
 
 Both projects deploy via GitHub Actions on push to main. Do NOT deploy manually.
 
@@ -57,7 +57,7 @@ packages/
   core/                      — @johnvondrashek/forumline-core (shared utilities)
 ```
 
-npm workspaces are configured at root. Run `npm install` from root to link all packages.
+pnpm workspaces are configured via `pnpm-workspace.yaml` at root. Run `pnpm install` from root to link all packages.
 
 ### Package Details
 

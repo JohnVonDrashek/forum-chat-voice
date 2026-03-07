@@ -11,17 +11,19 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o forum ./cmd/forum/
 # ---- Frontend build stage ----
 FROM node:20-slim AS frontend-build
 
+RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
+
 WORKDIR /app
 
 # Copy examples/forum-a (standalone, no workspace deps needed)
-COPY examples/forum-a/package.json examples/forum-a/package-lock.json* ./
+COPY examples/forum-a/package.json examples/forum-a/pnpm-lock.yaml* ./
 
 # Install dependencies (all from public npm registry)
-RUN npm install
+RUN pnpm install --frozen-lockfile || pnpm install
 
 # Copy source and build
 COPY examples/forum-a/ .
-RUN npm run build
+RUN pnpm run build
 
 # ---- Production stage ----
 FROM alpine:3.21

@@ -37,7 +37,7 @@ Traditional forums lack real-time interaction. Chat apps lack structure. Forumli
 
 ```bash
 # Install (links workspace packages)
-npm install
+pnpm install
 
 # Start local Postgres + GoTrue
 cd go-services && docker compose up -d
@@ -46,13 +46,13 @@ cd go-services && docker compose up -d
 cd go-services && go run ./cmd/forum/
 
 # Run the forum frontend
-cd examples/forum-a && npm run dev
+cd examples/forum-a && pnpm dev
 
 # Run the forumline backend
 cd go-services && go run ./cmd/forumline/
 
 # Run the forumline frontend
-cd central-services && npm run dev
+cd central-services && pnpm dev
 ```
 
 Both apps require a `.env.local` — see `.env.example` in each directory.
@@ -60,10 +60,10 @@ Both apps require a `.env.local` — see `.env.example` in each directory.
 ## Scripts
 
 ```bash
-npm run build          # Build all packages (via Turbo)
-npm run dev:app        # Run central services dev server
-npm run lint           # ESLint
-npm run format         # Prettier
+pnpm build          # Build all packages (via Turbo)
+pnpm dev:app        # Run central services dev server
+pnpm lint           # ESLint
+pnpm format         # Prettier
 ```
 
 ## Deployment

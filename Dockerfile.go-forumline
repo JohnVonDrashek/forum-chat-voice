@@ -11,26 +11,28 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o forumline ./cmd/forumline/
 # ---- Frontend build stage ----
 FROM node:20-slim AS frontend-build
 
+RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
+
 WORKDIR /app
 
-# Copy workspace root files (skip lock file — regenerate for Linux platform)
-COPY package.json turbo.json tsconfig.base.json ./
+# Copy workspace root files
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY .npmrc ./
 
 # Copy all workspace packages (needed for dependency resolution)
 COPY packages/ packages/
 COPY central-services/ central-services/
 
-# Install all dependencies (fresh install to get correct platform binaries)
+# Install all dependencies
 ARG GITHUB_PACKAGES_TOKEN
-RUN GITHUB_PACKAGES_TOKEN=${GITHUB_PACKAGES_TOKEN} npm install
+RUN GITHUB_PACKAGES_TOKEN=${GITHUB_PACKAGES_TOKEN} pnpm install --frozen-lockfile
 
 # Vite build-time env vars (public keys only — baked into frontend bundle)
 ARG VITE_VAPID_PUBLIC_KEY
 
 # Build packages + central-services frontend
 RUN VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY} \
-    npx turbo run build --filter=./central-services...
+    pnpm exec turbo run build --filter=./central-services...
 
 # ---- Production stage ----
 FROM alpine:3.21

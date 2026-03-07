@@ -15,24 +15,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: https://npm.pkg.github.com
-          cache: npm
+          cache: pnpm
 
       - name: Install workspace dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         env:
           GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and publish all packages
         run: |
-          for pkg in protocol server-sdk central-services-client react; do
+          for pkg in protocol server-sdk central-services-client; do
             echo "=== Building and publishing $pkg ==="
             cd "packages/$pkg"
-            npm run build
-            OUTPUT=$(npm publish 2>&1) && echo "$OUTPUT" || {
+            pnpm run build
+            OUTPUT=$(pnpm publish --no-git-checks 2>&1) && echo "$OUTPUT" || {
               if echo "$OUTPUT" | grep -qi "cannot publish over"; then
                 echo "Version already published, skipping"
               else

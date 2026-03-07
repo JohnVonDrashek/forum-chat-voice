@@ -9,7 +9,7 @@
   },
   "files": ["src"],
   "dependencies": {
-    "@johnvondrashek/forumline-central-services-client": "*",
-    "@johnvondrashek/forumline-protocol": "*"
+    "@johnvondrashek/forumline-central-services-client": "workspace:*",
+    "@johnvondrashek/forumline-protocol": "workspace:*"
   }
 }
