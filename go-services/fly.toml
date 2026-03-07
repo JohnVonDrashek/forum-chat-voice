@@ -1,4 +1,4 @@
-app = 'forumline-hub'
+app = 'forumline-app'
 primary_region = 'iad'
 
 [http_service]

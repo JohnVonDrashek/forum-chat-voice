@@ -1,4 +1,4 @@
-package hub
+package forumline
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 	"github.com/johnvondrashek/forumline/go-services/internal/shared"
 )
 
-// HandleLogin delegates to GoTrue for auth, then sets the hub_pending_auth cookie.
+// HandleLogin delegates to GoTrue for auth, then sets the forumline_pending_auth cookie.
 func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Email    string `json:"email"`
@@ -70,7 +70,7 @@ func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Set httpOnly cookie for OAuth authorize flow
 	http.SetCookie(w, &http.Cookie{
-		Name:     "hub_pending_auth",
+		Name:     "forumline_pending_auth",
 		Value:    gotrueResp.AccessToken,
 		Path:     "/",
 		HttpOnly: true,
@@ -94,7 +94,7 @@ func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// HandleSignup delegates to GoTrue, then creates hub_profile.
+// HandleSignup delegates to GoTrue, then creates forumline profile.
 func (h *Handlers) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Email       string `json:"email"`
@@ -128,7 +128,7 @@ func (h *Handlers) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	// Check username uniqueness
 	var exists bool
 	err := h.Pool.QueryRow(ctx,
-		"SELECT EXISTS(SELECT 1 FROM hub_profiles WHERE username = $1)", body.Username,
+		"SELECT EXISTS(SELECT 1 FROM forumline_profiles WHERE username = $1)", body.Username,
 	).Scan(&exists)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
@@ -190,15 +190,15 @@ func (h *Handlers) HandleSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create hub profile
+	// Create forumline profile
 	avatarURL := fmt.Sprintf("https://api.dicebear.com/9.x/avataaars/svg?seed=%s&size=256", gotrueResp.User.ID)
 	_, err = h.Pool.Exec(ctx,
-		`INSERT INTO hub_profiles (id, username, display_name, avatar_url) VALUES ($1, $2, $3, $4)
+		`INSERT INTO forumline_profiles (id, username, display_name, avatar_url) VALUES ($1, $2, $3, $4)
 		 ON CONFLICT (id) DO NOTHING`,
 		gotrueResp.User.ID, body.Username, displayName, avatarURL,
 	)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create hub profile for user %s: %v\n", gotrueResp.User.ID, err)
+		fmt.Fprintf(os.Stderr, "Failed to create forumline profile for user %s: %v\n", gotrueResp.User.ID, err)
 		// Rollback: delete auth user via GoTrue admin API
 		deleteGoTrueUser(gotrueResp.User.ID)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create profile"})
@@ -207,7 +207,7 @@ func (h *Handlers) HandleSignup(w http.ResponseWriter, r *http.Request) {
 
 	// Set httpOnly cookie for OAuth authorize flow
 	http.SetCookie(w, &http.Cookie{
-		Name:     "hub_pending_auth",
+		Name:     "forumline_pending_auth",
 		Value:    gotrueResp.AccessToken,
 		Path:     "/",
 		HttpOnly: true,
@@ -240,7 +240,7 @@ func (h *Handlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 
 	// Clear cookies
 	http.SetCookie(w, &http.Cookie{
-		Name:     "hub_pending_auth",
+		Name:     "forumline_pending_auth",
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,

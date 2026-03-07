@@ -22,7 +22,7 @@ self.addEventListener('notificationclick', (event) => {
 
   const { link, forum_domain } = event.notification.data || {}
 
-  // Open the hub app, optionally navigating to the forum/link
+  // Open the Forumline app, optionally navigating to the forum/link
   const url = forum_domain && link
     ? `/?forum=${forum_domain}&path=${encodeURIComponent(link)}`
     : '/'

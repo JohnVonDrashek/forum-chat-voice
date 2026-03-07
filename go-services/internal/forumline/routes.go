@@ -1,4 +1,4 @@
-package hub
+package forumline
 
 import (
 	"net/http"

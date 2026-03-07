@@ -1,7 +1,7 @@
 export { createStore, type Store, type Subscriber } from './store.js'
 export { h, on, cls } from './dom.js'
 export { createForumStore, type ForumStore, type ForumState, type ForumMembership } from './forum-store.js'
-export { createHubStore, type HubStore, type HubState, type HubStoreOptions } from './hub-store.js'
+export { createForumlineStore, type ForumlineStore, type ForumlineState, type ForumlineStoreOptions } from './forumline-store.js'
 export { createForumWebview, type ForumWebviewOptions, type ForumWebviewInstance } from './forum-webview.js'
 export { createForumRail, type ForumRailOptions, type ForumRailInstance } from './forum-rail.js'
 export { isTauri, openExternal, getTauriNotification, getTauriAutostart, getTauriShell } from './tauri.js'

@@ -1,17 +1,17 @@
-import type { GoTrueAuthClient, HubSession } from '../lib/gotrue-auth.js'
-import type { ForumStore, HubStore } from '@johnvondrashek/forumline-core'
-import { createHubAuth } from './hub-auth.js'
+import type { GoTrueAuthClient, ForumlineSession } from '../lib/gotrue-auth.js'
+import type { ForumStore, ForumlineStore } from '@johnvondrashek/forumline-core'
+import { createForumlineAuth } from './forumline-auth.js'
 import { createAvatar, createButton, createCard } from './ui.js'
 
 interface SettingsPageOptions {
-  hubSession: HubSession | null
+  forumlineSession: ForumlineSession | null
   forumStore: ForumStore
-  hubStore: HubStore
+  forumlineStore: ForumlineStore
   auth: GoTrueAuthClient
   onClose: () => void
 }
 
-export function createSettingsPage({ hubSession, forumStore, hubStore, auth, onClose }: SettingsPageOptions) {
+export function createSettingsPage({ forumlineSession, forumStore, forumlineStore, auth, onClose }: SettingsPageOptions) {
   let memberships: { forum_domain: string; notifications_muted: boolean }[] = []
   let removingDomain: string | null = null
   let avatarUrl: string | null = null
@@ -40,41 +40,41 @@ export function createSettingsPage({ hubSession, forumStore, hubStore, auth, onC
   el.appendChild(content)
 
   // Hub card
-  const hubCard = createCard()
-  const hubTitle = document.createElement('h2')
-  hubTitle.className = 'text-lg font-semibold text-white'
-  hubTitle.textContent = 'Forumline Hub'
-  hubCard.appendChild(hubTitle)
-  const hubSub = document.createElement('p')
-  hubSub.className = 'text-sm text-muted mt-sm'
-  hubSub.textContent = 'Connect to the Forumline Hub for cross-forum direct messages'
-  hubCard.appendChild(hubSub)
+  const accountCard = createCard()
+  const accountTitle = document.createElement('h2')
+  accountTitle.className = 'text-lg font-semibold text-white'
+  accountTitle.textContent = 'Forumline'
+  accountCard.appendChild(accountTitle)
+  const accountSub = document.createElement('p')
+  accountSub.className = 'text-sm text-muted mt-sm'
+  accountSub.textContent = 'Connect to the Forumline for cross-forum direct messages'
+  accountCard.appendChild(accountSub)
 
   // Hub profile/auth area (rendered once based on session state)
-  const hubContentArea = document.createElement('div')
-  hubContentArea.className = 'mt-lg'
-  hubCard.appendChild(hubContentArea)
-  content.appendChild(hubCard)
+  const accountContentArea = document.createElement('div')
+  accountContentArea.className = 'mt-lg'
+  accountCard.appendChild(accountContentArea)
+  content.appendChild(accountCard)
 
   function renderHubContent() {
-    hubContentArea.innerHTML = ''
-    const { isHubConnected } = hubStore.get()
-    if (isHubConnected && hubSession) {
+    accountContentArea.innerHTML = ''
+    const { isForumlineConnected } = forumlineStore.get()
+    if (isForumlineConnected && forumlineSession) {
       const profileRow = document.createElement('div')
       profileRow.className = 'settings-profile-row'
       profileRow.appendChild(createAvatar({
         avatarUrl,
-        seed: hubSession.user.user_metadata?.username as string || hubSession.user.email || undefined,
+        seed: forumlineSession.user.user_metadata?.username as string || forumlineSession.user.email || undefined,
         size: 40,
       }))
       const info = document.createElement('div')
       info.className = 'flex-1'
       const name = document.createElement('p')
       name.className = 'font-medium text-white'
-      name.textContent = (hubSession.user.user_metadata?.username as string) || hubSession.user.email || ''
+      name.textContent = (forumlineSession.user.user_metadata?.username as string) || forumlineSession.user.email || ''
       const emailEl = document.createElement('p')
       emailEl.className = 'text-sm text-muted'
-      emailEl.textContent = hubSession.user.email || ''
+      emailEl.textContent = forumlineSession.user.email || ''
       info.append(name, emailEl)
       profileRow.appendChild(info)
       profileRow.appendChild(createButton({
@@ -82,10 +82,10 @@ export function createSettingsPage({ hubSession, forumStore, hubStore, auth, onC
         variant: 'secondary',
         onClick: () => auth.signOut(),
       }))
-      hubContentArea.appendChild(profileRow)
+      accountContentArea.appendChild(profileRow)
     } else {
-      const { el: authEl } = createHubAuth({ auth })
-      hubContentArea.appendChild(authEl)
+      const { el: authEl } = createForumlineAuth({ auth })
+      accountContentArea.appendChild(authEl)
     }
   }
 
@@ -233,7 +233,7 @@ export function createSettingsPage({ hubSession, forumStore, hubStore, auth, onC
   }
 
   async function fetchAvatar() {
-    const userId = hubSession?.user?.id
+    const userId = forumlineSession?.user?.id
     if (!userId) return
     try {
       const session = auth.getSession()

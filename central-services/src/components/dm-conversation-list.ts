@@ -1,16 +1,16 @@
-import type { HubStore } from '@johnvondrashek/forumline-core'
-import type { HubDmConversation } from '@johnvondrashek/forumline-protocol'
+import type { ForumlineStore } from '@johnvondrashek/forumline-core'
+import type { ForumlineDmConversation } from '@johnvondrashek/forumline-protocol'
 import { createAvatar, createSpinner } from './ui.js'
 import { formatShortTimeAgo } from '../lib/dateFormatters.js'
 
 interface DmConversationListOptions {
-  hubStore: HubStore
+  forumlineStore: ForumlineStore
   onSelectConversation: (recipientId: string) => void
 }
 
-type Conversation = HubDmConversation
+type Conversation = ForumlineDmConversation
 
-export function createDmConversationList({ hubStore, onSelectConversation }: DmConversationListOptions) {
+export function createDmConversationList({ forumlineStore, onSelectConversation }: DmConversationListOptions) {
   const el = document.createElement('div')
   el.className = 'flex-1 overflow-y-auto'
 
@@ -213,11 +213,11 @@ export function createDmConversationList({ hubStore, onSelectConversation }: DmC
   }
 
   async function fetchAndRender() {
-    const { hubClient } = hubStore.get()
-    if (!hubClient) return
+    const { forumlineClient } = forumlineStore.get()
+    if (!forumlineClient) return
 
     try {
-      const conversations = await hubClient.getConversations()
+      const conversations = await forumlineClient.getConversations()
       hasLoaded = true
       renderConversations(conversations)
     } catch {

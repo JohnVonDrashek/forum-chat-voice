@@ -1,14 +1,14 @@
-import { GoTrueAuthClient, type HubSession } from './lib/gotrue-auth.js'
-import { createForumStore, createHubStore, type ForumStore, type HubStore } from '@johnvondrashek/forumline-core'
+import { GoTrueAuthClient, type ForumlineSession } from './lib/gotrue-auth.js'
+import { createForumStore, createForumlineStore, type ForumStore, type ForumlineStore } from '@johnvondrashek/forumline-core'
 import { createResetPassword } from './components/reset-password.js'
-import { createHubAuth } from './components/hub-auth.js'
+import { createForumlineAuth } from './components/forumline-auth.js'
 import { createAppLayout } from './components/app-layout.js'
 
-export const hubAuth = new GoTrueAuthClient()
+export const forumlineAuth = new GoTrueAuthClient()
 
 export const forumStore: ForumStore = createForumStore()
-export const hubStore: HubStore = createHubStore({
-  hubUrl: '',
+export const forumlineStore: ForumlineStore = createForumlineStore({
+  forumlineUrl: '',
 })
 
 export function createApp(root: HTMLElement) {
@@ -29,7 +29,7 @@ export function createApp(root: HTMLElement) {
     cleanup()
     root.innerHTML = ''
     const { el, destroy } = createResetPassword({
-      auth: hubAuth,
+      auth: forumlineAuth,
       onComplete() {
         passwordRecovery = false
         renderForSession(currentSession)
@@ -44,32 +44,32 @@ export function createApp(root: HTMLElement) {
     root.innerHTML = ''
     const page = document.createElement('div')
     page.className = 'auth-page'
-    const { el } = createHubAuth({ auth: hubAuth })
+    const { el } = createForumlineAuth({ auth: forumlineAuth })
     page.appendChild(el)
     root.appendChild(page)
   }
 
-  function renderApp(session: HubSession) {
+  function renderApp(session: ForumlineSession) {
     cleanup()
     root.innerHTML = ''
 
-    // Init hub store with the direct session
-    hubStore.init({
+    // Init Forumline store with the direct session
+    forumlineStore.init({
       access_token: session.access_token,
       user_id: session.user.id,
     })
 
     const { el, destroy } = createAppLayout({
-      hubSession: session,
+      forumlineSession: session,
       forumStore,
-      hubStore,
-      auth: hubAuth,
+      forumlineStore,
+      auth: forumlineAuth,
     })
     currentDestroy = destroy
     root.appendChild(el)
   }
 
-  function renderForSession(session: HubSession | null) {
+  function renderForSession(session: ForumlineSession | null) {
     if (passwordRecovery) {
       renderResetPassword()
       return
@@ -88,16 +88,16 @@ export function createApp(root: HTMLElement) {
     }
   }
 
-  let currentSession: HubSession | null = null
+  let currentSession: ForumlineSession | null = null
   let passwordRecovery = false
   let hasRenderedApp = false
 
   renderLoading()
 
   // Check for URL hash tokens (password recovery links)
-  hubAuth.restoreSessionFromUrl()
+  forumlineAuth.restoreSessionFromUrl()
 
-  const unsubscribe = hubAuth.onAuthStateChange((event, session) => {
+  const unsubscribe = forumlineAuth.onAuthStateChange((event, session) => {
     currentSession = session
     if (event === 'PASSWORD_RECOVERY') {
       passwordRecovery = true
@@ -121,6 +121,6 @@ export function createApp(root: HTMLElement) {
   return () => {
     unsubscribe()
     cleanup()
-    hubStore.destroy()
+    forumlineStore.destroy()
   }
 }

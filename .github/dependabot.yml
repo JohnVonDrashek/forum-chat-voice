@@ -9,11 +9,11 @@ updates:
         patterns: ["*"]
 
   - package-ecosystem: npm
-    directory: /forum-vanilla
+    directory: /examples/forum-a
     schedule:
       interval: weekly
     groups:
-      forum-vanilla-dependencies:
+      forum-a-dependencies:
         patterns: ["*"]
 
   - package-ecosystem: npm
@@ -21,7 +21,7 @@ updates:
     schedule:
       interval: weekly
     groups:
-      hub-dependencies:
+      forumline-dependencies:
         patterns: ["*"]
 
   - package-ecosystem: cargo

@@ -1,9 +1,9 @@
 // ============================================================================
-// Hub Direct Messages — Cross-forum DM types
+// Forumline Direct Messages — Cross-forum DM types
 // ============================================================================
 
 /** A direct message stored on Forumline Central Services */
-export interface HubDirectMessage {
+export interface ForumlineDirectMessage {
   id: string
   sender_id: string
   recipient_id: string
@@ -12,8 +12,8 @@ export interface HubDirectMessage {
   created_at: string
 }
 
-/** A hub DM conversation summary */
-export interface HubDmConversation {
+/** A forumline DM conversation summary */
+export interface ForumlineDmConversation {
   recipientId: string
   recipientName: string
   recipientAvatarUrl: string | null
@@ -22,8 +22,8 @@ export interface HubDmConversation {
   unreadCount: number
 }
 
-/** A hub user profile (search result) */
-export interface HubProfile {
+/** A forumline user profile (search result) */
+export interface ForumlineProfile {
   id: string
   username: string
   display_name: string

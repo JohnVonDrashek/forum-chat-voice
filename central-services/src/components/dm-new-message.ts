@@ -1,15 +1,15 @@
-import type { HubStore } from '@johnvondrashek/forumline-core'
-import type { HubProfile } from '@johnvondrashek/forumline-protocol'
+import type { ForumlineStore } from '@johnvondrashek/forumline-core'
+import type { ForumlineProfile } from '@johnvondrashek/forumline-protocol'
 import { createAvatar, createInput, createSpinner } from './ui.js'
 
 interface DmNewMessageOptions {
-  hubStore: HubStore
+  forumlineStore: ForumlineStore
   onSelectUser: (userId: string) => void
 }
 
-export function createDmNewMessage({ hubStore, onSelectUser }: DmNewMessageOptions) {
+export function createDmNewMessage({ forumlineStore, onSelectUser }: DmNewMessageOptions) {
   let searchQuery = ''
-  let results: HubProfile[] = []
+  let results: ForumlineProfile[] = []
   let searching = false
   let searchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -40,14 +40,14 @@ export function createDmNewMessage({ hubStore, onSelectUser }: DmNewMessageOptio
   el.appendChild(resultsEl)
 
   async function doSearch() {
-    const { hubClient } = hubStore.get()
-    if (!hubClient || !searchQuery.trim()) return
+    const { forumlineClient } = forumlineStore.get()
+    if (!forumlineClient || !searchQuery.trim()) return
 
     searching = true
     renderResults()
 
     try {
-      results = await hubClient.searchProfiles(searchQuery)
+      results = await forumlineClient.searchProfiles(searchQuery)
     } catch (err) {
       console.error('[Hub:DM] Profile search failed:', err)
       results = []

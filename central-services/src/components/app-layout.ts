@@ -1,13 +1,13 @@
-import type { GoTrueAuthClient, HubSession } from '../lib/gotrue-auth.js'
+import type { GoTrueAuthClient, ForumlineSession } from '../lib/gotrue-auth.js'
 import type { ForumNotification } from '@johnvondrashek/forumline-protocol'
-import { createForumWebview, isTauri, getTauriNotification, setupDeepLinkListener, type ForumStore, type HubStore, type DeepLinkTarget } from '@johnvondrashek/forumline-core'
+import { createForumWebview, isTauri, getTauriNotification, setupDeepLinkListener, type ForumStore, type ForumlineStore, type DeepLinkTarget } from '@johnvondrashek/forumline-core'
 import { createWelcomePage } from './welcome-page.js'
 import { createDmPanel } from './dm-panel.js'
 import { createSettingsPage } from './settings-page.js'
 import { createMobileTabBar, type AppView } from './mobile-tab-bar.js'
 import type { ForumWebviewInstance } from '@johnvondrashek/forumline-core'
 
-/** Persist auth state change to hub DB */
+/** Persist auth state change to Forumline DB */
 async function updateForumAuthState(auth: GoTrueAuthClient, forumDomain: string, authed: boolean) {
   try {
     const session = auth.getSession()
@@ -26,13 +26,13 @@ async function updateForumAuthState(auth: GoTrueAuthClient, forumDomain: string,
 }
 
 interface AppLayoutOptions {
-  hubSession: HubSession
+  forumlineSession: ForumlineSession
   forumStore: ForumStore
-  hubStore: HubStore
+  forumlineStore: ForumlineStore
   auth: GoTrueAuthClient
 }
 
-export function createAppLayout({ hubSession, forumStore, hubStore, auth }: AppLayoutOptions) {
+export function createAppLayout({ forumlineSession, forumStore, forumlineStore, auth }: AppLayoutOptions) {
   let view: AppView = 'forums'
   let authedForums: Set<string> | null = null
   let mutedForums = new Set<string>()
@@ -77,12 +77,12 @@ export function createAppLayout({ hubSession, forumStore, hubStore, auth }: AppL
 
   // ---- DM polling ----
   function startDmPolling() {
-    const { hubClient } = hubStore.get()
-    if (!hubClient) return
+    const { forumlineClient } = forumlineStore.get()
+    if (!forumlineClient) return
 
     const fetchDmCount = async () => {
       try {
-        const convos = await hubClient.getConversations()
+        const convos = await forumlineClient.getConversations()
         dmUnreadCount = convos.reduce((sum, c) => sum + c.unreadCount, 0)
         tabBarInstance?.update(view, dmUnreadCount)
       } catch { /* ignore */ }
@@ -303,7 +303,7 @@ export function createAppLayout({ hubSession, forumStore, hubStore, auth }: AppL
         const af = activeForum
         const session = auth.getSession()
         if (session && wv === webviewInstance) {
-          wv.setAuthUrl(`${af.api_base}/auth?hub_token=${session.access_token}`)
+          wv.setAuthUrl(`${af.api_base}/auth?forumline_token=${session.access_token}`)
         }
       }
 
@@ -327,9 +327,9 @@ export function createAppLayout({ hubSession, forumStore, hubStore, auth }: AppL
     if (view === 'settings') {
       if (!settingsChild) {
         settingsChild = createSettingsPage({
-          hubSession,
+          forumlineSession,
           forumStore,
-          hubStore,
+          forumlineStore,
           auth,
           onClose: () => { view = 'forums'; switchView() },
         })
@@ -342,7 +342,7 @@ export function createAppLayout({ hubSession, forumStore, hubStore, auth }: AppL
     if (view === 'dms') {
       if (!dmChild) {
         dmChild = createDmPanel({
-          hubStore,
+          forumlineStore,
           onClose: () => { view = 'forums'; switchView() },
           onGoToSettings: () => { view = 'settings'; switchView() },
         })
@@ -366,9 +366,9 @@ export function createAppLayout({ hubSession, forumStore, hubStore, auth }: AppL
     // No active forum — welcome page
     if (!welcomeChild) {
       welcomeChild = createWelcomePage({
-        hubSession,
+        forumlineSession,
         forumStore,
-        hubStore,
+        forumlineStore,
         onGoToSettings: () => { view = 'settings'; switchView() },
       })
       mainArea.appendChild(welcomeChild.el)

@@ -11,7 +11,7 @@ Thin [Tauri v2](https://tauri.app/) shell that wraps the Forumline hub web app (
 
 ## Development
 
-1. Start the hub dev server (the Tauri app loads it as `devUrl`):
+1. Start the forumline dev server (the Tauri app loads it as `devUrl`):
 
    ```bash
    cd central-services

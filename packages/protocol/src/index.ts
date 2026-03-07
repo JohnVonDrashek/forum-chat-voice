@@ -11,9 +11,9 @@ export type {
   ForumlineMembership,
   AuthResult,
   AuthSession,
-  HubAuthorizeParams,
-  HubTokenRequest,
-  HubTokenResponse,
+  ForumlineAuthorizeParams,
+  ForumlineTokenRequest,
+  ForumlineTokenResponse,
 } from './identity'
 export type {
   ForumNotification,
@@ -26,13 +26,13 @@ export type {
   ForumlineAuthEndpoints,
 } from './api'
 export type {
-  HubDirectMessage,
-  HubDmConversation,
-  HubProfile,
-} from './hub-dms'
+  ForumlineDirectMessage,
+  ForumlineDmConversation,
+  ForumlineProfile,
+} from './forumline-dms'
 export type {
-  ForumToHubMessage,
-  HubToForumMessage,
+  ForumToForumlineMessage,
+  ForumlineToForumMessage,
   ForumlineMessage,
 } from './webview-messages'
 export { isForumlineMessage } from './webview-messages'

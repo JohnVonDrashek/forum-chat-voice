@@ -45,7 +45,7 @@ func NewRouter(pool *pgxpool.Pool, sseHub *shared.SSEHub, cfg *Config) *chi.Mux 
 	r.Get("/api/forumline/auth", h.HandleForumlineAuth)
 	r.Post("/api/forumline/auth", h.HandleForumlineAuth)
 	r.Get("/api/forumline/auth/callback", h.HandleForumlineCallback)
-	r.Get("/api/forumline/auth/hub-token", h.HandleHubToken)
+	r.Get("/api/forumline/auth/forumline-token", h.HandleForumlineToken)
 	r.Get("/api/forumline/auth/session", h.HandleForumlineSession)
 	r.Delete("/api/forumline/auth/session", h.HandleForumlineSession)
 

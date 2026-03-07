@@ -1,4 +1,4 @@
-import type { HubStore } from '@johnvondrashek/forumline-core'
+import type { ForumlineStore } from '@johnvondrashek/forumline-core'
 import { createButton } from './ui.js'
 import { createDmConversationList } from './dm-conversation-list.js'
 import { createDmMessageView } from './dm-message-view.js'
@@ -7,12 +7,12 @@ import { createDmNewMessage } from './dm-new-message.js'
 type DmView = 'list' | 'conversation' | 'new'
 
 interface DmPanelOptions {
-  hubStore: HubStore
+  forumlineStore: ForumlineStore
   onClose: () => void
   onGoToSettings: () => void
 }
 
-export function createDmPanel({ hubStore, onClose, onGoToSettings }: DmPanelOptions) {
+export function createDmPanel({ forumlineStore, onClose, onGoToSettings }: DmPanelOptions) {
   let dmView: DmView = 'list'
   let selectedRecipientId: string | null = null
   let currentChild: { el: HTMLElement; destroy: () => void } | null = null
@@ -27,7 +27,7 @@ export function createDmPanel({ hubStore, onClose, onGoToSettings }: DmPanelOpti
     currentChild = null
     el.innerHTML = ''
 
-    const { isHubConnected } = hubStore.get()
+    const { isForumlineConnected } = forumlineStore.get()
 
     // Header
     const header = document.createElement('div')
@@ -56,7 +56,7 @@ export function createDmPanel({ hubStore, onClose, onGoToSettings }: DmPanelOpti
 
     const headerRight = document.createElement('div')
     headerRight.className = 'flex items-center gap-sm'
-    if (dmView === 'list' && isHubConnected) {
+    if (dmView === 'list' && isForumlineConnected) {
       const newBtn = document.createElement('button')
       newBtn.className = 'btn--icon'
       newBtn.title = 'New message'
@@ -71,7 +71,7 @@ export function createDmPanel({ hubStore, onClose, onGoToSettings }: DmPanelOpti
     const content = document.createElement('div')
     content.className = 'flex-1 overflow-hidden'
 
-    if (!isHubConnected) {
+    if (!isForumlineConnected) {
       const empty = document.createElement('div')
       empty.className = 'empty-state'
       const p = document.createElement('p')
@@ -87,7 +87,7 @@ export function createDmPanel({ hubStore, onClose, onGoToSettings }: DmPanelOpti
       content.appendChild(empty)
     } else if (dmView === 'new') {
       const newMsg = createDmNewMessage({
-        hubStore,
+        forumlineStore,
         onSelectUser: (userId) => {
           selectedRecipientId = userId
           dmView = 'conversation'
@@ -98,14 +98,14 @@ export function createDmPanel({ hubStore, onClose, onGoToSettings }: DmPanelOpti
       content.appendChild(newMsg.el)
     } else if (dmView === 'conversation' && selectedRecipientId) {
       const msgView = createDmMessageView({
-        hubStore,
+        forumlineStore,
         recipientId: selectedRecipientId,
       })
       currentChild = msgView
       content.appendChild(msgView.el)
     } else {
       const convList = createDmConversationList({
-        hubStore,
+        forumlineStore,
         onSelectConversation: (recipientId) => {
           selectedRecipientId = recipientId
           dmView = 'conversation'

@@ -1,4 +1,4 @@
-package hub
+package forumline
 
 import (
 	"encoding/json"
@@ -37,7 +37,7 @@ func (h *Handlers) HandleListConversations(w http.ResponseWriter, r *http.Reques
 
 	rows, err := h.Pool.Query(ctx,
 		`SELECT id, sender_id, recipient_id, content, read, created_at
-		 FROM hub_direct_messages
+		 FROM forumline_direct_messages
 		 WHERE sender_id = $1 OR recipient_id = $1
 		 ORDER BY created_at DESC
 		 LIMIT 500`, userID,
@@ -147,7 +147,7 @@ func (h *Handlers) HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 	if before != "" {
 		rows2, err2 := h.Pool.Query(ctx,
 			`SELECT id, sender_id, recipient_id, content, read, created_at
-			 FROM hub_direct_messages
+			 FROM forumline_direct_messages
 			 WHERE ((sender_id = $1 AND recipient_id = $2) OR (sender_id = $2 AND recipient_id = $1))
 			   AND id < $3
 			 ORDER BY created_at DESC
@@ -159,7 +159,7 @@ func (h *Handlers) HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 	} else {
 		rows2, err2 := h.Pool.Query(ctx,
 			`SELECT id, sender_id, recipient_id, content, read, created_at
-			 FROM hub_direct_messages
+			 FROM forumline_direct_messages
 			 WHERE (sender_id = $1 AND recipient_id = $2) OR (sender_id = $2 AND recipient_id = $1)
 			 ORDER BY created_at DESC
 			 LIMIT $3`,
@@ -235,7 +235,7 @@ func (h *Handlers) HandleSendMessage(w http.ResponseWriter, r *http.Request) {
 	// Verify recipient exists
 	var recipientExists bool
 	h.Pool.QueryRow(ctx,
-		`SELECT EXISTS(SELECT 1 FROM hub_profiles WHERE id = $1)`, recipientID,
+		`SELECT EXISTS(SELECT 1 FROM forumline_profiles WHERE id = $1)`, recipientID,
 	).Scan(&recipientExists)
 
 	if !recipientExists {
@@ -246,7 +246,7 @@ func (h *Handlers) HandleSendMessage(w http.ResponseWriter, r *http.Request) {
 	// Insert message
 	var msg DirectMessage
 	err := h.Pool.QueryRow(ctx,
-		`INSERT INTO hub_direct_messages (sender_id, recipient_id, content)
+		`INSERT INTO forumline_direct_messages (sender_id, recipient_id, content)
 		 VALUES ($1, $2, $3)
 		 RETURNING id, sender_id, recipient_id, content, read, created_at`,
 		userID, recipientID, content,
@@ -272,7 +272,7 @@ func (h *Handlers) HandleMarkRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err := h.Pool.Exec(ctx,
-		`UPDATE hub_direct_messages SET read = true
+		`UPDATE forumline_direct_messages SET read = true
 		 WHERE sender_id = $1 AND recipient_id = $2 AND read = false`,
 		otherUserID, userID,
 	)

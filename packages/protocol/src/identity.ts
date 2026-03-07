@@ -54,11 +54,11 @@ export interface AuthSession {
 }
 
 // ============================================================================
-// Hub OAuth Flow Types
+// Forumline OAuth Flow Types
 // ============================================================================
 
-/** Parameters for the hub OAuth authorize redirect */
-export interface HubAuthorizeParams {
+/** Parameters for the Forumline OAuth authorize redirect */
+export interface ForumlineAuthorizeParams {
   /** OAuth client ID assigned to the forum */
   client_id: string
 
@@ -68,13 +68,13 @@ export interface HubAuthorizeParams {
   /** CSRF protection token */
   state: string
 
-  /** Optional: pre-authenticated hub access token */
+  /** Optional: pre-authenticated Forumline access token */
   access_token?: string
 }
 
 /** Request body for exchanging an auth code for an identity token */
-export interface HubTokenRequest {
-  /** Authorization code received from the hub */
+export interface ForumlineTokenRequest {
+  /** Authorization code received from Forumline */
   code: string
 
   /** Forum's OAuth client ID */
@@ -87,8 +87,8 @@ export interface HubTokenRequest {
   redirect_uri?: string
 }
 
-/** Response from the hub token endpoint */
-export interface HubTokenResponse {
+/** Response from the Forumline token endpoint */
+export interface ForumlineTokenResponse {
   /** Signed JWT containing the user's ForumlineIdentity */
   identity_token: string
 

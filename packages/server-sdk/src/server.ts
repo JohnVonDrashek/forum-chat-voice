@@ -44,17 +44,17 @@ export interface ForumlineServerConfig {
    * Forumline Central Services (hub) configuration for OAuth.
    * Required for auth handlers.
    */
-  hub?: {
+  forumline?: {
     url: string
     clientId: string
     clientSecret: string
   }
 
   /**
-   * JWT secret used to verify identity tokens signed by the hub.
+   * JWT secret used to verify identity tokens signed by Forumline.
    * Required for secure session validation.
    */
-  hubJwtSecret?: string
+  forumlineJwtSecret?: string
 
   /** Site URL for redirects (e.g. https://my-forum.example.com) */
   siteUrl?: string
@@ -64,7 +64,7 @@ export interface ForumlineServerConfig {
    * Returns the local user ID.
    * Required for authCallbackHandler.
    */
-  createOrLinkUser?: (identity: ForumlineIdentity, hubAccessToken: string | null) => Promise<string>
+  createOrLinkUser?: (identity: ForumlineIdentity, forumlineAccessToken: string | null) => Promise<string>
 
   /**
    * Called after auth completes (user created/linked, cookies set).
@@ -73,7 +73,7 @@ export interface ForumlineServerConfig {
   afterAuth?: (params: {
     userId: string
     identity: ForumlineIdentity
-    hubAccessToken: string | null
+    forumlineAccessToken: string | null
     request: GenericRequest
   }) => Promise<string | undefined>
 
@@ -203,8 +203,8 @@ export class ForumlineServer {
         return res.status(405).json({ error: 'Method not allowed' })
       }
 
-      const { hub, siteUrl } = this.config
-      if (!hub) {
+      const { forumline, siteUrl } = this.config
+      if (!forumline) {
         return res.status(500).json({ error: 'Forumline Central Services not configured' })
       }
 
@@ -212,20 +212,20 @@ export class ForumlineServer {
       const state = randomBytes(16).toString('hex')
       const redirectUri = `${siteUrl}/api/forumline/auth/callback`
 
-      const authorizeUrl = new URL(`${hub.url}/api/oauth/authorize`)
-      authorizeUrl.searchParams.set('client_id', hub.clientId)
+      const authorizeUrl = new URL(`${forumline.url}/api/oauth/authorize`)
+      authorizeUrl.searchParams.set('client_id', forumline.clientId)
       authorizeUrl.searchParams.set('redirect_uri', redirectUri)
       authorizeUrl.searchParams.set('state', state)
 
       res.setHeader('Set-Cookie', `forumline_state=${state}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=600`)
 
-      // If hub_token is provided, use a POST form to send it securely (keeps token out of URL)
-      if (req.query.hub_token) {
+      // If forumline_token is provided, use a POST form to send it securely (keeps token out of URL)
+      if (req.query.forumline_token) {
         const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         const formHtml = `<!DOCTYPE html>
 <html><body>
 <form id="f" method="POST" action="${escapeAttr(authorizeUrl.toString())}">
-<input type="hidden" name="access_token" value="${escapeAttr(req.query.hub_token as string)}">
+<input type="hidden" name="access_token" value="${escapeAttr(req.query.forumline_token as string)}">
 </form>
 <script>document.getElementById('f').submit()</script>
 </body></html>`
@@ -256,20 +256,20 @@ export class ForumlineServer {
         return res.status(400).json({ error: 'State mismatch — possible CSRF attack' })
       }
 
-      const { hub, siteUrl, createOrLinkUser } = this.config
-      if (!hub || !createOrLinkUser) {
+      const { forumline, siteUrl, createOrLinkUser } = this.config
+      if (!forumline || !createOrLinkUser) {
         return res.status(500).json({ error: 'Forumline Central Services not configured' })
       }
 
       // Exchange code for identity token
       const redirectUri = `${siteUrl}/api/forumline/auth/callback`
-      const tokenResponse = await fetch(`${hub.url}/api/oauth/token`, {
+      const tokenResponse = await fetch(`${forumline.url}/api/oauth/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           code,
-          client_id: hub.clientId,
-          client_secret: hub.clientSecret,
+          client_id: forumline.clientId,
+          client_secret: forumline.clientSecret,
           redirect_uri: redirectUri,
         }),
       })
@@ -280,14 +280,14 @@ export class ForumlineServer {
       }
 
       const tokenData = await tokenResponse.json()
-      const { identity, identity_token, hub_access_token } = tokenData
+      const { identity, identity_token, forumline_access_token } = tokenData
 
       if (!identity?.forumline_id || !identity?.username) {
-        return res.status(500).json({ error: 'Invalid identity response from hub' })
+        return res.status(500).json({ error: 'Invalid identity response from Forumline' })
       }
 
       // Create or link local user
-      const localUserId = await createOrLinkUser(identity, hub_access_token || null)
+      const localUserId = await createOrLinkUser(identity, forumline_access_token || null)
 
       // Set cookies
       const setCookies = [
@@ -295,8 +295,8 @@ export class ForumlineServer {
         `forumline_identity=${identity_token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=3600`,
         `forumline_user_id=${localUserId}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=3600`,
       ]
-      if (hub_access_token) {
-        setCookies.push(`hub_access_token=${hub_access_token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=3600`)
+      if (forumline_access_token) {
+        setCookies.push(`forumline_access_token=${forumline_access_token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=3600`)
       }
       res.setHeader('Set-Cookie', setCookies)
 
@@ -305,7 +305,7 @@ export class ForumlineServer {
         const redirectUrl = await this.config.afterAuth({
           userId: localUserId,
           identity,
-          hubAccessToken: hub_access_token || null,
+          forumlineAccessToken: forumline_access_token || null,
           request: req,
         })
         if (redirectUrl) {
@@ -318,9 +318,9 @@ export class ForumlineServer {
   }
 
   /**
-   * GET /auth/hub-token — Returns the hub access token from httpOnly cookie.
+   * GET /auth/forumline-token — Returns the forumline access token from httpOnly cookie.
    */
-  hubTokenHandler(): RequestHandler {
+  forumlineTokenHandler(): RequestHandler {
     return async (req, res) => {
       if (req.method === 'OPTIONS') {
         res.setHeader('Access-Control-Allow-Origin', '*')
@@ -337,8 +337,8 @@ export class ForumlineServer {
       res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
       res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type')
 
-      const hubAccessToken = req.cookies.hub_access_token
-      return res.status(200).json({ hub_access_token: hubAccessToken || null })
+      const forumlineAccessToken = req.cookies.forumline_access_token
+      return res.status(200).json({ forumline_access_token: forumlineAccessToken || null })
     }
   }
 
@@ -369,10 +369,10 @@ export class ForumlineServer {
         return res.status(200).json(null)
       }
 
-      // Verify JWT signature if hub secret is configured, otherwise fall back to decode-only
+      // Verify JWT signature if forumline secret is configured, otherwise fall back to decode-only
       let payload: Record<string, unknown> | null
-      if (this.config.hubJwtSecret) {
-        payload = await verifyJwt(identityToken, this.config.hubJwtSecret)
+      if (this.config.forumlineJwtSecret) {
+        payload = await verifyJwt(identityToken, this.config.forumlineJwtSecret)
         // verifyJwt also checks expiry, so invalid/expired tokens return null
       } else {
         payload = decodeJwtPayload(identityToken)

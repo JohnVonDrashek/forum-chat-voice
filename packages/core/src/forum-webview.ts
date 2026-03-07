@@ -1,4 +1,4 @@
-import type { ForumToHubMessage, HubToForumMessage, UnreadCounts, ForumNotification } from '@johnvondrashek/forumline-protocol'
+import type { ForumToForumlineMessage, ForumlineToForumMessage, UnreadCounts, ForumNotification } from '@johnvondrashek/forumline-protocol'
 import type { ForumMembership } from './forum-store.js'
 
 export interface ForumWebviewOptions {
@@ -81,13 +81,13 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
     banner.style.display = show ? '' : 'none'
   }
 
-  function postToForum(msg: HubToForumMessage) {
+  function postToForum(msg: ForumlineToForumMessage) {
     iframe.contentWindow?.postMessage(msg, forumOrigin)
   }
 
   function handleMessage(event: MessageEvent) {
     if (event.origin !== forumOrigin) return
-    const msg = event.data as ForumToHubMessage
+    const msg = event.data as ForumToForumlineMessage
     if (!msg?.type?.startsWith('forumline:')) return
 
     switch (msg.type) {

@@ -55,7 +55,7 @@ export interface ForumlineApiEndpoints {
 export interface ForumlineAuthEndpoints {
   /**
    * GET /auth
-   * Redirects to Forumline hub OAuth2 authorization.
+   * Redirects to Forumline Forumline OAuth2 authorization.
    */
   'GET /auth': {
     query: { redirect_uri: string }
@@ -64,7 +64,7 @@ export interface ForumlineAuthEndpoints {
 
   /**
    * GET /auth/callback
-   * Handles OAuth2 callback from the hub.
+   * Handles OAuth2 callback from Forumline.
    */
   'GET /auth/callback': {
     query: { code: string; state: string }

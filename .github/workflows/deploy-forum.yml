@@ -6,10 +6,10 @@ on:
     branches: [main]
     paths:
       - 'go-services/**'
-      - 'forum-vanilla/src/**'
-      - 'forum-vanilla/index.html'
-      - 'forum-vanilla/vite.config.js'
-      - 'forum-vanilla/package.json'
+      - 'examples/forum-a/src/**'
+      - 'examples/forum-a/index.html'
+      - 'examples/forum-a/vite.config.js'
+      - 'examples/forum-a/package.json'
       - 'Dockerfile.go-forum'
       - '.github/workflows/deploy-forum.yml'
 

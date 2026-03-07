@@ -1,16 +1,16 @@
-import type { HubStore } from '@johnvondrashek/forumline-core'
-import type { HubDirectMessage } from '@johnvondrashek/forumline-protocol'
+import type { ForumlineStore } from '@johnvondrashek/forumline-core'
+import type { ForumlineDirectMessage } from '@johnvondrashek/forumline-protocol'
 import { createAvatar, createButton, createInput, createSpinner } from './ui.js'
 import { formatMessageTime } from '../lib/dateFormatters.js'
-import { hubAuth } from '../app.js'
+import { forumlineAuth } from '../app.js'
 
 interface DmMessageViewOptions {
-  hubStore: HubStore
+  forumlineStore: ForumlineStore
   recipientId: string
 }
 
-export function createDmMessageView({ hubStore, recipientId }: DmMessageViewOptions) {
-  let messages: HubDirectMessage[] = []
+export function createDmMessageView({ forumlineStore, recipientId }: DmMessageViewOptions) {
+  let messages: ForumlineDirectMessage[] = []
   let recipientName = 'User'
   let recipientAvatarUrl: string | null = null
   let newMessage = ''
@@ -91,9 +91,9 @@ export function createDmMessageView({ hubStore, recipientId }: DmMessageViewOpti
     messagesContainer.scrollTop = messagesContainer.scrollHeight
   }
 
-  function createMessageRow(msg: HubDirectMessage): HTMLElement {
-    const { hubUserId } = hubStore.get()
-    const isMe = msg.sender_id === hubUserId
+  function createMessageRow(msg: ForumlineDirectMessage): HTMLElement {
+    const { forumlineUserId } = forumlineStore.get()
+    const isMe = msg.sender_id === forumlineUserId
     const row = document.createElement('div')
     row.className = isMe ? 'dm-row dm-row--mine' : 'dm-row dm-row--theirs'
 
@@ -162,12 +162,12 @@ export function createDmMessageView({ hubStore, recipientId }: DmMessageViewOpti
   }
 
   async function fetchMessages() {
-    const { hubClient } = hubStore.get()
-    if (!hubClient) return
+    const { forumlineClient } = forumlineStore.get()
+    if (!forumlineClient) return
 
     try {
       // Fetch conversation info for recipient name
-      const convos = await hubClient.getConversations()
+      const convos = await forumlineClient.getConversations()
       const convo = convos.find((c) => c.recipientId === recipientId)
       if (convo) {
         const nameChanged = recipientName !== convo.recipientName || recipientAvatarUrl !== (convo.recipientAvatarUrl ?? null)
@@ -178,13 +178,13 @@ export function createDmMessageView({ hubStore, recipientId }: DmMessageViewOpti
       }
 
       // Fetch messages
-      messages = await hubClient.getMessages(recipientId)
+      messages = await forumlineClient.getMessages(recipientId)
       renderMessages()
 
       // Mark as read
       if (!markedRead && messages.length > 0) {
         markedRead = true
-        hubClient.markRead(recipientId).catch(console.error)
+        forumlineClient.markRead(recipientId).catch(console.error)
       }
     } catch (err) {
       console.error('[Hub:DM] Failed to fetch messages:', err)
@@ -193,16 +193,16 @@ export function createDmMessageView({ hubStore, recipientId }: DmMessageViewOpti
 
   async function handleSend() {
     if (!newMessage.trim() || sending) return
-    const { hubClient, hubUserId } = hubStore.get()
-    if (!hubClient) return
+    const { forumlineClient, forumlineUserId } = forumlineStore.get()
+    if (!forumlineClient) return
 
     const content = newMessage.trim()
     sending = true
 
     // Optimistic update
-    const optimistic: HubDirectMessage = {
+    const optimistic: ForumlineDirectMessage = {
       id: `temp-${Date.now()}`,
-      sender_id: hubUserId || '',
+      sender_id: forumlineUserId || '',
       recipient_id: recipientId,
       content,
       created_at: new Date().toISOString(),
@@ -214,12 +214,12 @@ export function createDmMessageView({ hubStore, recipientId }: DmMessageViewOpti
     renderMessages()
 
     try {
-      await hubClient.sendMessage(recipientId, content)
+      await forumlineClient.sendMessage(recipientId, content)
       // Remove optimistic message before adding real ones
       renderedMessages.get(optimistic.id)?.remove()
       renderedMessages.delete(optimistic.id)
       // Refetch to get real message
-      const realMessages = await hubClient.getMessages(recipientId)
+      const realMessages = await forumlineClient.getMessages(recipientId)
       messages = realMessages
       renderMessages()
     } catch (err) {
@@ -242,12 +242,12 @@ export function createDmMessageView({ hubStore, recipientId }: DmMessageViewOpti
 
   // SSE for real-time DM updates
   function connectSSE() {
-    const session = hubAuth.getSession()
+    const session = forumlineAuth.getSession()
     if (!session) return
-    const { hubUserId } = hubStore.get()
-    if (!hubUserId) return
+    const { forumlineUserId } = forumlineStore.get()
+    if (!forumlineUserId) return
 
-    const url = `/api/dms/${hubUserId}/stream?access_token=${encodeURIComponent(session.access_token)}`
+    const url = `/api/dms/${forumlineUserId}/stream?access_token=${encodeURIComponent(session.access_token)}`
     eventSource = new EventSource(url)
     eventSource.onmessage = () => {
       // Any SSE message means DMs changed — refetch

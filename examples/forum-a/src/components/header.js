@@ -18,21 +18,7 @@ let userMenuOpen = false
 export function renderHeader(container) {
   const { user } = authStore.get()
 
-  const hubBannerDismissed = localStorage.getItem('hub-banner-dismissed')
-
   container.innerHTML = `
-    ${!user && !hubBannerDismissed ? `
-    <div id="hub-banner" class="relative z-50 bg-indigo-600 px-4 py-2 text-center text-sm text-white">
-      <a href="/api/forumline/auth" class="font-medium hover:underline">
-        Sign in with Forumline Hub
-      </a>
-      <span class="text-indigo-200 mx-1">&mdash;</span>
-      <span class="text-indigo-200">Connect your identity across forums</span>
-      <button id="dismiss-hub-banner" class="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-200 hover:text-white">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    ` : ''}
     <header class="sticky top-0 z-40 h-14 bg-slate-900/95 backdrop-blur border-b border-slate-700/50 px-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <button id="mobile-menu-btn" class="lg:hidden p-1.5 text-slate-400 hover:text-slate-200">
@@ -108,15 +94,6 @@ export function renderHeader(container) {
     signOutBtn.addEventListener('click', async () => {
       await signOut()
       navigate('/')
-    })
-  }
-
-  // Hub banner dismiss
-  const dismissBtn = container.querySelector('#dismiss-hub-banner')
-  if (dismissBtn) {
-    dismissBtn.addEventListener('click', () => {
-      localStorage.setItem('hub-banner-dismissed', '1')
-      container.querySelector('#hub-banner')?.remove()
     })
   }
 

@@ -1,4 +1,4 @@
-package hub
+package forumline
 
 import (
 	"crypto/rand"
@@ -74,10 +74,10 @@ func (h *Handlers) HandleOAuthAuthorize(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	// 2. hub_pending_auth cookie or access_token in POST body
+	// 2. forumline_pending_auth cookie or access_token in POST body
 	if userID == "" {
 		var pendingToken string
-		if cookie, err := r.Cookie("hub_pending_auth"); err == nil {
+		if cookie, err := r.Cookie("forumline_pending_auth"); err == nil {
 			pendingToken = cookie.Value
 		}
 		if pendingToken == "" && r.Method == http.MethodPost {
@@ -132,7 +132,7 @@ func (h *Handlers) HandleOAuthAuthorize(w http.ResponseWriter, r *http.Request) 
 
 	// Clear pending auth cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     "hub_pending_auth",
+		Name:     "forumline_pending_auth",
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
@@ -226,7 +226,7 @@ func (h *Handlers) HandleOAuthToken(w http.ResponseWriter, r *http.Request) {
 		Bio         *string
 	}
 	err = h.Pool.QueryRow(ctx,
-		`SELECT id, username, display_name, avatar_url, bio FROM hub_profiles WHERE id = $1`,
+		`SELECT id, username, display_name, avatar_url, bio FROM forumline_profiles WHERE id = $1`,
 		authUserID,
 	).Scan(&profile.ID, &profile.Username, &profile.DisplayName, &profile.AvatarURL, &profile.Bio)
 
@@ -256,7 +256,7 @@ func (h *Handlers) HandleOAuthToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Sign identity JWT
-	jwtSecret := os.Getenv("HUB_JWT_SECRET")
+	jwtSecret := os.Getenv("FORUMLINE_JWT_SECRET")
 	if jwtSecret == "" {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Server misconfiguration"})
 		return
@@ -274,8 +274,8 @@ func (h *Handlers) HandleOAuthToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate hub access token via GoTrue magic link
-	hubAccessToken := generateHubAccessToken(authUserID)
+	// Generate forumline access token via GoTrue magic link
+	forumlineAccessToken := generateForumlineAccessToken(authUserID)
 
 	response := map[string]interface{}{
 		"identity_token": tokenStr,
@@ -283,17 +283,17 @@ func (h *Handlers) HandleOAuthToken(w http.ResponseWriter, r *http.Request) {
 		"token_type":     "Bearer",
 		"expires_in":     3600,
 	}
-	if hubAccessToken != "" {
-		response["hub_access_token"] = hubAccessToken
+	if forumlineAccessToken != "" {
+		response["forumline_access_token"] = forumlineAccessToken
 	}
 
 	writeJSON(w, http.StatusOK, response)
 }
 
-// generateHubAccessToken mints a JWT for the user signed with JWT_SECRET.
-// This token is valid for authenticated hub API endpoints (DMs, memberships, etc.).
+// generateForumlineAccessToken mints a JWT for the user signed with JWT_SECRET.
+// This token is valid for authenticated forumline API endpoints (DMs, memberships, etc.).
 // Best-effort — if it fails, DMs won't work but identity federation still does.
-func generateHubAccessToken(userID string) string {
+func generateForumlineAccessToken(userID string) string {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		return ""
@@ -304,7 +304,7 @@ func generateHubAccessToken(userID string) string {
 		Subject:   userID,
 		IssuedAt:  jwt.NewNumericDate(now),
 		ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
-		Issuer:    "forumline-hub",
+		Issuer:    "forumline-app",
 	})
 
 	tokenStr, err := token.SignedString([]byte(secret))

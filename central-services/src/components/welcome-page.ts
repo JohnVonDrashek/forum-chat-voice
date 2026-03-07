@@ -1,16 +1,16 @@
-import type { HubSession } from '../lib/gotrue-auth.js'
-import type { ForumStore, HubStore } from '@johnvondrashek/forumline-core'
+import type { ForumlineSession } from '../lib/gotrue-auth.js'
+import type { ForumStore, ForumlineStore } from '@johnvondrashek/forumline-core'
 import { createMobileForumList } from './mobile-forum-list.js'
 import { createButton } from './ui.js'
 
 interface WelcomePageOptions {
-  hubSession: HubSession | null
+  forumlineSession: ForumlineSession | null
   forumStore: ForumStore
-  hubStore: HubStore
+  forumlineStore: ForumlineStore
   onGoToSettings: () => void
 }
 
-export function createWelcomePage({ hubSession, forumStore, hubStore, onGoToSettings }: WelcomePageOptions) {
+export function createWelcomePage({ forumlineSession, forumStore, forumlineStore, onGoToSettings }: WelcomePageOptions) {
   const el = document.createElement('div')
   el.className = 'page-scroll'
   el.style.paddingLeft = '1rem'
@@ -91,20 +91,20 @@ export function createWelcomePage({ hubSession, forumStore, hubStore, onGoToSett
 
   function render() {
     const { forums } = forumStore.get()
-    const { isHubConnected } = hubStore.get()
+    const { isForumlineConnected } = forumlineStore.get()
 
     const forumsLengthChanged = forums.length !== prevForumsLength
-    const hubChanged = isHubConnected !== prevHubConnected
+    const forumlineChanged = isForumlineConnected !== prevHubConnected
 
-    // Update hub status if changed
-    if (hubChanged) {
-      dot.className = `status-dot ${isHubConnected ? 'status-dot--connected' : 'status-dot--disconnected'}`
-      statusText.textContent = isHubConnected
-        ? `Connected as @${hubSession?.user?.user_metadata?.username || hubSession?.user?.email || 'user'}`
-        : 'Not connected to Forumline Hub'
+    // Update forumline status if changed
+    if (forumlineChanged) {
+      dot.className = `status-dot ${isForumlineConnected ? 'status-dot--connected' : 'status-dot--disconnected'}`
+      statusText.textContent = isForumlineConnected
+        ? `Connected as @${forumlineSession?.user?.user_metadata?.username || forumlineSession?.user?.email || 'user'}`
+        : 'Not connected to Forumline'
 
       signInBtnWrap.innerHTML = ''
-      if (!isHubConnected) {
+      if (!isForumlineConnected) {
         signInBtnWrap.appendChild(createButton({
           text: 'Sign in',
           variant: 'primary',
@@ -112,7 +112,7 @@ export function createWelcomePage({ hubSession, forumStore, hubStore, onGoToSett
           onClick: onGoToSettings,
         }))
       }
-      prevHubConnected = isHubConnected
+      prevHubConnected = isForumlineConnected
     }
 
     // Update forum-dependent layout if forums length changed

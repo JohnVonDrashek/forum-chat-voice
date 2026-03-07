@@ -21,12 +21,12 @@ type Config struct {
 	ServiceRoleKey       string
 	SiteURL              string
 	Domain               string
-	HubURL               string
-	HubClientID          string
-	HubClientSecret      string
-	HubJWTSecret         string
-	HubSupabaseURL       string
-	HubServiceRoleKey    string
+	ForumlineURL               string
+	ForumlineClientID          string
+	ForumlineClientSecret      string
+	ForumlineJWTSecret         string
+	ForumlineSupabaseURL       string
+	ForumlineServiceRoleKey    string
 	LiveKitURL           string
 	LiveKitAPIKey        string
 	LiveKitAPISecret     string

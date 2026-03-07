@@ -1,16 +1,16 @@
 /**
- * GoTrueAuthClient — Direct GoTrue REST API client for hub auth.
- * Replaces @supabase/supabase-js auth, using the Go hub's auth endpoints.
+ * GoTrueAuthClient — Direct GoTrue REST API client for Forumline auth.
+ * Replaces @supabase/supabase-js auth, using the Go Forumline's auth endpoints.
  *
  * Login/signup go through /api/auth/* (Go handlers that create profiles, set cookies).
  * Token refresh and password operations use the GoTrue proxy at /auth/v1/*.
  */
 
-const STORAGE_KEY = 'hub-gotrue-session'
+const STORAGE_KEY = 'forumline-session'
 
 export type AuthStateEvent = 'INITIAL_SESSION' | 'SIGNED_IN' | 'SIGNED_OUT' | 'TOKEN_REFRESHED' | 'PASSWORD_RECOVERY'
 
-export interface HubSession {
+export interface ForumlineSession {
   access_token: string
   refresh_token: string
   expires_in: number
@@ -24,13 +24,13 @@ export interface HubUser {
   user_metadata?: Record<string, unknown>
 }
 
-type AuthCallback = (event: AuthStateEvent, session: HubSession | null) => void
+type AuthCallback = (event: AuthStateEvent, session: ForumlineSession | null) => void
 type Unsubscribe = () => void
 
 export class GoTrueAuthClient {
   private listeners: Set<AuthCallback> = new Set()
   private refreshTimer: ReturnType<typeof setTimeout> | null = null
-  private currentSession: HubSession | null = null
+  private currentSession: ForumlineSession | null = null
 
   constructor() {
     const stored = localStorage.getItem(STORAGE_KEY)
@@ -46,7 +46,7 @@ export class GoTrueAuthClient {
     }
   }
 
-  private saveSession(session: HubSession | null) {
+  private saveSession(session: ForumlineSession | null) {
     this.currentSession = session
     if (session) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
@@ -60,7 +60,7 @@ export class GoTrueAuthClient {
     }
   }
 
-  private scheduleRefresh(session: HubSession) {
+  private scheduleRefresh(session: ForumlineSession) {
     if (this.refreshTimer) clearTimeout(this.refreshTimer)
     const expiresAt = session.expires_at * 1000
     const refreshIn = Math.max(expiresAt - Date.now() - 60_000, 5_000)
@@ -81,7 +81,7 @@ export class GoTrueAuthClient {
         return false
       }
       const data = await res.json()
-      const session: HubSession = {
+      const session: ForumlineSession = {
         access_token: data.access_token,
         refresh_token: data.refresh_token,
         expires_in: data.expires_in,
@@ -96,7 +96,7 @@ export class GoTrueAuthClient {
     }
   }
 
-  private emit(event: AuthStateEvent, session: HubSession | null) {
+  private emit(event: AuthStateEvent, session: ForumlineSession | null) {
     for (const cb of this.listeners) {
       try { cb(event, session) } catch {}
     }
@@ -113,7 +113,7 @@ export class GoTrueAuthClient {
       if (!res.ok) {
         return { error: new Error(body.error || 'Login failed') }
       }
-      const session: HubSession = {
+      const session: ForumlineSession = {
         access_token: body.session.access_token,
         refresh_token: body.session.refresh_token,
         expires_in: body.session.expires_in || 3600,
@@ -143,7 +143,7 @@ export class GoTrueAuthClient {
       if (!res.ok) {
         return { error: new Error(body.error || 'Signup failed') }
       }
-      const session: HubSession = {
+      const session: ForumlineSession = {
         access_token: body.session.access_token,
         refresh_token: body.session.refresh_token,
         expires_in: body.session.expires_in || 3600,
@@ -210,7 +210,7 @@ export class GoTrueAuthClient {
     }
   }
 
-  getSession(): HubSession | null {
+  getSession(): ForumlineSession | null {
     if (!this.currentSession) return null
     if (this.currentSession.expires_at * 1000 < Date.now()) {
       // Token expired — refresh will happen via timer, return null for now
@@ -236,7 +236,7 @@ export class GoTrueAuthClient {
       const user = await userRes.json()
 
       const payload = JSON.parse(atob(accessToken.split('.')[1]))
-      const session: HubSession = {
+      const session: ForumlineSession = {
         access_token: accessToken,
         refresh_token: refreshToken,
         expires_in: (payload.exp - payload.iat) || 3600,

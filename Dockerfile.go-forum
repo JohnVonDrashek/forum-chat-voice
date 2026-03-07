@@ -13,14 +13,14 @@ FROM node:20-slim AS frontend-build
 
 WORKDIR /app
 
-# Copy forum-vanilla (standalone, no workspace deps needed)
-COPY forum-vanilla/package.json forum-vanilla/package-lock.json* ./
+# Copy examples/forum-a (standalone, no workspace deps needed)
+COPY examples/forum-a/package.json examples/forum-a/package-lock.json* ./
 
 # Install dependencies (all from public npm registry)
 RUN npm install
 
 # Copy source and build
-COPY forum-vanilla/ .
+COPY examples/forum-a/ .
 RUN npm run build
 
 # ---- Production stage ----

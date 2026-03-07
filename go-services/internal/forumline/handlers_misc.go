@@ -1,4 +1,4 @@
-package hub
+package forumline
 
 import (
 	"context"
@@ -306,7 +306,7 @@ func (h *Handlers) HandleGetIdentity(w http.ResponseWriter, r *http.Request) {
 	var username, displayName string
 	var avatarURL, bio *string
 	err := h.Pool.QueryRow(ctx,
-		`SELECT username, display_name, avatar_url, bio FROM hub_profiles WHERE id = $1`, userID,
+		`SELECT username, display_name, avatar_url, bio FROM forumline_profiles WHERE id = $1`, userID,
 	).Scan(&username, &displayName, &avatarURL, &bio)
 
 	if err != nil {
@@ -342,7 +342,7 @@ func (h *Handlers) HandleSearchProfiles(w http.ResponseWriter, r *http.Request) 
 	pattern := "%" + q + "%"
 	rows, err := h.Pool.Query(ctx,
 		`SELECT id, username, display_name, avatar_url
-		 FROM hub_profiles
+		 FROM forumline_profiles
 		 WHERE id != $1 AND (username ILIKE $2 OR display_name ILIKE $2)
 		 LIMIT 10`,
 		userID, pattern,
@@ -468,7 +468,7 @@ func (h *Handlers) handlePushNotify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	serviceKey := os.Getenv("HUB_SERVICE_ROLE_KEY")
+	serviceKey := os.Getenv("FORUMLINE_SERVICE_ROLE_KEY")
 
 	if token != serviceKey {
 		// Check if it's an OAuth client secret hash
@@ -508,7 +508,7 @@ func (h *Handlers) handlePushNotify(w http.ResponseWriter, r *http.Request) {
 	if targetUserID == "" && body.ForumlineID != "" {
 		var id string
 		err := h.Pool.QueryRow(ctx,
-			`SELECT id FROM hub_profiles WHERE id = $1`, body.ForumlineID,
+			`SELECT id FROM forumline_profiles WHERE id = $1`, body.ForumlineID,
 		).Scan(&id)
 		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})
@@ -647,7 +647,7 @@ func fetchProfilesByIDs(ctx context.Context, pool *pgxpool.Pool, ids []string) m
 	}
 
 	rows, err := pool.Query(ctx,
-		`SELECT id, username, display_name, avatar_url FROM hub_profiles WHERE id = ANY($1)`, ids,
+		`SELECT id, username, display_name, avatar_url FROM forumline_profiles WHERE id = ANY($1)`, ids,
 	)
 	if err != nil {
 		return profiles

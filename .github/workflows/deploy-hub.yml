@@ -13,7 +13,7 @@ on:
       - 'central-services/package.json'
       - 'packages/**'
       - 'package-lock.json'
-      - 'Dockerfile.go-hub'
+      - 'Dockerfile.go-forumline'
 
 jobs:
   deploy:
@@ -30,8 +30,8 @@ jobs:
           echo "${{ secrets.FORUM_SSH_KEY }}" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
           cat >> ~/.ssh/config <<EOF
-          Host hub-prod
-            HostName hub-ssh.forumline.net
+          Host forumline-prod
+            HostName app-ssh.forumline.net
             User root
             IdentityFile ~/.ssh/id_deploy
             StrictHostKeyChecking no
@@ -40,4 +40,4 @@ jobs:
 
       - name: Deploy
         run: |
-          ssh hub-prod "cd /opt/hub/repo && git pull origin main && cd /opt/hub && docker compose up -d --build hub && docker compose ps"
+          ssh forumline-prod "cd /opt/forumline/repo && git pull origin main && cd /opt/forumline && docker compose up -d --build forumline && docker compose ps"

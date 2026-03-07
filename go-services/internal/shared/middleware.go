@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// CORSMiddleware handles CORS for the hub API.
+// CORSMiddleware handles CORS for the API.
 func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")

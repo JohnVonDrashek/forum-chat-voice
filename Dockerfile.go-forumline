@@ -6,7 +6,7 @@ COPY go-services/go.mod go-services/go.sum ./
 RUN go mod download
 
 COPY go-services/ .
-RUN CGO_ENABLED=0 GOOS=linux go build -o hub ./cmd/hub/
+RUN CGO_ENABLED=0 GOOS=linux go build -o forumline ./cmd/forumline/
 
 # ---- Frontend build stage ----
 FROM node:20-slim AS frontend-build
@@ -39,10 +39,10 @@ RUN apk add --no-cache ca-certificates
 
 WORKDIR /app
 
-COPY --from=go-build /app/hub .
+COPY --from=go-build /app/forumline .
 COPY --from=frontend-build /app/central-services/dist ./dist/
 
 ENV PORT=3000
 EXPOSE 3000
 
-CMD ["./hub"]
+CMD ["./forumline"]

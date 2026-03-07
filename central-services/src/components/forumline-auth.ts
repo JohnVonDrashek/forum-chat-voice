@@ -3,11 +3,11 @@ import { createButton, createInput } from './ui.js'
 
 type AuthMode = 'signin' | 'signup' | 'forgot'
 
-interface HubAuthOptions {
+interface ForumlineAuthOptions {
   auth: GoTrueAuthClient
 }
 
-export function createHubAuth({ auth }: HubAuthOptions) {
+export function createForumlineAuth({ auth }: ForumlineAuthOptions) {
   let mode: AuthMode = 'signin'
   let email = ''
   let password = ''
@@ -60,12 +60,12 @@ export function createHubAuth({ auth }: HubAuthOptions) {
 
     // Heading
     const heading = mode === 'signin'
-      ? 'Sign in to Forumline Hub'
+      ? 'Sign in to Forumline'
       : mode === 'signup'
-        ? 'Create Hub Account'
+        ? 'Create Account'
         : 'Reset Password'
     const subheading = mode === 'signin'
-      ? 'Connect your hub account to enable cross-forum DMs'
+      ? 'Connect your Forumline account to enable cross-forum DMs'
       : mode === 'signup'
         ? 'Create an account to start messaging across forums'
         : "Enter your email and we'll send you a reset link"

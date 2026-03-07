@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/johnvondrashek/forumline/go-services/internal/hub"
+	forumlineapp "github.com/johnvondrashek/forumline/go-services/internal/forumline"
 	"github.com/johnvondrashek/forumline/go-services/internal/shared"
 )
 
@@ -37,11 +37,11 @@ func main() {
 	sseHub.StartListening(ctx)
 
 	// Push notification listener
-	pushListener := hub.NewPushListener(pool, sseHub)
+	pushListener := forumlineapp.NewPushListener(pool, sseHub)
 	go pushListener.Start(ctx)
 
 	// Router
-	router := hub.NewRouter(pool, sseHub)
+	router := forumlineapp.NewRouter(pool, sseHub)
 
 	// Wrap with global middleware
 	var handler http.Handler = router

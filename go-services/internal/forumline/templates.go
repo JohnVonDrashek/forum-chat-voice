@@ -1,4 +1,4 @@
-package hub
+package forumline
 
 import (
 	"encoding/json"
@@ -98,7 +98,7 @@ func renderLoginPage(clientID, redirectURI, state, forumName string) string {
 
 <script>
   const AUTHORIZE_URL = %s;
-  const HUB_ORIGIN = location.origin;
+  const FORUMLINE_ORIGIN = location.origin;
 
   function switchTab(tab) {
     document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === (tab === 'login' ? 0 : 1)));
@@ -117,10 +117,10 @@ func renderLoginPage(clientID, redirectURI, state, forumName string) string {
     document.getElementById('error').classList.remove('visible');
   }
 
-  // Auto-authorize if user already has a hub session in localStorage
+  // Auto-authorize if user already has a forumline session in localStorage
   (function tryAutoAuth() {
     try {
-      const raw = localStorage.getItem('hub-gotrue-session');
+      const raw = localStorage.getItem('forumline-session');
       if (!raw) return;
       const session = JSON.parse(raw);
       if (!session || !session.access_token) return;
@@ -145,7 +145,7 @@ func renderLoginPage(clientID, redirectURI, state, forumName string) string {
     btn.disabled = true;
     btn.textContent = 'Signing in...';
     try {
-      const res = await fetch(HUB_ORIGIN + '/api/auth/login', {
+      const res = await fetch(FORUMLINE_ORIGIN + '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -170,7 +170,7 @@ func renderLoginPage(clientID, redirectURI, state, forumName string) string {
     btn.disabled = true;
     btn.textContent = 'Creating account...';
     try {
-      const res = await fetch(HUB_ORIGIN + '/api/auth/signup', {
+      const res = await fetch(FORUMLINE_ORIGIN + '/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
