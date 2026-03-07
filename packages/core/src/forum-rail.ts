@@ -288,7 +288,11 @@ export function createForumRail(opts: ForumRailOptions): ForumRailInstance {
 
     const input = dialog.querySelector('input')!
     input.value = addUrl
-    input.addEventListener('input', (e) => { addUrl = (e.target as HTMLInputElement).value })
+    const addBtn = dialog.querySelectorAll('button')[1] as HTMLButtonElement
+    input.addEventListener('input', (e) => {
+      addUrl = (e.target as HTMLInputElement).value
+      addBtn.disabled = adding || !addUrl.trim()
+    })
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') handleAdd()
       if (e.key === 'Escape') closeModal()
@@ -296,7 +300,7 @@ export function createForumRail(opts: ForumRailOptions): ForumRailInstance {
 
     const buttons = dialog.querySelectorAll('button')
     buttons[0].addEventListener('click', closeModal)
-    buttons[1].addEventListener('click', handleAdd)
+    addBtn.addEventListener('click', handleAdd)
 
     modalEl.append(overlay, dialog)
     document.body.appendChild(modalEl)

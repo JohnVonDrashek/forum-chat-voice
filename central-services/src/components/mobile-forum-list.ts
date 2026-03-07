@@ -183,7 +183,10 @@ export function createMobileForumList({ forumStore }: MobileForumListOptions) {
 
     const input = createInput({ type: 'url', placeholder: 'https://example-forum.com', value: addUrl, autofocus: true })
     input.className = 'input modal__input'
-    input.addEventListener('input', () => { addUrl = input.value })
+    input.addEventListener('input', () => {
+      addUrl = input.value
+      addBtn.disabled = adding || !addUrl.trim()
+    })
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') handleAdd()
       if (e.key === 'Escape') closeModal()
@@ -200,12 +203,13 @@ export function createMobileForumList({ forumStore }: MobileForumListOptions) {
     const actions = document.createElement('div')
     actions.className = 'modal__actions'
     actions.appendChild(createButton({ text: 'Cancel', variant: 'ghost', onClick: closeModal }))
-    actions.appendChild(createButton({
+    const addBtn = createButton({
       text: adding ? 'Adding...' : 'Add Forum',
       variant: 'primary',
       disabled: adding || !addUrl.trim(),
       onClick: handleAdd,
-    }))
+    }) as HTMLButtonElement
+    actions.appendChild(addBtn)
     dialog.appendChild(actions)
 
     modalEl.append(overlay, dialog)
