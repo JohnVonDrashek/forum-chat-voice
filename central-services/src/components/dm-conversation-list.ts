@@ -1,4 +1,4 @@
-import type { ForumlineStore } from '@johnvondrashek/forumline-core'
+import type { ForumlineStore } from '../lib/index.js'
 import type { ForumlineDmConversation } from '@johnvondrashek/forumline-protocol'
 import { createAvatar, createSpinner } from './ui.js'
 import { formatShortTimeAgo } from '../lib/dateFormatters.js'

@@ -1,4 +1,4 @@
-import type { ForumlineStore } from '@johnvondrashek/forumline-core'
+import type { ForumlineStore } from '../lib/index.js'
 import type { ForumlineProfile } from '@johnvondrashek/forumline-protocol'
 import { createAvatar, createInput, createSpinner } from './ui.js'
 

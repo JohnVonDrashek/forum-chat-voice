@@ -1,11 +1,11 @@
 import type { GoTrueAuthClient, ForumlineSession } from '../lib/gotrue-auth.js'
 import type { ForumNotification } from '@johnvondrashek/forumline-protocol'
-import { createForumWebview, isTauri, getTauriNotification, setupDeepLinkListener, type ForumStore, type ForumlineStore, type DeepLinkTarget } from '@johnvondrashek/forumline-core'
+import { createForumWebview, isTauri, getTauriNotification, setupDeepLinkListener, type ForumStore, type ForumlineStore, type DeepLinkTarget } from '../lib/index.js'
 import { createWelcomePage } from './welcome-page.js'
 import { createDmPanel } from './dm-panel.js'
 import { createSettingsPage } from './settings-page.js'
 import { createMobileTabBar, type AppView } from './mobile-tab-bar.js'
-import type { ForumWebviewInstance } from '@johnvondrashek/forumline-core'
+import type { ForumWebviewInstance } from '../lib/index.js'
 
 /** Persist auth state change to Forumline DB */
 async function updateForumAuthState(auth: GoTrueAuthClient, forumDomain: string, authed: boolean) {

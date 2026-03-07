@@ -8,8 +8,6 @@ export default defineConfig({
     // code from the monorepo rather than stale dist files.
     alias: {
       '@johnvondrashek/forumline-protocol': path.resolve(__dirname, '../packages/protocol/src/index.ts'),
-      '@johnvondrashek/forumline-central-services-client': path.resolve(__dirname, '../packages/central-services-client/src/index.ts'),
-      '@johnvondrashek/forumline-core': path.resolve(__dirname, '../packages/core/src/index.ts'),
     },
   },
   clearScreen: false,

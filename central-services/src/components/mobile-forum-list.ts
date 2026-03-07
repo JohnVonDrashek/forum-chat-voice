@@ -1,5 +1,4 @@
-import type { ForumStore } from '@johnvondrashek/forumline-core'
-import type { ForumMembership } from '@johnvondrashek/forumline-core'
+import type { ForumStore, ForumMembership } from '../lib/index.js'
 import { createButton, createInput } from './ui.js'
 
 interface MobileForumListOptions {

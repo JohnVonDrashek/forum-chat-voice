@@ -1,4 +1,4 @@
-import type { ForumStore } from '@johnvondrashek/forumline-core'
+import type { ForumStore } from '../lib/index.js'
 
 export type AppView = 'forums' | 'settings' | 'dms'
 

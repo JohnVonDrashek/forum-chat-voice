@@ -1,4 +1,4 @@
-import type { ForumlineStore } from '@johnvondrashek/forumline-core'
+import type { ForumlineStore } from '../lib/index.js'
 import { createButton } from './ui.js'
 import { createDmConversationList } from './dm-conversation-list.js'
 import { createDmMessageView } from './dm-message-view.js'

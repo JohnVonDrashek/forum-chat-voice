@@ -9,8 +9,6 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@johnvondrashek/forumline-central-services-client": "workspace:*",
-    "@johnvondrashek/forumline-core": "workspace:*",
     "@johnvondrashek/forumline-protocol": "workspace:*"
   },
   "devDependencies": {

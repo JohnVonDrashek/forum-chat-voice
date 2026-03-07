@@ -1,4 +1,4 @@
-import { CentralServicesClient } from '@johnvondrashek/forumline-central-services-client'
+import { CentralServicesClient } from './client/index.js'
 import { createStore, type Store } from './store.js'
 
 export interface ForumlineState {

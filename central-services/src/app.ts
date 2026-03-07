@@ -1,5 +1,5 @@
 import { GoTrueAuthClient, type ForumlineSession } from './lib/gotrue-auth.js'
-import { createForumStore, createForumlineStore, type ForumStore, type ForumlineStore } from '@johnvondrashek/forumline-core'
+import { createForumStore, createForumlineStore, type ForumStore, type ForumlineStore } from './lib/index.js'
 import { createResetPassword } from './components/reset-password.js'
 import { createForumlineAuth } from './components/forumline-auth.js'
 import { createAppLayout } from './components/app-layout.js'

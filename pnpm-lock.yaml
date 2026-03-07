@@ -26,12 +26,6 @@ importers:
 
   central-services:
     dependencies:
-      '@johnvondrashek/forumline-central-services-client':
-        specifier: workspace:*
-        version: link:../packages/central-services-client
-      '@johnvondrashek/forumline-core':
-        specifier: workspace:*
-        version: link:../packages/core
       '@johnvondrashek/forumline-protocol':
         specifier: workspace:*
         version: link:../packages/protocol
@@ -42,25 +36,6 @@ importers:
       vite:
         specifier: ^6.0.0
         version: 6.4.1(@types/node@25.3.5)
-
-  packages/central-services-client:
-    dependencies:
-      '@johnvondrashek/forumline-protocol':
-        specifier: workspace:*
-        version: link:../protocol
-    devDependencies:
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
-  packages/core:
-    dependencies:
-      '@johnvondrashek/forumline-central-services-client':
-        specifier: workspace:*
-        version: link:../central-services-client
-      '@johnvondrashek/forumline-protocol':
-        specifier: workspace:*
-        version: link:../protocol
 
   packages/protocol:
     dependencies:

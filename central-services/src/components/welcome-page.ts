@@ -1,5 +1,5 @@
 import type { ForumlineSession } from '../lib/gotrue-auth.js'
-import type { ForumStore, ForumlineStore } from '@johnvondrashek/forumline-core'
+import type { ForumStore, ForumlineStore } from '../lib/index.js'
 import { createMobileForumList } from './mobile-forum-list.js'
 import { createButton } from './ui.js'
 
