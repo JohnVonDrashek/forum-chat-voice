@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'go-services/**'
+      - 'examples/**'
       - 'examples/forum-b/src/**'
       - 'examples/forum-b/index.html'
       - 'examples/forum-b/vite.config.js'

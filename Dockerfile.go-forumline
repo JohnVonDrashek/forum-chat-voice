@@ -21,7 +21,7 @@ COPY .npmrc ./
 
 # Copy all workspace packages (needed for dependency resolution)
 COPY packages/ packages/
-COPY central-services/ central-services/
+COPY forumline-identity-and-federation-web/ forumline-identity-and-federation-web/
 
 # Install all dependencies
 ARG GITHUB_PACKAGES_TOKEN
@@ -30,9 +30,9 @@ RUN GITHUB_PACKAGES_TOKEN=${GITHUB_PACKAGES_TOKEN} pnpm install --frozen-lockfil
 # Vite build-time env vars (public keys only — baked into frontend bundle)
 ARG VITE_VAPID_PUBLIC_KEY
 
-# Build packages + central-services frontend
+# Build packages + forumline-identity-and-federation-web frontend
 RUN VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY} \
-    pnpm exec turbo run build --filter=./central-services...
+    pnpm exec turbo run build --filter=./forumline-identity-and-federation-web...
 
 # ---- Production stage ----
 FROM alpine:3.21
@@ -42,7 +42,7 @@ RUN apk add --no-cache ca-certificates
 WORKDIR /app
 
 COPY --from=go-build /app/forumline .
-COPY --from=frontend-build /app/central-services/dist ./dist/
+COPY --from=frontend-build /app/forumline-identity-and-federation-web/dist ./dist/
 
 ENV PORT=3000
 EXPOSE 3000

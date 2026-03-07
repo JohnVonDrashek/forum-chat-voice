@@ -3,7 +3,7 @@ node_modules
 .github
 .vercel
 .claude
-native-app
+desktop-and-mobile-tauri-apps
 *.md
 *.log
 dist

@@ -34,8 +34,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            native-app/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('native-app/Cargo.lock') }}
+            desktop-and-mobile-tauri-apps/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('desktop-and-mobile-tauri-apps/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
@@ -44,7 +44,7 @@ jobs:
 
       - name: Build Tauri app
         run: cargo tauri build --bundles app
-        working-directory: native-app
+        working-directory: desktop-and-mobile-tauri-apps
 
       - name: Install create-dmg
         run: corepack enable && pnpm add -g create-dmg
@@ -55,13 +55,13 @@ jobs:
           if [ -n "${{ inputs.version }}" ]; then
             echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
           else
-            VERSION=$(grep '"version"' native-app/tauri.conf.json | head -1 | sed 's/.*: *"\(.*\)".*/\1/')
+            VERSION=$(grep '"version"' desktop-and-mobile-tauri-apps/tauri.conf.json | head -1 | sed 's/.*: *"\(.*\)".*/\1/')
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create DMG with create-dmg
         run: |
-          APP_PATH="native-app/target/release/bundle/macos/Forumline.app"
+          APP_PATH="desktop-and-mobile-tauri-apps/target/release/bundle/macos/Forumline.app"
 
           create-dmg "$APP_PATH" --overwrite --dmg-title "Forumline" --no-code-sign || true
 

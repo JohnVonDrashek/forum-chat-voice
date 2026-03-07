@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/johnvondrashek/forumline/go-services/internal/shared"
+	"github.com/johnvondrashek/forumline/examples/shared"
 	"github.com/livekit/protocol/auth"
 	"github.com/livekit/protocol/livekit"
 	lksdk "github.com/livekit/server-sdk-go/v2"

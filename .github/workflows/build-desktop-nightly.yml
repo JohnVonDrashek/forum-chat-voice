@@ -33,8 +33,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            native-app/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('native-app/Cargo.lock') }}
+            desktop-and-mobile-tauri-apps/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('desktop-and-mobile-tauri-apps/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
@@ -43,7 +43,7 @@ jobs:
 
       - name: Build Tauri app
         run: cargo tauri build --bundles app
-        working-directory: native-app
+        working-directory: desktop-and-mobile-tauri-apps
 
       - name: Install create-dmg
         if: inputs.skip_dmg != 'true'
@@ -52,8 +52,8 @@ jobs:
       - name: Create DMG with create-dmg
         if: inputs.skip_dmg != 'true'
         run: |
-          APP_PATH="native-app/target/release/bundle/macos/Forumline.app"
-          VERSION=$(grep '"version"' native-app/tauri.conf.json | head -1 | sed 's/.*: *"\(.*\)".*/\1/')
+          APP_PATH="desktop-and-mobile-tauri-apps/target/release/bundle/macos/Forumline.app"
+          VERSION=$(grep '"version"' desktop-and-mobile-tauri-apps/tauri.conf.json | head -1 | sed 's/.*: *"\(.*\)".*/\1/')
           DATE=$(date +%Y%m%d)
 
           create-dmg "$APP_PATH" --overwrite --dmg-title "Forumline Nightly" --no-code-sign || true
@@ -82,5 +82,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: forumline-nightly-app
-          path: native-app/target/release/bundle/macos/Forumline.app
+          path: desktop-and-mobile-tauri-apps/target/release/bundle/macos/Forumline.app
           retention-days: 7

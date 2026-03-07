@@ -44,7 +44,7 @@ packages/*/src/**/*.js.map
 .env*.local
 
 # Tauri auto-generated platform files
-native-app/gen/
+desktop-and-mobile-tauri-apps/gen/
 
 # Test screenshots
 *.png

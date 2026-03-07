@@ -2,11 +2,13 @@
 FROM golang:1.25-alpine AS go-build
 
 WORKDIR /app
-COPY go-services/go.mod go-services/go.sum ./
+COPY examples/go.mod examples/go.sum ./
 RUN go mod download
 
-COPY go-services/ .
-RUN CGO_ENABLED=0 GOOS=linux go build -o forum ./cmd/forum/
+COPY examples/shared/ shared/
+COPY examples/forum/ forum/
+COPY examples/forum-a/main.go forum-a/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o forum ./forum-a/
 
 # ---- Frontend build stage ----
 FROM node:20-slim AS frontend-build

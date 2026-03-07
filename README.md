@@ -24,14 +24,15 @@ Traditional forums lack real-time interaction. Chat apps lack structure. Forumli
 
 | Directory | Description |
 |-----------|-------------|
-| `examples/forum-a/` | Example forum web app (Vite + vanilla JS) |
-| `central-services/` | Forumline app — identity & federation registry (Vite + vanilla TS) |
-| `go-services/` | Go API servers for forum (`cmd/forum/`) and forumline (`cmd/forumline/`) |
-| `native-app/` | Tauri native app shell |
+| `examples/forum-a/` | Example forum — web frontend + Go backend entrypoint (Vite + vanilla JS) |
+| `examples/forum-b/` | Example forum — gothic theme (Vite + vanilla JS) |
+| `examples/forum/` | Shared Go forum handlers and routes |
+| `examples/shared/` | Shared Go infrastructure (db, auth, SSE, middleware) |
+| `forumline-identity-and-federation-web/` | Forumline app — identity & federation registry (Vite + vanilla TS) |
+| `go-services/` | Forumline Go API server (`cmd/forumline/`) |
+| `desktop-and-mobile-tauri-apps/` | Tauri native app (desktop, iOS, Android) |
 | `packages/protocol/` | Federation types (zero-dependency) |
 | `packages/server-sdk/` | Protocol endpoint handler factories |
-| `packages/central-services-client/` | Forumline API client |
-| `packages/core/` | Shared utilities |
 
 ## Quick Start
 
@@ -43,7 +44,7 @@ pnpm install
 cd go-services && docker compose up -d
 
 # Run the forum backend
-cd go-services && go run ./cmd/forum/
+cd examples && go run ./forum-a/
 
 # Run the forum frontend
 cd examples/forum-a && pnpm dev
@@ -52,7 +53,7 @@ cd examples/forum-a && pnpm dev
 cd go-services && go run ./cmd/forumline/
 
 # Run the forumline frontend
-cd central-services && pnpm dev
+cd forumline-identity-and-federation-web && pnpm dev
 ```
 
 Both apps require a `.env.local` — see `.env.example` in each directory.
@@ -70,8 +71,8 @@ pnpm format         # Prettier
 
 Both services are self-hosted on Proxmox LXCs with Docker Compose, exposed via Cloudflare Tunnel. Deploys are triggered automatically via GitHub Actions on push to `main`:
 
-- **Forum** → `go-services/**` or `examples/forum-a/**` changes trigger [deploy-forum.yml](.github/workflows/deploy-forum.yml)
-- **Forumline App** → `go-services/**`, `central-services/**`, or `packages/**` changes trigger [deploy-forumline.yml](.github/workflows/deploy-forumline.yml)
+- **Forum** → `examples/**` changes trigger [deploy-forum.yml](.github/workflows/deploy-forum.yml)
+- **Forumline App** → `go-services/**`, `forumline-identity-and-federation-web/**`, or `packages/**` changes trigger [deploy-forumline.yml](.github/workflows/deploy-forumline.yml)
 
 ## License
 

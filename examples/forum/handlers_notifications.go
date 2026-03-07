@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/johnvondrashek/forumline/go-services/internal/shared"
+	"github.com/johnvondrashek/forumline/examples/shared"
 )
 
 // HandleNotifications handles GET /api/forumline/notifications.

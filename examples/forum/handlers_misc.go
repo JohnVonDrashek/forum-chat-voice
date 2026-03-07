@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/johnvondrashek/forumline/go-services/internal/shared"
+	"github.com/johnvondrashek/forumline/examples/shared"
 )
 
 // HandleManifest serves /.well-known/forumline-manifest.json for forum discovery.

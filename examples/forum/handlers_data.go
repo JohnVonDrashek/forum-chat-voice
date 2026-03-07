@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/johnvondrashek/forumline/go-services/internal/shared"
+	"github.com/johnvondrashek/forumline/examples/shared"
 )
 
 // ============================================================================

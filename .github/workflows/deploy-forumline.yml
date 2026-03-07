@@ -6,11 +6,11 @@ on:
     branches: [main]
     paths:
       - 'go-services/**'
-      - 'central-services/src/**'
-      - 'central-services/index.html'
-      - 'central-services/vite.config.ts'
-      - 'central-services/tsconfig.json'
-      - 'central-services/package.json'
+      - 'forumline-identity-and-federation-web/src/**'
+      - 'forumline-identity-and-federation-web/index.html'
+      - 'forumline-identity-and-federation-web/vite.config.ts'
+      - 'forumline-identity-and-federation-web/tsconfig.json'
+      - 'forumline-identity-and-federation-web/package.json'
       - 'packages/**'
       - 'package-lock.json'
       - 'Dockerfile.go-forumline'

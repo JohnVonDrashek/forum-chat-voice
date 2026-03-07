@@ -14,7 +14,7 @@ Thin [Tauri v2](https://tauri.app/) shell that wraps the Forumline web app (`app
 1. Start the forumline dev server (the Tauri app loads it as `devUrl`):
 
    ```bash
-   cd central-services
+   cd forumline-identity-and-federation-web
    pnpm install
    pnpm dev
    ```

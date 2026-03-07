@@ -73,7 +73,7 @@ func main() {
 		srv.Shutdown(shutdownCtx)
 	}()
 
-	log.Printf("central-services server listening on http://localhost:%s", port)
+	log.Printf("forumline server listening on http://localhost:%s", port)
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 		log.Fatalf("server error: %v", err)
 	}

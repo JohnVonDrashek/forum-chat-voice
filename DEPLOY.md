@@ -11,8 +11,8 @@ Both apps deploy via **GitHub Actions** on push to `main` → **self-hosted Prox
 
 Both deploy via GitHub Actions workflows:
 
-- `.github/workflows/deploy-forum.yml` — triggers on `go-services/` or `examples/forum-a/` changes
-- `.github/workflows/deploy-forumline.yml` — triggers on `go-services/`, `central-services/`, or `packages/` changes
+- `.github/workflows/deploy-forum.yml` — triggers on `examples/` changes
+- `.github/workflows/deploy-forumline.yml` — triggers on `go-services/`, `forumline-identity-and-federation-web/`, or `packages/` changes
 
 Required GitHub secrets:
 - `FORUM_SSH_KEY` — SSH key for production servers
@@ -23,9 +23,9 @@ Required GitHub secrets:
 ## Local Development
 
 ```bash
-pnpm install                          # from root — sets up workspaces
+pnpm install                            # from root — sets up workspaces
 cd go-services && docker compose up -d  # start Postgres + GoTrue
-cd go-services && go run ./cmd/forum/   # start forum backend
+cd examples && go run ./forum-a/        # start forum backend
 cd examples/forum-a && pnpm dev         # start forum frontend
 ```
 

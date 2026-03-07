@@ -10,15 +10,15 @@ services:
     environment:
       - PORT=3000
 
-  central-services:
+  forumline:
     build:
       context: .
-      dockerfile: Dockerfile.central-services
+      dockerfile: Dockerfile.go-forumline
       args:
         GITHUB_PACKAGES_TOKEN: ${GITHUB_PACKAGES_TOKEN}
     ports:
       - "3001:3000"
     env_file:
-      - central-services/.env.local
+      - forumline-identity-and-federation-web/.env.local
     environment:
       - PORT=3000

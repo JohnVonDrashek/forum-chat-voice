@@ -24,7 +24,7 @@ importers:
         specifier: ^8.0.0
         version: 8.56.1(eslint@9.39.4)(typescript@5.9.3)
 
-  central-services:
+  forumline-identity-and-federation-web:
     dependencies:
       '@johnvondrashek/forumline-protocol':
         specifier: workspace:*

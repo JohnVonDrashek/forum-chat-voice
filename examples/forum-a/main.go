@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/johnvondrashek/forumline/go-services/internal/forum"
-	"github.com/johnvondrashek/forumline/go-services/internal/shared"
+	"github.com/johnvondrashek/forumline/examples/forum"
+	"github.com/johnvondrashek/forumline/examples/shared"
 )
 
 func main() {

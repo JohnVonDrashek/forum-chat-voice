@@ -20,8 +20,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            native-app/target
-          key: ${{ runner.os }}-cargo-ios-${{ hashFiles('native-app/Cargo.lock') }}
+            desktop-and-mobile-tauri-apps/target
+          key: ${{ runner.os }}-cargo-ios-${{ hashFiles('desktop-and-mobile-tauri-apps/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-ios-
 
@@ -30,11 +30,11 @@ jobs:
 
       - name: Build iOS app
         run: cargo tauri ios build
-        working-directory: native-app
+        working-directory: desktop-and-mobile-tauri-apps
 
       - name: Upload iOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: forumline-ios
-          path: native-app/gen/apple/build/
+          path: desktop-and-mobile-tauri-apps/gen/apple/build/
           retention-days: 7
