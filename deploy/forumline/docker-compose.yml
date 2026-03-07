@@ -56,12 +56,12 @@ services:
       gotrue:
         condition: service_healthy
     volumes:
-      - /opt/forumline/init-db/01-hub-tables.sql:/01-hub-tables.sql:ro
+      - /opt/forumline/init-db/01-forumline-tables.sql:/01-forumline-tables.sql:ro
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD}
     entrypoint: >
       sh -c "
-        psql -h postgres -U postgres -d postgres -f /01-hub-tables.sql &&
+        psql -h postgres -U postgres -d postgres -f /01-forumline-tables.sql &&
         echo Forumline DB init complete!
       "
 
