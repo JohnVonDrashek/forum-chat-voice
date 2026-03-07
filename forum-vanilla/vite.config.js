@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 
+const apiTarget = process.env.VITE_API_TARGET || 'http://localhost:3000'
+
 export default defineConfig({
   plugins: [tailwindcss()],
   base: '/',
@@ -11,9 +13,9 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/api': {
-        target: 'https://demo.forumline.net',
+        target: apiTarget,
         changeOrigin: true,
-        secure: true,
+        secure: apiTarget.startsWith('https'),
         configure: (proxy) => {
           // Disable buffering for SSE streams
           proxy.on('proxyRes', (proxyRes) => {
@@ -25,9 +27,9 @@ export default defineConfig({
         },
       },
       '/auth': {
-        target: 'https://demo.forumline.net',
+        target: apiTarget,
         changeOrigin: true,
-        secure: true,
+        secure: apiTarget.startsWith('https'),
       },
     },
   },
