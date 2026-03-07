@@ -1,0 +1,105 @@
+# Production docker-compose for forum-b LXC
+# Deploy to /opt/forum-b/docker-compose.yml on the forum-b LXC
+# Requires .env file with production secrets (see .env.example below)
+#
+# .env.example:
+#   POSTGRES_PASSWORD=<strong-password>
+#   JWT_SECRET=<min-32-char-secret>
+#   GOTRUE_SERVICE_ROLE_KEY=<service-role-key>
+#   FORUM_DOMAIN=forum-b.forumline.net
+#   FORUMLINE_APP_URL=https://app.forumline.net
+#   FORUMLINE_CLIENT_ID=<oauth-client-id>
+#   FORUMLINE_CLIENT_SECRET=<oauth-client-secret>
+#   FORUMLINE_JWT_SECRET=<forumline-jwt-secret>
+#   FORUMLINE_GOTRUE_URL=https://app.forumline.net/auth
+#   FORUMLINE_SERVICE_ROLE_KEY=<forumline-service-role-key>
+#   LIVEKIT_URL=wss://forum-9rmr0mb0.livekit.cloud
+#   LIVEKIT_API_KEY=<livekit-key>
+#   LIVEKIT_API_SECRET=<livekit-secret>
+#   R2_ACCOUNT_ID=<cloudflare-account-id>
+#   R2_ACCESS_KEY_ID=<r2-access-key>
+#   R2_SECRET_ACCESS_KEY=<r2-secret-key>
+#   R2_BUCKET_NAME=forumline-avatars
+#   R2_PUBLIC_URL=https://pub-9fedbeec44784c27aa252b7360d67971.r2.dev
+#   VAPID_PUBLIC_KEY=<vapid-public>
+#   VAPID_PRIVATE_KEY=<vapid-private>
+#   VAPID_EMAIL=noreply@forumline.net
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+      - ./repo/go-services/init-auth-schema.sql:/docker-entrypoint-initdb.d/00-auth-schema.sql:ro
+      - ./repo/go-services/init-forum-tables.sql:/docker-entrypoint-initdb.d/01-forum-tables.sql:ro
+      - ./repo/go-services/init-forum.sql:/docker-entrypoint-initdb.d/02-forum.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  gotrue:
+    image: supabase/gotrue:v2.186.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: "0.0.0.0"
+      GOTRUE_API_PORT: "8080"
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD}@db:5432/postgres?sslmode=disable&search_path=auth"
+      GOTRUE_SITE_URL: "https://${FORUM_DOMAIN}"
+      API_EXTERNAL_URL: "https://${FORUM_DOMAIN}/auth"
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_JWT_AUD: "authenticated"
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: "authenticated"
+      GOTRUE_JWT_ADMIN_ROLES: "service_role"
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_SMTP_ADMIN_EMAIL: "noreply@forumline.net"
+
+  forum:
+    build:
+      context: ./repo
+      dockerfile: Dockerfile.go-forum-b
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      gotrue:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD}@db:5432/postgres?sslmode=disable"
+      GOTRUE_URL: "http://gotrue:8080"
+      GOTRUE_SERVICE_ROLE_KEY: ${GOTRUE_SERVICE_ROLE_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      FORUM_DOMAIN: ${FORUM_DOMAIN}
+      VITE_SITE_URL: "https://${FORUM_DOMAIN}"
+      FORUMLINE_APP_URL: ${FORUMLINE_APP_URL}
+      FORUMLINE_CLIENT_ID: ${FORUMLINE_CLIENT_ID}
+      FORUMLINE_CLIENT_SECRET: ${FORUMLINE_CLIENT_SECRET}
+      FORUMLINE_JWT_SECRET: ${FORUMLINE_JWT_SECRET}
+      FORUMLINE_GOTRUE_URL: ${FORUMLINE_GOTRUE_URL}
+      FORUMLINE_SERVICE_ROLE_KEY: ${FORUMLINE_SERVICE_ROLE_KEY}
+      LIVEKIT_URL: ${LIVEKIT_URL}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME}
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_EMAIL: ${VAPID_EMAIL}

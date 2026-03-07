@@ -1,0 +1,41 @@
+# ---- Go build stage ----
+FROM golang:1.25-alpine AS go-build
+
+WORKDIR /app
+COPY go-services/go.mod go-services/go.sum ./
+RUN go mod download
+
+COPY go-services/ .
+RUN CGO_ENABLED=0 GOOS=linux go build -o forum ./cmd/forum/
+
+# ---- Frontend build stage ----
+FROM node:20-slim AS frontend-build
+
+RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
+
+WORKDIR /app
+
+# Copy examples/forum-b (standalone, no workspace deps needed)
+COPY examples/forum-b/package.json examples/forum-b/pnpm-lock.yaml* ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile || pnpm install
+
+# Copy source and build
+COPY examples/forum-b/ .
+RUN pnpm run build
+
+# ---- Production stage ----
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /app
+
+COPY --from=go-build /app/forum .
+COPY --from=frontend-build /app/dist ./dist/
+
+ENV PORT=3000
+EXPOSE 3000
+
+CMD ["./forum"]

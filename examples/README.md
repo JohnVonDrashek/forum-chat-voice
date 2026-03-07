@@ -1,0 +1,1 @@
+This folder contains examples you can use to create your own Forumline compatible forum!

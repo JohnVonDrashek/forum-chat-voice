@@ -1,0 +1,41 @@
+name: Deploy Forum-B
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'go-services/**'
+      - 'examples/forum-b/src/**'
+      - 'examples/forum-b/index.html'
+      - 'examples/forum-b/vite.config.js'
+      - 'examples/forum-b/package.json'
+      - 'Dockerfile.go-forum-b'
+      - '.github/workflows/deploy-forum-b.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install cloudflared
+        run: |
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb
+          sudo dpkg -i /tmp/cloudflared.deb
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.FORUM_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          cat >> ~/.ssh/config <<EOF
+          Host forum-b-prod
+            HostName forum-b-ssh.forumline.net
+            User root
+            IdentityFile ~/.ssh/id_deploy
+            StrictHostKeyChecking no
+            ProxyCommand cloudflared access ssh --hostname %h
+          EOF
+
+      - name: Deploy
+        run: |
+          ssh forum-b-prod "cd /opt/forum-b/repo && git pull origin main && cd /opt/forum-b && docker compose up -d --build forum && docker compose ps"
