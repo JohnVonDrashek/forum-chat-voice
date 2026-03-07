@@ -19,6 +19,22 @@ export interface ForumWebviewInstance {
   setAuthUrl: (url: string | null) => void
 }
 
+// State machine for forum auth inside the Forumline iframe wrapper:
+//
+//   loggingIn:      true while the iframe is navigating to the auth URL (set on
+//                   banner click, cleared when iframe finishes loading after redirect)
+//   loginAttempted: true only during the brief window where we're waiting for the
+//                   forum to confirm auth via postMessage after the redirect completes.
+//                   Must be cleared on successful auth AND on sign-out to avoid
+//                   false "login did not complete" toasts when the user later signs out.
+//   hasCalledAuthed: true once the forum confirms signedIn:true. Reset to false on
+//                   signedIn:false so the login banner can reappear.
+//   authUrl:        the server-side OAuth URL. Set by the parent via setAuthUrl()
+//                   when the user is signed into Forumline but not this forum.
+//
+// Banner visibility: shown when authUrl is set, not currently logging in, and
+//                    the forum hasn't confirmed auth yet.
+
 export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInstance {
   const { forum, onAuthed, onSignedOut, onUnreadCounts, onNotification, onNavigate } = opts
   let authUrl = opts.authUrl ?? null
@@ -102,14 +118,15 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
         if (msg.signedIn) {
           if (onAuthed && !hasCalledAuthed) {
             hasCalledAuthed = true
+            loginAttempted = false
             onAuthed(forum.domain)
             updateBanner()
           }
         } else {
           if (loginAttempted && !hasCalledAuthed && !loggingIn) {
             showToast(`Login to ${forum.name} did not complete. The forum reported you are not signed in.`, 'error', 8000)
-            loginAttempted = false
           }
+          loginAttempted = false
           if (onSignedOut) {
             hasCalledAuthed = false
             onSignedOut(forum.domain)
