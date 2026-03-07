@@ -8,7 +8,7 @@ RUN go mod download
 COPY examples/shared/ shared/
 COPY examples/forum/ forum/
 COPY examples/forum-a/main.go forum-a/main.go
-RUN CGO_ENABLED=0 GOOS=linux go build -o forum ./forum-a/
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/forum ./forum-a/
 
 # ---- Frontend build stage ----
 FROM node:20-slim AS frontend-build
@@ -34,7 +34,7 @@ RUN apk add --no-cache ca-certificates
 
 WORKDIR /app
 
-COPY --from=go-build /app/forum .
+COPY --from=go-build /app/bin/forum .
 COPY --from=frontend-build /app/dist ./dist/
 
 ENV PORT=3000
