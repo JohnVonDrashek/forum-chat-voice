@@ -89,6 +89,9 @@ export function createSpinner(small?: boolean): HTMLDivElement {
 let toastContainer: HTMLElement | null = null
 
 export function showToast(message: string, variant: 'error' | 'success' | 'info' = 'info', duration = 5000) {
+  const logFn = variant === 'error' ? console.error : variant === 'success' ? console.log : console.info
+  logFn(`[Toast:${variant}] ${message}`)
+
   if (!toastContainer) {
     toastContainer = document.createElement('div')
     toastContainer.className = 'toast-container'
