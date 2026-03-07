@@ -109,11 +109,17 @@ if (window.parent !== window) {
     }
   })
 
-  // Notify parent we're ready once auth is resolved
+  // Notify parent on auth state changes (login, logout, initial load)
+  let lastSignedIn: boolean | null = null
   authStore.subscribe(() => {
-    const { loading } = authStore.get()
-    if (!loading) {
+    const { loading, user } = authStore.get()
+    if (loading) return
+    const signedIn = !!user
+    if (lastSignedIn === null) {
       window.parent.postMessage({ type: 'forumline:ready' }, '*')
+    }
+    if (signedIn !== lastSignedIn) {
+      lastSignedIn = signedIn
       sendAuthState()
     }
   })
