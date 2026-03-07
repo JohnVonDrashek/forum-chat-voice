@@ -117,6 +117,27 @@ func renderLoginPage(clientID, redirectURI, state, forumName string) string {
     document.getElementById('error').classList.remove('visible');
   }
 
+  // Auto-authorize if user already has a hub session in localStorage
+  (function tryAutoAuth() {
+    try {
+      const raw = localStorage.getItem('hub-gotrue-session');
+      if (!raw) return;
+      const session = JSON.parse(raw);
+      if (!session || !session.access_token) return;
+      // Submit token via hidden form POST to authorize endpoint
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = AUTHORIZE_URL;
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'access_token';
+      input.value = session.access_token;
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    } catch(e) {}
+  })();
+
   async function handleLogin(e) {
     e.preventDefault();
     hideError();

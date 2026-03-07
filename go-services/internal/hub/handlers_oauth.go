@@ -81,9 +81,14 @@ func (h *Handlers) HandleOAuthAuthorize(w http.ResponseWriter, r *http.Request) 
 			pendingToken = cookie.Value
 		}
 		if pendingToken == "" && r.Method == http.MethodPost {
-			var body map[string]string
-			json.NewDecoder(r.Body).Decode(&body)
-			pendingToken = body["access_token"]
+			// Try form-encoded first, then JSON
+			r.ParseForm()
+			pendingToken = r.FormValue("access_token")
+			if pendingToken == "" {
+				var body map[string]string
+				json.NewDecoder(r.Body).Decode(&body)
+				pendingToken = body["access_token"]
+			}
 		}
 
 		if pendingToken != "" {
