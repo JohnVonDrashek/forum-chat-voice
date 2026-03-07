@@ -49,7 +49,7 @@ export function createDmNewMessage({ forumlineStore, onSelectUser }: DmNewMessag
     try {
       results = await forumlineClient.searchProfiles(searchQuery)
     } catch (err) {
-      console.error('[Hub:DM] Profile search failed:', err)
+      console.error('[Forumline:DM] Profile search failed:', err)
       results = []
     }
 

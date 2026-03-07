@@ -187,7 +187,7 @@ export function createDmMessageView({ forumlineStore, recipientId }: DmMessageVi
         forumlineClient.markRead(recipientId).catch(console.error)
       }
     } catch (err) {
-      console.error('[Hub:DM] Failed to fetch messages:', err)
+      console.error('[Forumline:DM] Failed to fetch messages:', err)
     }
   }
 
@@ -226,7 +226,7 @@ export function createDmMessageView({ forumlineStore, recipientId }: DmMessageVi
       // Remove optimistic on failure
       messages = messages.filter((m) => m.id !== optimistic.id)
       renderMessages()
-      console.error('[Hub:DM] Failed to send message:', err)
+      console.error('[Forumline:DM] Failed to send message:', err)
     } finally {
       sending = false
     }

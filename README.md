@@ -71,7 +71,7 @@ pnpm format         # Prettier
 Both services are self-hosted on Proxmox LXCs with Docker Compose, exposed via Cloudflare Tunnel. Deploys are triggered automatically via GitHub Actions on push to `main`:
 
 - **Forum** → `go-services/**` or `examples/forum-a/**` changes trigger [deploy-forum.yml](.github/workflows/deploy-forum.yml)
-- **Forumline App** → `go-services/**`, `central-services/**`, or `packages/**` changes trigger [deploy-hub.yml](.github/workflows/deploy-hub.yml)
+- **Forumline App** → `go-services/**`, `central-services/**`, or `packages/**` changes trigger [deploy-forumline.yml](.github/workflows/deploy-forumline.yml)
 
 ## License
 

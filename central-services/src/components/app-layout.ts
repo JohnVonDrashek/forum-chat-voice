@@ -21,7 +21,7 @@ async function updateForumAuthState(auth: GoTrueAuthClient, forumDomain: string,
       body: JSON.stringify({ forum_domain: forumDomain, authed }),
     })
   } catch (err) {
-    console.error('[Hub] Failed to persist forum auth state:', err)
+    console.error('[Forumline] Failed to persist forum auth state:', err)
   }
 }
 
@@ -189,7 +189,7 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
           body: JSON.stringify({ endpoint: sub.endpoint, keys: sub.keys }),
         })
       } catch (err) {
-        console.error('[Hub] Push subscription failed:', err)
+        console.error('[Forumline] Push subscription failed:', err)
       }
     }
     doRegister()

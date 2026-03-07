@@ -41,7 +41,7 @@ export interface ForumlineServerConfig {
   accent_color?: string
 
   /**
-   * Forumline Central Services (hub) configuration for OAuth.
+   * Forumline Central Services configuration for OAuth.
    * Required for auth handlers.
    */
   forumline?: {

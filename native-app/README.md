@@ -44,7 +44,7 @@ desktop/
 
 **Key points:**
 
-- **No bundled frontend** — `frontendDist` points to `https://app.forumline.net`. The desktop app loads the production hub directly.
+- **No bundled frontend** — `frontendDist` points to `https://app.forumline.net`. The desktop app loads the production Forumline app directly.
 - **System tray** — Close minimizes to tray instead of quitting. Tray menu has Show/Quit.
 - **Plugins** — `notification`, `autostart`, `shell`, `deep-link` are all Tauri v2 plugins configured in `Cargo.toml` and `capabilities/default.json`.
 - **Deep links** — Registers `forumline://` protocol. URLs like `forumline://forum/{domain}/t/{threadId}` open the app and navigate to the target forum/thread.

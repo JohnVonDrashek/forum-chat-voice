@@ -48,7 +48,7 @@ export function createWelcomePage({ forumlineSession, forumStore, forumlineStore
   desc.textContent = 'Your multi-forum client. Add forums, chat across communities, and send direct messages.'
   content.appendChild(desc)
 
-  // Hub status area — updated in place
+  // Forumline status area — updated in place
   const status = document.createElement('div')
   status.className = 'welcome-status'
   const statusInner = document.createElement('div')

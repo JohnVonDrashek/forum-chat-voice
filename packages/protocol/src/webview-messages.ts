@@ -1,5 +1,5 @@
 // ============================================================================
-// Forumline Webview Messages — Typed postMessage protocol between hub and forum
+// Forumline Webview Messages — Typed postMessage protocol between Forumline app and forum
 // ============================================================================
 
 import type { UnreadCounts, ForumNotification } from './notifications'

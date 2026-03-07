@@ -12,7 +12,7 @@ Both apps deploy via **GitHub Actions** on push to `main` → **self-hosted Prox
 Both deploy via GitHub Actions workflows:
 
 - `.github/workflows/deploy-forum.yml` — triggers on `go-services/` or `examples/forum-a/` changes
-- `.github/workflows/deploy-hub.yml` — triggers on `go-services/`, `central-services/`, or `packages/` changes
+- `.github/workflows/deploy-forumline.yml` — triggers on `go-services/`, `central-services/`, or `packages/` changes
 
 Required GitHub secrets:
 - `FORUM_SSH_KEY` — SSH key for production servers

@@ -1,4 +1,4 @@
-// Forumline Hub — Push Notification Service Worker
+// Forumline — Push Notification Service Worker
 
 self.addEventListener('push', (event) => {
   if (!event.data) return

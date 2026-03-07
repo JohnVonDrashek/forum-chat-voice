@@ -15,7 +15,7 @@ import (
 	"github.com/johnvondrashek/forumline/go-services/internal/shared"
 )
 
-// forumlineIdentity represents a Forumline hub identity.
+// forumlineIdentity represents a Forumline identity.
 type forumlineIdentity struct {
 	ForumlineID string `json:"forumline_id"`
 	Username    string `json:"username"`
@@ -28,7 +28,7 @@ type forumlineIdentity struct {
 // Supports three flows:
 // 1. link_token query param — "Connect from Settings" flow
 // 2. forumline_token query param — server-side OAuth for iframe usage
-// 3. No params — redirect to hub authorize page
+// 3. No params — redirect to Forumline authorize page
 func (h *Handlers) HandleForumlineAuth(w http.ResponseWriter, r *http.Request) {
 	linkToken := r.URL.Query().Get("link_token")
 	if linkToken != "" {
@@ -42,11 +42,11 @@ func (h *Handlers) HandleForumlineAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Default: redirect to hub authorize page
+	// Default: redirect to Forumline authorize page
 	h.redirectToForumlineAuth(w, r, "")
 }
 
-// handleLinkRedirect handles "Connect from Settings" — verify session, set link cookie, redirect to hub.
+// handleLinkRedirect handles "Connect from Settings" — verify session, set link cookie, redirect to Forumline.
 func (h *Handlers) handleLinkRedirect(w http.ResponseWriter, r *http.Request, linkToken string) {
 	// Validate the user's session via GoTrue
 	email, err := gotrueGetUserByToken(h.Config.GoTrueURL, linkToken)
@@ -112,7 +112,7 @@ func (h *Handlers) handleServerSideAuth(w http.ResponseWriter, r *http.Request, 
 	state := randomHex(16)
 	redirectURI := h.Config.SiteURL + "/api/forumline/auth/callback"
 
-	// Step 1: Call hub authorize endpoint server-side to get auth code
+	// Step 1: Call Forumline authorize endpoint server-side to get auth code
 	authorizeURL, _ := url.Parse(h.Config.ForumlineURL + "/api/oauth/authorize")
 	q := authorizeURL.Query()
 	q.Set("client_id", h.Config.ForumlineClientID)
@@ -137,14 +137,14 @@ func (h *Handlers) handleServerSideAuth(w http.ResponseWriter, r *http.Request, 
 
 	location := resp.Header.Get("Location")
 	if location == "" {
-		log.Printf("[Forumline:Auth] No redirect from hub authorize. Status: %d", resp.StatusCode)
+		log.Printf("[Forumline:Auth] No redirect from Forumline authorize. Status: %d", resp.StatusCode)
 		http.Redirect(w, r, h.Config.SiteURL+"/login?error=auth_failed", http.StatusFound)
 		return
 	}
 
 	callbackURL, err := url.Parse(location)
 	if err != nil || callbackURL.Query().Get("code") == "" {
-		log.Printf("[Forumline:Auth] No code in hub redirect: %s", location)
+		log.Printf("[Forumline:Auth] No code in Forumline redirect: %s", location)
 		http.Redirect(w, r, h.Config.SiteURL+"/login?error=auth_failed", http.StatusFound)
 		return
 	}
@@ -353,13 +353,13 @@ func (h *Handlers) HandleForumlineSession(w http.ResponseWriter, r *http.Request
 	h.handleSessionGet(w, r)
 }
 
-// handleDisconnect revokes hub session and clears cookies.
+// handleDisconnect revokes Forumline session and clears cookies.
 func (h *Handlers) handleDisconnect(w http.ResponseWriter, r *http.Request) {
 	cookies := parseCookies(r)
 	forumlineAccessToken := cookies["forumline_access_token"]
 
 	if forumlineAccessToken != "" && h.Config.ForumlineGoTrueURL != "" {
-		// Revoke hub session via GoTrue
+		// Revoke Forumline session via GoTrue
 		gotrueAdminSignOut(h.Config.ForumlineGoTrueURL, h.Config.ForumlineServiceRoleKey, forumlineAccessToken)
 	}
 
@@ -461,7 +461,7 @@ func (h *Handlers) exchangeCodeForTokens(code, redirectURI string) (*forumlineId
 	}
 
 	if tokenData.Identity == nil || tokenData.Identity.ForumlineID == "" || tokenData.Identity.Username == "" {
-		return nil, "", "", fmt.Errorf("invalid identity from hub")
+		return nil, "", "", fmt.Errorf("invalid identity from Forumline")
 	}
 
 	return tokenData.Identity, tokenData.IdentityToken, tokenData.HubAccessToken, nil
@@ -483,7 +483,7 @@ func (h *Handlers) createOrLinkUser(r *http.Request, identity *forumlineIdentity
 		return existingID, nil
 	}
 
-	// 2. Get hub email and check for collision
+	// 2. Get Forumline email and check for collision
 	var forumlineEmail string
 	if forumlineAccessToken != "" && h.Config.ForumlineGoTrueURL != "" {
 		forumlineEmail, _ = gotrueGetUserByToken(h.Config.ForumlineGoTrueURL, forumlineAccessToken)
@@ -500,7 +500,7 @@ func (h *Handlers) createOrLinkUser(r *http.Request, identity *forumlineIdentity
 			}
 		}
 
-		// Create new local user with hub email
+		// Create new local user with Forumline email
 		newUserID, err := gotrueAdminCreateUser(h.Config.GoTrueURL, h.Config.GoTrueServiceRoleKey, map[string]interface{}{
 			"email":         forumlineEmail,
 			"password":      randomHex(16),

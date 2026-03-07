@@ -39,7 +39,7 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
   content.className = 'page-content'
   el.appendChild(content)
 
-  // Hub card
+  // Forumline account card
   const accountCard = createCard()
   const accountTitle = document.createElement('h2')
   accountTitle.className = 'text-lg font-semibold text-white'
@@ -50,7 +50,7 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
   accountSub.textContent = 'Connect to the Forumline for cross-forum direct messages'
   accountCard.appendChild(accountSub)
 
-  // Hub profile/auth area (rendered once based on session state)
+  // Forumline profile/auth area (rendered once based on session state)
   const accountContentArea = document.createElement('div')
   accountContentArea.className = 'mt-lg'
   accountCard.appendChild(accountContentArea)
