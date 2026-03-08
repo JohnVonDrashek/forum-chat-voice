@@ -1,0 +1,42 @@
+# ---- Go build stage ----
+FROM golang:1.25-alpine AS go-build
+
+WORKDIR /app
+COPY example-forum-instances-and-shared-forum-server/go.mod example-forum-instances-and-shared-forum-server/go.sum ./
+RUN go mod download
+
+COPY example-forum-instances-and-shared-forum-server/shared/ shared/
+COPY example-forum-instances-and-shared-forum-server/forum/ forum/
+COPY example-forum-instances-and-shared-forum-server/platform/ platform/
+COPY example-forum-instances-and-shared-forum-server/hosted/main.go hosted/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/hosted ./hosted/
+
+# ---- Frontend build stage ----
+# Hosted forums use forum-a's frontend as the default template.
+FROM node:20-slim AS frontend-build
+
+RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
+
+WORKDIR /app
+
+COPY example-forum-instances-and-shared-forum-server/forum-a/package.json example-forum-instances-and-shared-forum-server/forum-a/pnpm-lock.yaml* ./
+
+RUN pnpm install --frozen-lockfile || pnpm install
+
+COPY example-forum-instances-and-shared-forum-server/forum-a/ .
+RUN pnpm run build
+
+# ---- Production stage ----
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /app
+
+COPY --from=go-build /app/bin/hosted .
+COPY --from=frontend-build /app/dist ./dist/
+
+ENV PORT=3000
+EXPOSE 3000
+
+CMD ["./hosted"]
