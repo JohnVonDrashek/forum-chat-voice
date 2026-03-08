@@ -6,6 +6,7 @@ import { createDmPanel } from './dm-panel.js'
 import { createSettingsPage } from './settings-page.js'
 import { createMobileTabBar, type AppView } from './mobile-tab-bar.js'
 import type { ForumWebviewInstance } from '../lib/index.js'
+import { subscribeDmEvents } from '../lib/dm-sse.js'
 
 /** Persist auth state change to Forumline DB */
 async function updateForumAuthState(auth: GoTrueAuthClient, forumDomain: string, authed: boolean) {
@@ -75,20 +76,36 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
   })
   root.appendChild(tabBarInstance.el)
 
-  // ---- DM polling ----
-  function startDmPolling() {
+  // ---- DM unread count (SSE + fallback poll) ----
+  function fetchDmCount() {
+    const { forumlineClient } = forumlineStore.get()
+    if (!forumlineClient) return
+    forumlineClient.getConversations().then((convos) => {
+      dmUnreadCount = convos.reduce((sum, c) => sum + c.unreadCount, 0)
+      tabBarInstance?.update(view, dmUnreadCount)
+    }).catch(() => { /* ignore */ })
+  }
+
+  function startDmUpdates() {
     const { forumlineClient } = forumlineStore.get()
     if (!forumlineClient) return
 
-    const fetchDmCount = async () => {
-      try {
-        const convos = await forumlineClient.getConversations()
-        dmUnreadCount = convos.reduce((sum, c) => sum + c.unreadCount, 0)
-        tabBarInstance?.update(view, dmUnreadCount)
-      } catch { /* ignore */ }
-    }
+    // Initial fetch
     fetchDmCount()
-    dmPollInterval = setInterval(fetchDmCount, 30_000)
+
+    // SSE-driven updates — shared connection, no extra EventSource
+    const unsubSSE = subscribeDmEvents(() => {
+      fetchDmCount()
+    })
+    cleanups.push(unsubSSE)
+
+    // Refresh badge when a conversation is marked as read
+    const onDmRead = () => fetchDmCount()
+    window.addEventListener('forumline:dm-read', onDmRead)
+    cleanups.push(() => window.removeEventListener('forumline:dm-read', onDmRead))
+
+    // Fallback poll every 60s (in case SSE silently drops)
+    dmPollInterval = setInterval(fetchDmCount, 60_000)
     cleanups.push(() => { if (dmPollInterval) clearInterval(dmPollInterval) })
   }
 
@@ -406,7 +423,7 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
   // ---- Init ----
   fetchMemberships()
   registerPush()
-  startDmPolling()
+  startDmUpdates()
   switchView()
 
   return {

@@ -2,7 +2,7 @@ import type { ForumlineStore } from '../lib/index.js'
 import type { ForumlineDirectMessage, ForumlineDmConversation, ForumlineConversationMember } from '@johnvondrashek/forumline-protocol'
 import { createAvatar, createButton, createInput, createSpinner } from './ui.js'
 import { formatMessageTime } from '../lib/dateFormatters.js'
-import { forumlineAuth } from '../app.js'
+import { subscribeDmEvents } from '../lib/dm-sse.js'
 
 interface DmMessageViewOptions {
   forumlineStore: ForumlineStore
@@ -14,7 +14,6 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
   let conversation: ForumlineDmConversation | null = null
   let newMessage = ''
   let sending = false
-  let eventSource: EventSource | null = null
   let initialLoad = true
 
   const el = document.createElement('div')
@@ -221,7 +220,9 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
 
       // Mark as read on every fetch (handles new messages arriving after initial load)
       if (messages.length > 0) {
-        forumlineClient.markRead(conversationId).catch(console.error)
+        forumlineClient.markRead(conversationId).then(() => {
+          window.dispatchEvent(new CustomEvent('forumline:dm-read'))
+        }).catch(console.error)
       }
     } catch (err) {
       console.error('[Forumline:DM] Failed to fetch messages:', err)
@@ -276,45 +277,16 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
 
   fetchMessages()
 
-  // SSE for real-time updates
-  let destroyed = false
-  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-
-  function connectSSE() {
-    if (destroyed) return
-    const session = forumlineAuth.getSession()
-    if (!session) return
-
-    const url = `/api/conversations/stream?access_token=${encodeURIComponent(session.access_token)}`
-    eventSource = new EventSource(url)
-    eventSource.onmessage = (event) => {
-      // Only refetch if the event is for this conversation
-      try {
-        const data = JSON.parse(event.data)
-        if (data.conversation_id !== conversationId) return
-      } catch {
-        // If we can't parse, refetch to be safe
-      }
-      fetchMessages()
-    }
-    eventSource.onerror = () => {
-      eventSource?.close()
-      eventSource = null
-      // Reconnect after 5 seconds (unless destroyed)
-      if (!destroyed) {
-        reconnectTimer = setTimeout(connectSSE, 5000)
-      }
-    }
-  }
-  connectSSE()
+  // SSE for real-time updates via shared connection (filtered to this conversation)
+  const unsubSSE = subscribeDmEvents((event) => {
+    if (event.conversation_id && event.conversation_id !== conversationId) return
+    fetchMessages()
+  })
 
   return {
     el,
     destroy() {
-      destroyed = true
-      eventSource?.close()
-      eventSource = null
-      if (reconnectTimer) clearTimeout(reconnectTimer)
+      unsubSSE()
     },
   }
 }

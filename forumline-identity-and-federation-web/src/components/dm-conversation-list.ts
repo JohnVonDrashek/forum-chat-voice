@@ -2,6 +2,7 @@ import type { ForumlineStore } from '../lib/index.js'
 import type { ForumlineDmConversation, ForumlineConversationMember } from '@johnvondrashek/forumline-protocol'
 import { createAvatar, createSpinner } from './ui.js'
 import { formatShortTimeAgo } from '../lib/dateFormatters.js'
+import { subscribeDmEvents } from '../lib/dm-sse.js'
 
 interface DmConversationListOptions {
   forumlineStore: ForumlineStore
@@ -274,13 +275,19 @@ export function createDmConversationList({ forumlineStore, onSelectConversation 
   // Initial fetch
   fetchAndRender()
 
-  // Poll for updates
+  // SSE for real-time updates via shared connection
+  const unsubSSE = subscribeDmEvents(() => {
+    fetchAndRender()
+  })
+
+  // Fallback poll (in case SSE drops without error)
   pollInterval = setInterval(fetchAndRender, 30_000)
 
   return {
     el,
     destroy() {
       if (pollInterval) clearInterval(pollInterval)
+      unsubSSE()
     },
   }
 }
