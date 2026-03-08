@@ -170,11 +170,28 @@ export function createDmNewGroup({ forumlineStore, onCreated }: DmNewGroupOption
     }
   }
 
+  // Validation message element
+  const validationMsg = document.createElement('div')
+  validationMsg.className = 'text-sm text-error'
+  validationMsg.style.cssText = 'padding:0 1rem;display:none'
+  el.insertBefore(validationMsg, bottomBar)
+
+  function showValidation(msg: string) {
+    validationMsg.textContent = msg
+    validationMsg.style.display = 'block'
+    setTimeout(() => { validationMsg.style.display = 'none' }, 3000)
+  }
+
   async function handleCreate() {
-    if (creating || selectedMembers.length < 2) return
+    if (creating) return
     const name = groupName.trim()
     if (!name) {
+      showValidation('Please enter a group name')
       nameInput.focus()
+      return
+    }
+    if (selectedMembers.length < 2) {
+      showValidation('Add at least 2 members to create a group')
       return
     }
 

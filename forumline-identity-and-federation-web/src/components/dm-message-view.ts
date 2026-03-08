@@ -210,8 +210,7 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
 
     try {
       // Fetch conversation info
-      const convos = await forumlineClient.getConversations()
-      const convo = convos.find((c) => c.id === conversationId)
+      const convo = await forumlineClient.getConversation(conversationId)
       if (convo) {
         conversation = convo
         updateHeader()
@@ -290,8 +289,14 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
 
     const url = `/api/conversations/stream?access_token=${encodeURIComponent(session.access_token)}`
     eventSource = new EventSource(url)
-    eventSource.onmessage = () => {
-      // Any SSE message means conversations changed — refetch
+    eventSource.onmessage = (event) => {
+      // Only refetch if the event is for this conversation
+      try {
+        const data = JSON.parse(event.data)
+        if (data.conversation_id !== conversationId) return
+      } catch {
+        // If we can't parse, refetch to be safe
+      }
       fetchMessages()
     }
     eventSource.onerror = () => {

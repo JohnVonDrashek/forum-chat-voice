@@ -32,6 +32,11 @@ export class CentralServicesClient {
     return this.fetch('/api/conversations')
   }
 
+  /** Get a single conversation's metadata */
+  async getConversation(conversationId: string): Promise<ForumlineDmConversation> {
+    return this.fetch(`/api/conversations/${conversationId}`)
+  }
+
   /** Get messages in a conversation */
   async getMessages(conversationId: string): Promise<ForumlineDirectMessage[]> {
     return this.fetch(`/api/conversations/${conversationId}/messages`)

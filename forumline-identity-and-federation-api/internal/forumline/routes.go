@@ -47,21 +47,27 @@ func NewRouter(pool *pgxpool.Pool, sseHub *shared.SSEHub) *chi.Mux {
 		r.Delete("/api/memberships", h.HandleLeaveForum)
 	})
 
-	// Conversations / DMs (authenticated)
-	r.Group(func(r chi.Router) {
-		r.Use(shared.AuthMiddleware)
-		r.Get("/api/conversations", h.HandleListConversations)
-		r.Post("/api/conversations", h.HandleCreateConversation)
-		r.Post("/api/conversations/dm", h.HandleGetOrCreateDM)
-		r.Get("/api/conversations/{conversationId}/messages", h.HandleGetMessages)
-		r.With(dmRL).Post("/api/conversations/{conversationId}/messages", h.HandleSendMessage)
-		r.Post("/api/conversations/{conversationId}/read", h.HandleMarkRead)
-		r.Patch("/api/conversations/{conversationId}", h.HandleUpdateConversation)
-		r.Delete("/api/conversations/{conversationId}/members/me", h.HandleLeaveConversation)
+	// Conversations / DMs
+	// NOTE: stream is NOT behind AuthMiddleware (EventSource can't set headers;
+	// auth is handled via query param inside the handler). All other routes use
+	// AuthMiddleware. They must be registered in the same r.Route block so that
+	// chi's trie correctly handles both the literal "stream" and the wildcard
+	// "{conversationId}" under the same /api/conversations prefix.
+	r.Route("/api/conversations", func(r chi.Router) {
+		r.Get("/stream", h.HandleDMStream)
+		r.Group(func(r chi.Router) {
+			r.Use(shared.AuthMiddleware)
+			r.Get("/", h.HandleListConversations)
+			r.Post("/", h.HandleCreateConversation)
+			r.Post("/dm", h.HandleGetOrCreateDM)
+			r.Get("/{conversationId}", h.HandleGetConversation)
+			r.Patch("/{conversationId}", h.HandleUpdateConversation)
+			r.Get("/{conversationId}/messages", h.HandleGetMessages)
+			r.With(dmRL).Post("/{conversationId}/messages", h.HandleSendMessage)
+			r.Post("/{conversationId}/read", h.HandleMarkRead)
+			r.Delete("/{conversationId}/members/me", h.HandleLeaveConversation)
+		})
 	})
-
-	// Conversation stream (authenticated via query param for EventSource)
-	r.Get("/api/conversations/stream", h.HandleDMStream)
 
 	// Legacy /api/dms/* routes — backwards compat for cached frontends / Tauri app.
 	// These resolve a userId to a conversation ID and forward to the new handlers.

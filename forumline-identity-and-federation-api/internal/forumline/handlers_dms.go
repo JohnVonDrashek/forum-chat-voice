@@ -143,6 +143,91 @@ func (h *Handlers) HandleListConversations(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, conversations)
 }
 
+// HandleGetConversation returns a single conversation's metadata.
+func (h *Handlers) HandleGetConversation(w http.ResponseWriter, r *http.Request) {
+	userID := shared.UserIDFromContext(r.Context())
+	conversationID := chi.URLParam(r, "conversationId")
+	ctx := r.Context()
+
+	if conversationID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "conversationId is required"})
+		return
+	}
+
+	var id string
+	var isGroup bool
+	var name *string
+	var lastMessage string
+	var lastMessageTime time.Time
+	var unreadCount int
+
+	err := h.Pool.QueryRow(ctx,
+		`SELECT
+			c.id, c.is_group, c.name,
+			COALESCE(m.content, ''), COALESCE(m.created_at, c.created_at),
+			(SELECT count(*) FROM forumline_direct_messages dm2
+			 WHERE dm2.conversation_id = c.id
+			   AND dm2.sender_id != $1
+			   AND dm2.created_at > cm.last_read_at)
+		 FROM forumline_conversations c
+		 JOIN forumline_conversation_members cm ON cm.conversation_id = c.id AND cm.user_id = $1
+		 LEFT JOIN LATERAL (
+			SELECT content, created_at FROM forumline_direct_messages
+			WHERE conversation_id = c.id
+			ORDER BY created_at DESC LIMIT 1
+		 ) m ON true
+		 WHERE c.id = $2`,
+		userID, conversationID,
+	).Scan(&id, &isGroup, &name, &lastMessage, &lastMessageTime, &unreadCount)
+
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Conversation not found"})
+		return
+	}
+
+	// Fetch members
+	memberRows, err := h.Pool.Query(ctx,
+		`SELECT cm.user_id, p.username, p.display_name, p.avatar_url
+		 FROM forumline_conversation_members cm
+		 JOIN forumline_profiles p ON p.id = cm.user_id
+		 WHERE cm.conversation_id = $1`, conversationID,
+	)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to fetch members"})
+		return
+	}
+	defer memberRows.Close()
+
+	var members []ConversationMember
+	for memberRows.Next() {
+		var userIDm, username, displayName string
+		var avatarURL *string
+		if err := memberRows.Scan(&userIDm, &username, &displayName, &avatarURL); err != nil {
+			continue
+		}
+		n := displayName
+		if n == "" {
+			n = username
+		}
+		members = append(members, ConversationMember{
+			ID:          userIDm,
+			Username:    username,
+			DisplayName: n,
+			AvatarURL:   avatarURL,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, Conversation{
+		ID:              id,
+		IsGroup:         isGroup,
+		Name:            name,
+		Members:         members,
+		LastMessage:     lastMessage,
+		LastMessageTime: lastMessageTime.Format(time.RFC3339),
+		UnreadCount:     unreadCount,
+	})
+}
+
 // HandleGetMessages returns messages in a conversation.
 func (h *Handlers) HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
@@ -177,7 +262,8 @@ func (h *Handlers) HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 		rows, err := h.Pool.Query(ctx,
 			`SELECT id, conversation_id, sender_id, content, created_at
 			 FROM forumline_direct_messages
-			 WHERE conversation_id = $1 AND id < $2
+			 WHERE conversation_id = $1
+			   AND created_at < (SELECT created_at FROM forumline_direct_messages WHERE id = $2)
 			 ORDER BY created_at DESC
 			 LIMIT $3`,
 			conversationID, before, limit,
