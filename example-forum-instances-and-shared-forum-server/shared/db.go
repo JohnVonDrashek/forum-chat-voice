@@ -6,8 +6,19 @@ import (
 	"os"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// DB is the interface that both *pgxpool.Pool and TenantPool satisfy.
+// Handlers use this instead of *pgxpool.Pool directly so they work in
+// both single-tenant and multi-tenant modes without code changes.
+type DB interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+}
 
 func NewDBPool(ctx context.Context) (*pgxpool.Pool, error) {
 	dsn := os.Getenv("DATABASE_URL")

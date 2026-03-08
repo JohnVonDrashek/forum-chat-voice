@@ -7,11 +7,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/johnvondrashek/forumline/example-forum-instances-and-shared-forum-server/shared"
 )
 
-func NewRouter(pool *pgxpool.Pool, sseHub *shared.SSEHub, cfg *Config) *chi.Mux {
+func NewRouter(pool shared.DB, sseHub *shared.SSEHub, cfg *Config) *chi.Mux {
 	r := chi.NewRouter()
 
 	h := &Handlers{
@@ -135,6 +134,7 @@ func NewRouter(pool *pgxpool.Pool, sseHub *shared.SSEHub, cfg *Config) *chi.Mux 
 		// Admin
 		r.Get("/api/admin/stats", h.HandleAdminStats)
 		r.Get("/api/admin/users", h.HandleAdminUsers)
+		r.Post("/api/admin/import", h.HandleImport)
 	})
 
 	// Forumline manifest (discovery)

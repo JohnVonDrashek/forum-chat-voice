@@ -1,0 +1,417 @@
+<!--
+    INTENT: forumline.net main site
+
+    WHY THIS PAGE EXISTS:
+    This is the front door for forumline. A visitor lands here and needs to
+    understand what forumline is and why they should care within seconds.
+    The two most important actions a visitor can take are:
+      1. Create a new forum (hosted by us) — this is the primary conversion goal
+      2. Download the desktop app — this is the secondary conversion goal
+
+    WHAT MUST BE HERE:
+    - Clear explanation of the product: forums + real-time chat + voice rooms,
+      federated identity across independent forum instances
+    - "Create your forum" CTA pointing to app.forumline.net — must be prominent
+      and impossible to miss
+    - Desktop download links (macOS .dmg, Windows .msi, Linux .deb) pointing to
+      GitHub releases
+    - Mobile app store links (iOS App Store, Google Play) — placeholders for now,
+      will be real links once apps ship
+    - Link to the live demo at demo.forumline.net so people can try before committing
+    - Link to GitHub repo for developers who want to self-host or contribute
+
+    WHO THIS IS FOR:
+    - Community builders who want to start a forum without running infrastructure
+    - Developers/self-hosters who want to evaluate the project
+    - Existing users who need download links or the app URL
+
+    DIFFERENTIATION:
+    The pitch is "what forums should have become" — threaded + searchable unlike
+    Discord/Slack, but with modern real-time features unlike old phpBB/vBulletin.
+    Federation means one identity across many independent forums.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>.:* forumline *:. ~ forums for the rest of us</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='12' font-family='monospace' fill='%237eb8e8'>&gt;</text></svg>">
+</head>
+<body>
+
+<!-- FLOATING DECORATIONS -->
+<div class="floating-decor" style="top: 80px; left: 25px;">*</div>
+<div class="floating-decor" style="top: 200px; right: 40px; animation-delay: -1.5s;">~</div>
+<div class="floating-decor" style="bottom: 150px; left: 60px; animation-delay: -3s;">+</div>
+<div class="floating-decor" style="bottom: 80px; right: 30px; animation-delay: -0.8s;">*</div>
+
+<!-- MARQUEE STAMPS -->
+<div id="stamp-marquee">
+    <marquee behavior="scroll" direction="left" scrollamount="2">
+        <span class="blinkie">FORUMS ARE BACK</span>
+        <span class="blinkie" style="background:#1a2a1a;border-color:#4a8a4a;">OPEN SOURCE</span>
+        <span class="blinkie" style="background:#2a1a1a;border-color:#8a4a4a;">NOT A DISCORD CLONE</span>
+        <span class="blinkie" style="background:#1a1a2a;border-color:#4a4a8a;">SELF-HOSTABLE</span>
+        <span class="blinkie" style="background:#2a2a1a;border-color:#8a8a4a;">FEDERATED</span>
+        <span class="blinkie" style="background:#1a2a2a;border-color:#4a8a8a;">THREADED DISCUSSIONS</span>
+        <span class="blinkie" style="background:#2a1a2a;border-color:#7a4a7a;">VOICE ROOMS</span>
+        <span class="blinkie" style="background:#1a1a1a;border-color:#6a6a6a;">REAL-TIME CHAT</span>
+        <span class="blinkie" style="background:#2a1a1a;border-color:#aa5a5a;">BEST VIEWED ON DESKTOP</span>
+    </marquee>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+    <h1>.:* forumline *:.</h1>
+    <div class="headertext">forums + chat + voice ~ federated ~ open source ~ yours to own</div>
+    <div class="headertext" style="margin-top: 8px; font-size: 10px; color: #5a6a7a;">est. 2025 ~ made by real humans who miss real forums</div>
+</div>
+
+<!-- PAGE CONTAINER -->
+<div id="page">
+
+    <!-- LEFT SIDE -->
+    <div id="leftbox">
+        <div class="panel">
+            <div class="panel-title">navigate !</div>
+            <ul class="navlist">
+                <li>&gt; <a href="#what">what is this</a></li>
+                <li>&gt; <a href="#features">features</a></li>
+                <li>&gt; <a href="#create">create a forum</a></li>
+                <li>&gt; <a href="#download">download apps</a></li>
+                <li>&gt; <a href="#links">links</a></li>
+            </ul>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">the vibe</div>
+            <div class="panel-body" style="font-size: 11px;">
+                remember when communities had <b>threads</b> and <b>archives</b> and you could actually <i>find things</i> later?? remember when you didn't need to scroll through 10,000 messages in a chat to find that one tutorial someone posted??
+                <br><br>
+                yeah. we remember too.
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">status</div>
+            <div class="panel-body" style="font-size: 11px; text-align: center;">
+                <span class="status-dot"></span> all systems operational
+                <br>
+                <span style="font-size: 9px; color: #5a6a7a;">demo.forumline.net</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="mainbox">
+
+        <div class="panel" id="what">
+            <div class="panel-title">what is forumline ??</div>
+            <div class="panel-body">
+                <p><b>forumline</b> is a community platform that combines the best parts of old-school forums with modern features. threaded discussions that are actually searchable, real-time chat for when you want to hang out, and voice rooms for talking to your people.</p>
+
+                <div class="feature-box">
+                    <div class="feature-box-title">~ how it works ~</div>
+                    <p>every forum is its own independent instance. you own your data, you control your community. but through <b>federation</b>, your members can use one identity across all forumline forums. no more making a new account everywhere you go.</p>
+                </div>
+
+                <p>it's what forums should have evolved into, instead of everything becoming discord servers where knowledge goes to die in an infinite scroll.</p>
+            </div>
+        </div>
+
+        <div class="panel" id="features">
+            <div class="panel-title">features !!</div>
+            <div class="panel-body">
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <div class="feature-icon">[##]</div>
+                        <b>threaded forums</b>
+                        <div class="feature-desc">real discussions with topics, replies, and structure. actually find things later.</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">&gt;&gt;&gt;</div>
+                        <b>real-time chat</b>
+                        <div class="feature-desc">live chat channels for when you want that instant back-and-forth.</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">((o))</div>
+                        <b>voice rooms</b>
+                        <div class="feature-desc">hop in and talk. powered by livekit. no downloads needed in browser.</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">&lt;-&gt;</div>
+                        <b>federation</b>
+                        <div class="feature-desc">one identity, many forums. independent instances that share auth.</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">{&nbsp;}</div>
+                        <b>open source</b>
+                        <div class="feature-desc">see the code, run your own, contribute. it's all on github.</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">[~]</div>
+                        <b>native apps</b>
+                        <div class="feature-desc">desktop + mobile apps. system tray, notifications, deep linking.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel" id="create">
+            <div class="panel-title">create your own forum</div>
+            <div class="panel-body">
+                <p>want to start a community? get your own forum at <b>yourname.forumline.net</b> — we host it, you run it. no server setup required.</p>
+
+                <div class="cta-box" id="create-box">
+                    <!-- Step 1: Form (default state) -->
+                    <div id="create-form">
+                        <div class="form-group">
+                            <label class="form-label" for="forum-slug">subdomain</label>
+                            <div class="slug-input-row">
+                                <input type="text" id="forum-slug" class="form-input" placeholder="yourforum" maxlength="40" pattern="[a-z0-9-]+" autocomplete="off" spellcheck="false">
+                                <span class="slug-suffix">.forumline.net</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="forum-name">forum name</label>
+                            <input type="text" id="forum-name" class="form-input" placeholder="My Awesome Forum" maxlength="100">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="forum-desc">description <span style="color:#5a6a7a;">(optional)</span></label>
+                            <input type="text" id="forum-desc" class="form-input" placeholder="what's it about?" maxlength="200">
+                        </div>
+                        <div id="create-error" class="form-error" style="display:none;"></div>
+                        <button id="create-btn" class="cta-button" onclick="createForum()">create forum →</button>
+                        <div style="font-size: 10px; color: #5a6a7a; margin-top: 8px;">
+                            requires a <a href="https://app.forumline.net">forumline account</a>. you'll sign in on the next step.
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Success (hidden by default) -->
+                    <div id="create-success" style="display:none; text-align:center;">
+                        <div style="color:#4a8a4a; font-size: 14px; margin-bottom: 8px;">forum created !!</div>
+                        <a id="create-success-link" href="#" class="cta-button">visit your forum →</a>
+                    </div>
+                </div>
+
+                <div style="font-size: 10px; color: #5a6a7a; margin-top: 8px; text-align: center;">
+                    or self-host it yourself. it's <a href="https://github.com/johnvondrashek/forumline">open source</a> after all.
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">try the demo</div>
+            <div class="panel-body" style="text-align: center;">
+                <p>don't take our word for it. poke around.</p>
+                <a href="https://demo.forumline.net" class="demo-button">visit demo.forumline.net →</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT SIDE -->
+    <div id="rightbox">
+        <div class="panel" id="download">
+            <div class="panel-title">download apps</div>
+            <div class="panel-body">
+                <div class="download-section">
+                    <div class="download-label">desktop</div>
+                    <a href="https://github.com/johnvondrashek/forumline/releases" class="download-btn">
+                        macOS (.dmg)
+                    </a>
+                    <a href="https://github.com/johnvondrashek/forumline/releases" class="download-btn">
+                        Windows (.msi)
+                    </a>
+                    <a href="https://github.com/johnvondrashek/forumline/releases" class="download-btn">
+                        Linux (.deb)
+                    </a>
+                </div>
+                <div class="download-section">
+                    <div class="download-label">mobile</div>
+                    <a href="#" class="download-btn disabled" title="Coming soon">
+                        App Store (soon)
+                    </a>
+                    <a href="#" class="download-btn disabled" title="Coming soon">
+                        Google Play (soon)
+                    </a>
+                </div>
+                <div style="font-size: 9px; color: #5a6a7a; text-align: center; margin-top: 8px;">
+                    or just use the web app. it works great in a browser.
+                </div>
+            </div>
+        </div>
+
+        <div class="panel" id="links">
+            <div class="panel-title">links</div>
+            <div class="panel-body" style="font-size: 12px;">
+                <ul class="link-list">
+                    <li>&gt; <a href="https://github.com/johnvondrashek/forumline" target="_blank">github repo</a></li>
+                    <li>&gt; <a href="https://app.forumline.net">forumline app</a></li>
+                    <li>&gt; <a href="https://demo.forumline.net">live demo</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">tech stack</div>
+            <div class="panel-body" style="font-size: 10px;">
+                <span class="tech-tag">Go</span>
+                <span class="tech-tag">TypeScript</span>
+                <span class="tech-tag">Vite</span>
+                <span class="tech-tag">PostgreSQL</span>
+                <span class="tech-tag">SSE</span>
+                <span class="tech-tag">LiveKit</span>
+                <span class="tech-tag">Tauri v2</span>
+                <span class="tech-tag">Cloudflare</span>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">forumline button</div>
+            <div class="panel-body" style="text-align:center; font-size: 10px;">
+                <div class="btn88x31 site-button">forumline.net</div>
+                <br>
+                <textarea readonly class="button-code">&lt;a href="https://forumline.net"&gt;&lt;img src="https://forumline.net/button.gif"&gt;&lt;/a&gt;</textarea>
+                <div style="font-size: 9px; color: #5a6a7a; margin-top: 4px;">put us on your site !!</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">built with</div>
+            <div class="panel-body" style="text-align: center; font-size: 10px;">
+                <div class="btn88x31" style="background:#1a2a1a;border-color:#3a6a3a;">open source</div>
+                <div class="btn88x31" style="background:#1a1a2a;border-color:#3a3a8a;">made w/ luv</div>
+                <div class="btn88x31" style="background:#2a1a1a;border-color:#6a3a3a;">no tracking</div>
+                <div class="btn88x31" style="background:#1a2a2a;border-color:#3a6a6a;">no ads ever</div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /page -->
+
+<!-- FOOTER -->
+<div id="footer">
+    <p>.:* forumline ~ forums for the rest of us *:.<br>
+    <span style="font-size: 9px;">open source &middot; self-hostable &middot; federated &middot; yours<br>
+    made by <a href="https://github.com/johnvondrashek">john von drashek</a> &middot; <a href="https://github.com/johnvondrashek/forumline">source code</a><br>
+    this site was hand-coded with html and css. no frameworks were harmed.</span></p>
+    <div class="construction">
+        [ permanently under construction ]
+    </div>
+</div>
+
+<script>
+// Forum creation flow.
+// 1. User fills form, clicks create
+// 2. We redirect to Forumline OAuth with the form data in sessionStorage
+// 3. On callback (with ?forumline_token=...), we call the platform API
+// 4. On success, show the link to their new forum
+
+var PLATFORM_API = 'https://hosted.forumline.net';
+var FORUMLINE_APP = 'https://app.forumline.net';
+var SITE_URL = 'https://forumline.net';
+
+// On page load: check if we're returning from OAuth callback
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    var token = params.get('forumline_token');
+    var forumlineId = params.get('forumline_id');
+    if (token && forumlineId) {
+        // Returning from OAuth — complete forum creation
+        completeForum(token, forumlineId);
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+})();
+
+function showError(msg) {
+    var el = document.getElementById('create-error');
+    el.textContent = '> ' + msg;
+    el.style.display = 'block';
+}
+
+function hideError() {
+    document.getElementById('create-error').style.display = 'none';
+}
+
+function createForum() {
+    hideError();
+
+    var slug = document.getElementById('forum-slug').value.trim().toLowerCase();
+    var name = document.getElementById('forum-name').value.trim();
+
+    if (!slug) { showError('subdomain is required'); return; }
+    if (!name) { showError('forum name is required'); return; }
+    if (!/^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$/.test(slug)) {
+        showError('subdomain must be lowercase letters, numbers, and hyphens');
+        return;
+    }
+
+    // Store form data for after OAuth
+    sessionStorage.setItem('forumline_create', JSON.stringify({
+        slug: slug,
+        name: name,
+        description: document.getElementById('forum-desc').value.trim()
+    }));
+
+    // Redirect to Forumline OAuth
+    // The callback will include the forumline_token and forumline_id as query params
+    var callbackURL = SITE_URL + '/create-callback.html';
+    var authURL = FORUMLINE_APP + '/api/oauth/authorize'
+        + '?client_id=forumline-website'
+        + '&redirect_uri=' + encodeURIComponent(callbackURL)
+        + '&state=create-forum';
+
+    window.location.href = authURL;
+}
+
+function completeForum(token, forumlineId) {
+    var stored = sessionStorage.getItem('forumline_create');
+    if (!stored) {
+        showError('form data lost. please try again.');
+        return;
+    }
+
+    var data = JSON.parse(stored);
+    sessionStorage.removeItem('forumline_create');
+
+    var btn = document.getElementById('create-btn');
+    btn.textContent = 'creating...';
+    btn.disabled = true;
+
+    fetch(PLATFORM_API + '/api/platform/forums', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Forumline-ID': forumlineId
+        },
+        body: JSON.stringify(data)
+    })
+    .then(function(resp) { return resp.json().then(function(body) { return {ok: resp.ok, body: body}; }); })
+    .then(function(result) {
+        if (!result.ok) {
+            showError(result.body.error || 'something went wrong');
+            btn.textContent = 'create forum →';
+            btn.disabled = false;
+            return;
+        }
+
+        // Success — show the link
+        var domain = result.body.domain;
+        document.getElementById('create-form').style.display = 'none';
+        document.getElementById('create-success').style.display = 'block';
+        var link = document.getElementById('create-success-link');
+        link.href = 'https://' + domain;
+        link.textContent = domain + ' →';
+    })
+    .catch(function(err) {
+        showError('network error. try again.');
+        btn.textContent = 'create forum →';
+        btn.disabled = false;
+    });
+}
+</script>
+
+</body>
+</html>

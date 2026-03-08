@@ -1,0 +1,83 @@
+<!--
+    INTENT: OAuth callback page for forum creation flow.
+
+    This page receives the redirect from Forumline OAuth after the user signs in.
+    It extracts the auth code, exchanges it for a token (via the Forumline API),
+    and redirects back to the main page with the token to complete forum creation.
+
+    This intermediate page exists because the OAuth callback URL must be a fixed
+    registered URI, and we need to do the token exchange client-side.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>creating your forum...</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div style="text-align: center; padding: 80px 20px;">
+    <div class="panel" style="display: inline-block; max-width: 400px;">
+        <div class="panel-title">creating your forum</div>
+        <div class="panel-body" id="status" style="font-size: 12px;">
+            signing you in...
+        </div>
+    </div>
+</div>
+
+<script>
+// This page is the OAuth redirect target.
+// Flow: Forumline redirects here with ?code=...&state=...
+// We exchange the code for a token, then redirect back to the main page.
+
+var FORUMLINE_APP = 'https://app.forumline.net';
+var SITE_URL = 'https://forumline.net';
+
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    var code = params.get('code');
+    var state = params.get('state');
+    var status = document.getElementById('status');
+
+    if (!code) {
+        status.textContent = 'error: no authorization code. redirecting back...';
+        setTimeout(function() { window.location.href = SITE_URL; }, 2000);
+        return;
+    }
+
+    // Exchange the auth code for an identity token
+    status.textContent = 'exchanging token...';
+
+    fetch(FORUMLINE_APP + '/api/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            code: code,
+            client_id: 'forumline-website',
+            client_secret: '', // website client uses PKCE or no secret
+            redirect_uri: SITE_URL + '/create-callback.html'
+        })
+    })
+    .then(function(resp) { return resp.json(); })
+    .then(function(data) {
+        if (!data.identity || !data.identity.forumline_id) {
+            status.textContent = 'error: authentication failed. redirecting back...';
+            setTimeout(function() { window.location.href = SITE_URL; }, 2000);
+            return;
+        }
+
+        // Redirect back to main page with token info
+        status.textContent = 'authenticated! creating forum...';
+        window.location.href = SITE_URL
+            + '?forumline_token=' + encodeURIComponent(data.identity_token)
+            + '&forumline_id=' + encodeURIComponent(data.identity.forumline_id)
+            + '#create';
+    })
+    .catch(function(err) {
+        status.textContent = 'error: ' + err.message + '. redirecting back...';
+        setTimeout(function() { window.location.href = SITE_URL; }, 2000);
+    });
+})();
+</script>
+</body>
+</html>

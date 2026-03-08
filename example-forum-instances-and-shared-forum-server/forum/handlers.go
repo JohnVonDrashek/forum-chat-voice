@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/johnvondrashek/forumline/example-forum-instances-and-shared-forum-server/shared"
 )
 
 // Handlers holds dependencies for all forum API handlers.
+// Pool is the shared.DB interface — in single-tenant mode this is a *pgxpool.Pool,
+// in multi-tenant mode this is a *TenantPool that sets search_path per-request.
 type Handlers struct {
-	Pool   *pgxpool.Pool
+	Pool   shared.DB
 	SSEHub *shared.SSEHub
 	Config *Config
 }

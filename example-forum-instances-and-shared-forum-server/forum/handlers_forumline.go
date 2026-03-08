@@ -160,7 +160,12 @@ func (h *Handlers) handleServerSideAuth(w http.ResponseWriter, r *http.Request, 
 	}
 
 	// Step 3: Create or link local user
-	localUserID, err := h.createOrLinkUser(r, identity, forumlineAccessToken)
+	var localUserID string
+	if h.isHostedMode() {
+		localUserID, err = h.createOrLinkUserHosted(r, identity)
+	} else {
+		localUserID, err = h.createOrLinkUser(r, identity, forumlineAccessToken)
+	}
 	if err != nil {
 		log.Printf("[Forumline:Auth] createOrLinkUser failed: %v", err)
 		if strings.Contains(err.Error(), "EMAIL_COLLISION") {
@@ -174,7 +179,18 @@ func (h *Handlers) handleServerSideAuth(w http.ResponseWriter, r *http.Request, 
 	// Step 4: Set cookies
 	h.setForumlineCookies(w, identityToken, localUserID, forumlineAccessToken)
 
-	// Step 5: Call afterAuth for session generation
+	// Step 5: Generate session
+	if h.isHostedMode() {
+		accessToken, err := h.signHostedSession(localUserID)
+		if err != nil {
+			log.Printf("[Forumline:Auth] signHostedSession failed: %v", err)
+			http.Redirect(w, r, h.Config.SiteURL+"/login?error=auth_failed", http.StatusFound)
+			return
+		}
+		http.Redirect(w, r, fmt.Sprintf("%s/#access_token=%s&type=bearer", h.Config.SiteURL, accessToken), http.StatusFound)
+		return
+	}
+
 	redirectURL := h.afterAuth(localUserID)
 	if redirectURL != "" {
 		http.Redirect(w, r, redirectURL, http.StatusFound)
@@ -288,7 +304,12 @@ func (h *Handlers) handleNormalCallback(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	localUserID, err := h.createOrLinkUser(r, identity, forumlineAccessToken)
+	var localUserID string
+	if h.isHostedMode() {
+		localUserID, err = h.createOrLinkUserHosted(r, identity)
+	} else {
+		localUserID, err = h.createOrLinkUser(r, identity, forumlineAccessToken)
+	}
 	if err != nil {
 		log.Printf("[Forumline:Callback] createOrLinkUser failed: %v", err)
 		if strings.Contains(err.Error(), "EMAIL_COLLISION") {
@@ -303,7 +324,19 @@ func (h *Handlers) handleNormalCallback(w http.ResponseWriter, r *http.Request) 
 	clearCookie(w, "forumline_state")
 	h.setForumlineCookies(w, identityToken, localUserID, forumlineAccessToken)
 
-	// Call afterAuth for session
+	if h.isHostedMode() {
+		// In hosted mode, sign our own session JWT and redirect with it
+		accessToken, err := h.signHostedSession(localUserID)
+		if err != nil {
+			log.Printf("[Forumline:Callback] signHostedSession failed: %v", err)
+			http.Redirect(w, r, h.Config.SiteURL+"/login?error=auth_failed", http.StatusFound)
+			return
+		}
+		http.Redirect(w, r, fmt.Sprintf("%s/#access_token=%s&type=bearer", h.Config.SiteURL, accessToken), http.StatusFound)
+		return
+	}
+
+	// Single-tenant: call afterAuth for GoTrue session
 	redirectURL := h.afterAuth(localUserID)
 	if redirectURL != "" {
 		http.Redirect(w, r, redirectURL, http.StatusFound)
@@ -619,4 +652,64 @@ func nilIfEmpty(s string) interface{} {
 		return nil
 	}
 	return s
+}
+
+// --- Hosted mode (no GoTrue) ---
+
+// isHostedMode returns true when there's no local GoTrue instance.
+// In hosted mode, users authenticate exclusively via Forumline identity.
+func (h *Handlers) isHostedMode() bool {
+	return h.Config.GoTrueURL == ""
+}
+
+// createOrLinkUserHosted creates or links a local profile without GoTrue.
+// Profile UUIDs are generated directly; the forumline_id is the source of truth.
+func (h *Handlers) createOrLinkUserHosted(r *http.Request, identity *forumlineIdentity) (string, error) {
+	ctx := r.Context()
+
+	// Check if a profile with this forumline_id already exists
+	var existingID string
+	err := h.Pool.QueryRow(ctx,
+		"SELECT id FROM profiles WHERE forumline_id = $1", identity.ForumlineID).Scan(&existingID)
+	if err == nil && existingID != "" {
+		// Update display info
+		h.Pool.Exec(ctx,
+			"UPDATE profiles SET display_name = $1, avatar_url = $2, updated_at = now() WHERE id = $3",
+			identity.DisplayName, identity.AvatarURL, existingID)
+		return existingID, nil
+	}
+
+	// Create new profile — use forumline_id as the profile UUID to keep things simple.
+	// This works because forumline_id is already a UUID.
+	_, err = h.Pool.Exec(ctx,
+		`INSERT INTO profiles (id, username, display_name, avatar_url, forumline_id)
+		 VALUES ($1, $2, $3, $4, $5)
+		 ON CONFLICT (id) DO UPDATE SET forumline_id = $5, display_name = $3`,
+		identity.ForumlineID, identity.Username, identity.DisplayName, identity.AvatarURL, identity.ForumlineID)
+	if err != nil {
+		return "", fmt.Errorf("create profile: %w", err)
+	}
+
+	return identity.ForumlineID, nil
+}
+
+// signHostedSession creates a JWT for hosted-mode auth.
+// The JWT uses the same format as GoTrue tokens so the existing auth middleware
+// validates it transparently. Signed with JWT_SECRET (HMAC).
+func (h *Handlers) signHostedSession(userID string) (string, error) {
+	secret := h.Config.ForumlineJWTSecret
+	if secret == "" {
+		return "", fmt.Errorf("no JWT secret configured")
+	}
+
+	now := time.Now()
+	claims := jwt.RegisteredClaims{
+		Subject:   userID,
+		IssuedAt:  jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(now.Add(24 * time.Hour)),
+		Issuer:    "forumline-hosted",
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
 }

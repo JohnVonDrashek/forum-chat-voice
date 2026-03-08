@@ -1,0 +1,41 @@
+name: Deploy Website
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - 'Dockerfile.website'
+      - '.github/workflows/deploy-website.yml'
+      - 'production-docker-compose-configs/website/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cloudflared
+        run: |
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb
+          sudo dpkg -i /tmp/cloudflared.deb
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.FORUM_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          cat >> ~/.ssh/config <<EOF
+          Host website-prod
+            HostName www-ssh.forumline.net
+            User root
+            IdentityFile ~/.ssh/id_deploy
+            StrictHostKeyChecking no
+            ProxyCommand cloudflared access ssh --hostname %h
+          EOF
+
+      - name: Deploy
+        run: |
+          scp production-docker-compose-configs/website/docker-compose.yml website-prod:/opt/website/docker-compose.yml
+          ssh website-prod "cd /opt/website/repo && git pull origin main && cd /opt/website && docker compose up -d --build website && docker compose ps"
