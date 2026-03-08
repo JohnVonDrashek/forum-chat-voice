@@ -80,23 +80,23 @@ async function main() {
   for (const forum of realForums) {
     const domain = forum.domain
     const url = forum.web_base
-    const key = `screenshots/${domain.replace(/\./g, '-')}.png`
+    const key = `screenshots/${domain.replace(/\./g, '-')}.jpg`
 
     log(`Capturing ${domain}...`)
     try {
       const page = await context.newPage()
       await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 })
       await page.waitForTimeout(2000)
-      const buffer = await page.screenshot({ type: 'png' })
+      const buffer = await page.screenshot({ type: 'jpeg', quality: 80 })
       await page.close()
 
-      log(`  Uploading to R2: ${key}`)
+      log(`  Uploading to R2: ${key} (${(buffer.length / 1024).toFixed(0)} KB)`)
       await s3.send(new PutObjectCommand({
         Bucket: R2_BUCKET_NAME,
         Key: key,
         Body: buffer,
-        ContentType: 'image/png',
-        CacheControl: 'public, max-age=3600',
+        ContentType: 'image/jpeg',
+        CacheControl: 'public, max-age=86400',
       }))
 
       const screenshotUrl = `${R2_PUBLIC_URL}/${key}`
