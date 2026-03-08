@@ -1,0 +1,37 @@
+name: Update Forum Screenshots
+
+on:
+  schedule:
+    # Run daily at 6:00 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: scripts
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: scripts
+        run: npx playwright install chromium --with-deps
+
+      - name: Capture screenshots and update API
+        working-directory: scripts
+        env:
+          FORUMLINE_API_URL: ${{ secrets.FORUMLINE_API_URL }}
+          FORUMLINE_SERVICE_KEY: ${{ secrets.FORUMLINE_SERVICE_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+        run: node update-forum-screenshots.js
