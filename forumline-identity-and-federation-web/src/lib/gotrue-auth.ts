@@ -98,7 +98,7 @@ export class GoTrueAuthClient {
 
   private emit(event: AuthStateEvent, session: ForumlineSession | null) {
     for (const cb of this.listeners) {
-      try { cb(event, session) } catch {}
+      try { cb(event, session) } catch (err) { console.error('[Forumline:Auth] listener error:', err) }
     }
   }
 

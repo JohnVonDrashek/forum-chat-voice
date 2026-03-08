@@ -177,16 +177,17 @@ func r2MetaKey(slug string) string {
 func (sh *SiteHandlers) loadManifest(ctx context.Context, client *minio.Client, slug string) (*siteManifest, error) {
 	obj, err := client.GetObject(ctx, sh.R2Bucket, r2MetaKey(slug), minio.GetObjectOptions{})
 	if err != nil {
-		return &siteManifest{Files: make(map[string]siteFileEntry)}, nil
+		return nil, fmt.Errorf("get manifest object: %w", err)
 	}
 	defer obj.Close()
 	data, err := io.ReadAll(obj)
 	if err != nil {
+		// Object doesn't exist yet — return empty manifest (not an error)
 		return &siteManifest{Files: make(map[string]siteFileEntry)}, nil
 	}
 	var m siteManifest
 	if err := json.Unmarshal(data, &m); err != nil {
-		return &siteManifest{Files: make(map[string]siteFileEntry)}, nil
+		return nil, fmt.Errorf("unmarshal manifest: %w", err)
 	}
 	if m.Files == nil {
 		m.Files = make(map[string]siteFileEntry)
@@ -307,7 +308,9 @@ func (sh *SiteHandlers) HandleGetFile(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", info.ContentType)
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", info.Size))
-	io.Copy(w, obj)
+	if _, err := io.Copy(w, obj); err != nil {
+		log.Printf("error streaming file %s/%s: %v", slug, filePath, err)
+	}
 }
 
 // HandlePutFile creates or updates a file.
@@ -396,13 +399,13 @@ func (sh *SiteHandlers) HandlePutFile(w http.ResponseWriter, r *http.Request) {
 		ETag:        etag,
 		Updated:     time.Now().UTC().Format(time.RFC3339),
 	}
-	if err := sh.saveManifest(r.Context(), client, slug, manifest); err != nil {
-		log.Printf("failed to save manifest for %s: %v", slug, err)
-	}
-
-	// Update DB state
+	// Update DB first (easier to recover if manifest save fails)
 	if err := sh.updateSiteState(r.Context(), slug, manifest); err != nil {
 		log.Printf("failed to update site state for %s: %v", slug, err)
+	}
+
+	if err := sh.saveManifest(r.Context(), client, slug, manifest); err != nil {
+		log.Printf("failed to save manifest for %s: %v", slug, err)
 	}
 
 	// Invalidate cache
@@ -493,8 +496,8 @@ func (sh *SiteHandlers) HandleMultipartUpload(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// 50MB total max for multipart
-	if err := r.ParseMultipartForm(50 << 20); err != nil {
+	// 10MB in-memory buffer for multipart (individual files capped at 5MB)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		writeJSON(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "request too large"})
 		return
 	}

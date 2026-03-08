@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS platform_tenants (
 CREATE INDEX IF NOT EXISTS idx_platform_tenants_domain ON platform_tenants(domain);
 CREATE INDEX IF NOT EXISTS idx_platform_tenants_slug ON platform_tenants(slug);
 CREATE INDEX IF NOT EXISTS idx_platform_tenants_owner ON platform_tenants(owner_forumline_id);
+CREATE INDEX IF NOT EXISTS idx_platform_tenants_active ON platform_tenants(active) WHERE active = true;
 
 -- Custom frontend storage
 ALTER TABLE platform_tenants ADD COLUMN IF NOT EXISTS has_custom_site BOOLEAN NOT NULL DEFAULT false;

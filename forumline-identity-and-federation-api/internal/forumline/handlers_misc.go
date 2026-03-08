@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/johnvondrashek/forumline/forumline-identity-and-federation-api/internal/shared"
 	webpush "github.com/SherClockHolmes/webpush-go"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // --- Memberships ---
@@ -381,13 +382,23 @@ func (h *Handlers) HandleRegisterForum(w http.ResponseWriter, r *http.Request) {
 
 	// Generate OAuth client credentials
 	clientIDBytes := make([]byte, 16)
-	rand.Read(clientIDBytes)
+	if _, err := rand.Read(clientIDBytes); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to generate credentials"})
+		return
+	}
 	clientID := hex.EncodeToString(clientIDBytes)
 
 	clientSecretBytes := make([]byte, 32)
-	rand.Read(clientSecretBytes)
+	if _, err := rand.Read(clientSecretBytes); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to generate credentials"})
+		return
+	}
 	clientSecret := hex.EncodeToString(clientSecretBytes)
-	clientSecretHash := sha256Hex(clientSecret)
+	clientSecretHash, err := bcryptHash(clientSecret)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to generate credentials"})
+		return
+	}
 
 	redirectURIs := body.RedirectURIs
 	if len(redirectURIs) == 0 {
@@ -877,4 +888,12 @@ func stringOrEmpty(s *string) string {
 
 func trimString(s string) string {
 	return strings.TrimSpace(s)
+}
+
+func bcryptHash(secret string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(secret), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
 }

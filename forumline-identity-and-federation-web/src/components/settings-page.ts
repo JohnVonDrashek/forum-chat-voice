@@ -272,19 +272,23 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
   async function fetchOwnedSites() {
     const session = auth.getSession()
     if (!session) return
-    // Try each forum until we find one that has the platform API (hosted server)
+    // Race all forums in parallel to find the hosted server quickly
     const { forums } = forumStore.get()
-    for (const forum of forums) {
-      try {
+    const results = await Promise.allSettled(
+      forums.map(async (forum) => {
         const res = await fetch(`https://${forum.domain}/api/platform/owned-sites`, {
           headers: { 'X-Forumline-ID': session.user.id },
         })
-        if (!res.ok) continue
-        const sites: { domain: string; slug: string }[] = await res.json()
-        ownedSites = new Map(sites.map(s => [s.domain, s.slug]))
+        if (!res.ok) throw new Error('not found')
+        return res.json() as Promise<{ domain: string; slug: string }[]>
+      })
+    )
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value.length >= 0) {
+        ownedSites = new Map(result.value.map(s => [s.domain, s.slug]))
         rebuildForumRows()
         return
-      } catch { continue }
+      }
     }
   }
 

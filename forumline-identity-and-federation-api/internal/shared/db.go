@@ -24,7 +24,15 @@ func NewDBPool(ctx context.Context) (*pgxpool.Pool, error) {
 	config.MinConns = 1
 	// LISTEN connections use direct pgx.Conn (not from pool), so pool
 	// only needs enough connections for concurrent API queries.
-	config.MaxConns = 5
+	maxConns := int32(5)
+	if v := os.Getenv("DB_MAX_CONNS"); v != "" {
+		if n, err := fmt.Sscanf(v, "%d", &maxConns); n == 1 && err == nil && maxConns > 0 {
+			// use parsed value
+		} else {
+			maxConns = 5
+		}
+	}
+	config.MaxConns = maxConns
 	// Recycle connections before Fly's proxy can kill them
 	config.MaxConnLifetime = 10 * time.Minute
 	config.MaxConnIdleTime = 2 * time.Minute

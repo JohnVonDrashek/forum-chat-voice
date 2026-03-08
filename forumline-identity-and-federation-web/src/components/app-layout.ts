@@ -289,7 +289,7 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
     if (!webviewInstance) {
       forumContainer.innerHTML = ''
       renderForumHeader()
-      forumContainer.appendChild(forumHeaderEl!)
+      if (forumHeaderEl) forumContainer.appendChild(forumHeaderEl)
 
       const needsAuth = authedForums !== null && !authedForums.has(activeForum.domain)
       webviewInstance = createForumWebview({

@@ -78,7 +78,9 @@ export function createDmMessageView({ forumlineStore, recipientId }: DmMessageVi
   function updateHeader() {
     // Replace avatar
     const newAvatar = createAvatar({ avatarUrl: recipientAvatarUrl, seed: recipientName, size: 32 })
-    headerEl.replaceChild(newAvatar, headerEl.firstChild!)
+    if (headerEl.firstChild) {
+      headerEl.replaceChild(newAvatar, headerEl.firstChild)
+    }
     headerName.textContent = recipientName
   }
 
@@ -241,7 +243,11 @@ export function createDmMessageView({ forumlineStore, recipientId }: DmMessageVi
   fetchMessages()
 
   // SSE for real-time DM updates
+  let destroyed = false
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+
   function connectSSE() {
+    if (destroyed) return
     const session = forumlineAuth.getSession()
     if (!session) return
     const { forumlineUserId } = forumlineStore.get()
@@ -256,8 +262,10 @@ export function createDmMessageView({ forumlineStore, recipientId }: DmMessageVi
     eventSource.onerror = () => {
       eventSource?.close()
       eventSource = null
-      // Reconnect after 5 seconds
-      setTimeout(connectSSE, 5000)
+      // Reconnect after 5 seconds (unless destroyed)
+      if (!destroyed) {
+        reconnectTimer = setTimeout(connectSSE, 5000)
+      }
     }
   }
   connectSSE()
@@ -265,8 +273,10 @@ export function createDmMessageView({ forumlineStore, recipientId }: DmMessageVi
   return {
     el,
     destroy() {
+      destroyed = true
       eventSource?.close()
       eventSource = null
+      if (reconnectTimer) clearTimeout(reconnectTimer)
     },
   }
 }
