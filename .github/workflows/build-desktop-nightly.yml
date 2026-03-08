@@ -84,13 +84,10 @@ jobs:
         run: cargo tauri build --bundles app
         working-directory: desktop-and-mobile-tauri-apps
 
-      - name: Install create-dmg
-        run: corepack enable && pnpm add -g create-dmg
-
       - name: Create DMG
         run: |
           APP_PATH="desktop-and-mobile-tauri-apps/target/release/bundle/macos/Forumline.app"
-          create-dmg "$APP_PATH" --overwrite --dmg-title "Forumline Nightly" --no-code-sign || true
+          npx create-dmg "$APP_PATH" --overwrite --dmg-title "Forumline Nightly" --no-code-sign || true
 
           DMG_FILE=$(ls -1 Forumline*.dmg 2>/dev/null | head -1)
           if [ -n "$DMG_FILE" ]; then
@@ -202,7 +199,14 @@ jobs:
         working-directory: desktop-and-mobile-tauri-apps
 
       - name: Build iOS (simulator)
-        run: cargo tauri ios build
+        run: |
+          # Disable code signing and build for simulator
+          cargo tauri ios build -- \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator'
         working-directory: desktop-and-mobile-tauri-apps
 
       - name: Package iOS build
