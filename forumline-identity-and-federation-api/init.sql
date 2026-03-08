@@ -85,6 +85,10 @@ CREATE INDEX IF NOT EXISTS idx_forumline_dms_conversation ON forumline_direct_me
 CREATE INDEX IF NOT EXISTS idx_forumline_dms_unread ON forumline_direct_messages(recipient_id, read)
   WHERE read = false;
 
+-- Performance indexes for memberships and forum ownership lookups
+CREATE INDEX IF NOT EXISTS idx_forumline_memberships_user_id ON forumline_memberships(user_id);
+CREATE INDEX IF NOT EXISTS idx_forumline_forums_owner_id ON forumline_forums(owner_id);
+
 -- Push subscriptions
 CREATE TABLE IF NOT EXISTS push_subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

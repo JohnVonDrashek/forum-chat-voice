@@ -12,6 +12,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/johnvondrashek/forumline/forumline-identity-and-federation-api/internal/shared"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // HandleOAuthAuthorize validates the OAuth client and either shows the login page
@@ -108,7 +109,10 @@ func (h *Handlers) HandleOAuthAuthorize(w http.ResponseWriter, r *http.Request) 
 
 	// Generate authorization code
 	codeBytes := make([]byte, 32)
-	rand.Read(codeBytes)
+	if _, err := rand.Read(codeBytes); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to generate authorization code"})
+		return
+	}
 	code := hex.EncodeToString(codeBytes)
 	expiresAt := time.Now().Add(5 * time.Minute)
 
@@ -177,14 +181,25 @@ func (h *Handlers) HandleOAuthToken(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Validate client credentials
-	secretHash := sha256Hex(body.ClientSecret)
 	var clientForumID, storedHash string
 	err := h.Pool.QueryRow(ctx,
 		`SELECT forum_id, client_secret_hash FROM forumline_oauth_clients WHERE client_id = $1`,
 		body.ClientID,
 	).Scan(&clientForumID, &storedHash)
 
-	if err != nil || storedHash != secretHash {
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Invalid client credentials"})
+		return
+	}
+
+	// Support both bcrypt (new) and SHA-256 (legacy) hashes
+	valid := false
+	if bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(body.ClientSecret)) == nil {
+		valid = true
+	} else if storedHash == sha256Hex(body.ClientSecret) {
+		valid = true
+	}
+	if !valid {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Invalid client credentials"})
 		return
 	}

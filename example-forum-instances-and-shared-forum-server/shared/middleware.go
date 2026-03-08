@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"strings"
@@ -72,22 +73,36 @@ type RateLimiter struct {
 	requests map[string][]time.Time
 	limit    int
 	window   time.Duration
+	cancel   context.CancelFunc
 }
 
 func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
+	ctx, cancel := context.WithCancel(context.Background())
 	rl := &RateLimiter{
 		requests: make(map[string][]time.Time),
 		limit:    limit,
 		window:   window,
+		cancel:   cancel,
 	}
 	// Cleanup old entries periodically
 	go func() {
+		ticker := time.NewTicker(window)
+		defer ticker.Stop()
 		for {
-			time.Sleep(window)
-			rl.cleanup()
+			select {
+			case <-ticker.C:
+				rl.cleanup()
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 	return rl
+}
+
+// Stop cancels the cleanup goroutine.
+func (rl *RateLimiter) Stop() {
+	rl.cancel()
 }
 
 func (rl *RateLimiter) Allow(ip string) bool {
@@ -136,12 +151,16 @@ func (rl *RateLimiter) cleanup() {
 }
 
 // RateLimitMiddleware applies rate limiting per IP.
+// Set TRUST_PROXY=true when running behind a known reverse proxy to use X-Forwarded-For.
 func RateLimitMiddleware(rl *RateLimiter) func(http.Handler) http.Handler {
+	trustProxy := os.Getenv("TRUST_PROXY") == "true"
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ip := r.RemoteAddr
-			if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-				ip = strings.Split(forwarded, ",")[0]
+			if trustProxy {
+				if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+					ip = strings.Split(forwarded, ",")[0]
+				}
 			}
 
 			if !rl.Allow(strings.TrimSpace(ip)) {

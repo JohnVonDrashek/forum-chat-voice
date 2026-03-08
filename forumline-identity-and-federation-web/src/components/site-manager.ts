@@ -110,14 +110,19 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
       if (!res.ok) throw new Error(await res.text())
       manifest = await res.json()
     } catch (err) {
-      showToast('Failed to load files', 'error')
+      showToast(err instanceof Error ? `Failed to load files: ${err.message}` : 'Failed to load files', 'error')
       manifest = { files: {}, updated: '', storage_bytes: 0, storage_limit: 52428800 }
     }
     loading = false
     render()
   }
 
+  let uploading = false
+
   async function uploadFiles(files: FileList) {
+    if (uploading) return
+    uploading = true
+    render()
     const formData = new FormData()
     for (const file of files) {
       formData.append('file', file, file.name.toLowerCase())
@@ -128,7 +133,10 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
         headers: authHeaders(),
         body: formData,
       })
-      if (!res.ok) throw new Error(await res.text())
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '')
+        throw new Error(detail || 'Upload failed')
+      }
       const result = await res.json()
       if (result.errors?.length) {
         showToast(`Errors: ${result.errors.join(', ')}`, 'error')
@@ -138,7 +146,10 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
       }
       await fetchManifest()
     } catch (err) {
-      showToast('Upload failed', 'error')
+      showToast(err instanceof Error ? err.message : 'Upload failed', 'error')
+    } finally {
+      uploading = false
+      render()
     }
   }
 
@@ -151,8 +162,8 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
       if (!res.ok) throw new Error(await res.text())
       showToast(`Deleted ${path}`, 'success')
       await fetchManifest()
-    } catch {
-      showToast('Delete failed', 'error')
+    } catch (err) {
+      showToast(err instanceof Error ? `Delete failed: ${err.message}` : 'Delete failed', 'error')
     }
   }
 
@@ -166,8 +177,8 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
       if (!res.ok) throw new Error(await res.text())
       showToast(`Saved ${path}`, 'success')
       await fetchManifest()
-    } catch {
-      showToast('Save failed', 'error')
+    } catch (err) {
+      showToast(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed', 'error')
     }
   }
 
@@ -192,8 +203,8 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
       if (!res.ok) throw new Error(await res.text())
       showToast('Site reset to default', 'success')
       await fetchManifest()
-    } catch {
-      showToast('Reset failed', 'error')
+    } catch (err) {
+      showToast(err instanceof Error ? `Reset failed: ${err.message}` : 'Reset failed', 'error')
     }
   }
 
@@ -210,6 +221,11 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
     if (!name) return
     const clean = name.toLowerCase().trim()
     if (!clean) return
+    // Client-side path validation
+    if (clean.includes('..') || clean.startsWith('/') || clean.split('/').some(s => s.startsWith('.'))) {
+      showToast('Invalid filename: path traversal or hidden files not allowed', 'error')
+      return
+    }
     editingFile = clean
     editingContent = ''
     render()
@@ -225,7 +241,7 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
 
     const fileLabel = document.createElement('div')
     fileLabel.className = 'text-sm font-medium text-white'
-    fileLabel.textContent = editingFile!
+    fileLabel.textContent = editingFile ?? ''
     editorCard.appendChild(fileLabel)
 
     const textarea = document.createElement('textarea')
@@ -250,7 +266,7 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
     btnRow.appendChild(createButton({
       text: 'Save',
       variant: 'primary',
-      onClick: () => saveFile(editingFile!, textarea.value),
+      onClick: () => { if (editingFile) saveFile(editingFile, textarea.value) },
     }))
     btnRow.appendChild(createButton({
       text: 'Cancel',
@@ -301,11 +317,13 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
     })
     actionsCard.appendChild(uploadInput)
 
-    actionsCard.appendChild(createButton({
-      text: 'Upload Files',
+    const uploadBtn = createButton({
+      text: uploading ? 'Uploading...' : 'Upload Files',
       variant: 'primary',
+      disabled: uploading,
       onClick: () => uploadInput.click(),
-    }))
+    })
+    actionsCard.appendChild(uploadBtn)
     actionsCard.appendChild(createButton({
       text: 'New File',
       variant: 'secondary',

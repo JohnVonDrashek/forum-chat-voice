@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"container/list"
 	"sync"
 	"time"
 )
@@ -8,15 +9,16 @@ import (
 // SiteCache is an in-memory LRU cache for custom site files served from R2.
 // Keyed by "{slug}/{path}", with TTL-based expiration and a max total size.
 type SiteCache struct {
-	mu       sync.Mutex
-	items    map[string]*cacheItem
-	order    []string // LRU order (most recent at end)
-	curSize  int64
-	maxSize  int64
-	ttl      time.Duration
+	mu      sync.Mutex
+	items   map[string]*list.Element
+	order   *list.List // front = least recently used
+	curSize int64
+	maxSize int64
+	ttl     time.Duration
 }
 
 type cacheItem struct {
+	key         string
 	data        []byte
 	contentType string
 	etag        string
@@ -25,7 +27,8 @@ type cacheItem struct {
 
 func NewSiteCache(maxSizeMB int, ttl time.Duration) *SiteCache {
 	return &SiteCache{
-		items:   make(map[string]*cacheItem),
+		items:   make(map[string]*list.Element),
+		order:   list.New(),
 		maxSize: int64(maxSizeMB) * 1024 * 1024,
 		ttl:     ttl,
 	}
@@ -40,16 +43,17 @@ func (c *SiteCache) Get(slug, path string) (data []byte, contentType string, eta
 	defer c.mu.Unlock()
 
 	key := cacheKey(slug, path)
-	item, exists := c.items[key]
+	elem, exists := c.items[key]
 	if !exists {
 		return nil, "", "", false
 	}
+	item := elem.Value.(*cacheItem)
 	if time.Since(item.added) > c.ttl {
 		c.removeLocked(key)
 		return nil, "", "", false
 	}
-	// Move to end (most recently used)
-	c.touchLocked(key)
+	// Move to back (most recently used) — O(1)
+	c.order.MoveToBack(elem)
 	return item.data, item.contentType, item.etag, true
 }
 
@@ -70,18 +74,21 @@ func (c *SiteCache) Put(slug, path string, data []byte, contentType, etag string
 		c.removeLocked(key)
 	}
 
-	// Evict until we have space
-	for c.curSize+size > c.maxSize && len(c.order) > 0 {
-		c.removeLocked(c.order[0])
+	// Evict LRU entries until we have space
+	for c.curSize+size > c.maxSize && c.order.Len() > 0 {
+		front := c.order.Front()
+		c.removeLocked(front.Value.(*cacheItem).key)
 	}
 
-	c.items[key] = &cacheItem{
+	item := &cacheItem{
+		key:         key,
 		data:        data,
 		contentType: contentType,
 		etag:        etag,
 		added:       time.Now(),
 	}
-	c.order = append(c.order, key)
+	elem := c.order.PushBack(item)
+	c.items[key] = elem
 	c.curSize += size
 }
 
@@ -92,24 +99,12 @@ func (c *SiteCache) Invalidate(slug, path string) {
 }
 
 func (c *SiteCache) removeLocked(key string) {
-	if item, exists := c.items[key]; exists {
-		c.curSize -= int64(len(item.data))
-		delete(c.items, key)
+	elem, exists := c.items[key]
+	if !exists {
+		return
 	}
-	for i, k := range c.order {
-		if k == key {
-			c.order = append(c.order[:i], c.order[i+1:]...)
-			break
-		}
-	}
-}
-
-func (c *SiteCache) touchLocked(key string) {
-	for i, k := range c.order {
-		if k == key {
-			c.order = append(c.order[:i], c.order[i+1:]...)
-			c.order = append(c.order, key)
-			break
-		}
-	}
+	item := elem.Value.(*cacheItem)
+	c.curSize -= int64(len(item.data))
+	c.order.Remove(elem)
+	delete(c.items, key)
 }
