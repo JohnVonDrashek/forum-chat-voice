@@ -26,7 +26,7 @@ func (h *Handlers) HandleGetMemberships(w http.ResponseWriter, r *http.Request) 
 
 	rows, err := h.Pool.Query(ctx,
 		`SELECT m.id, m.joined_at, m.forum_authed_at, m.notifications_muted,
-		        f.domain, f.name, f.icon_url
+		        f.domain, f.name, f.icon_url, f.api_base, f.web_base, f.capabilities
 		 FROM forumline_memberships m
 		 JOIN forumline_forums f ON f.id = m.forum_id
 		 WHERE m.user_id = $1
@@ -40,12 +40,15 @@ func (h *Handlers) HandleGetMemberships(w http.ResponseWriter, r *http.Request) 
 	defer rows.Close()
 
 	type membership struct {
-		ForumDomain        string  `json:"forum_domain"`
-		ForumName          string  `json:"forum_name"`
-		ForumIconURL       *string `json:"forum_icon_url"`
-		JoinedAt           string  `json:"joined_at"`
-		ForumAuthedAt      *string `json:"forum_authed_at"`
-		NotificationsMuted bool    `json:"notifications_muted"`
+		ForumDomain        string   `json:"forum_domain"`
+		ForumName          string   `json:"forum_name"`
+		ForumIconURL       *string  `json:"forum_icon_url"`
+		APIBase            string   `json:"api_base"`
+		WebBase            string   `json:"web_base"`
+		Capabilities       []string `json:"capabilities"`
+		JoinedAt           string   `json:"joined_at"`
+		ForumAuthedAt      *string  `json:"forum_authed_at"`
+		NotificationsMuted bool     `json:"notifications_muted"`
 	}
 
 	var memberships []membership
@@ -57,7 +60,7 @@ func (h *Handlers) HandleGetMemberships(w http.ResponseWriter, r *http.Request) 
 		var notifMuted bool
 
 		if err := rows.Scan(&id, &joinedAt, &forumAuthedAt, &notifMuted,
-			&m.ForumDomain, &m.ForumName, &m.ForumIconURL); err != nil {
+			&m.ForumDomain, &m.ForumName, &m.ForumIconURL, &m.APIBase, &m.WebBase, &m.Capabilities); err != nil {
 			continue
 		}
 		m.JoinedAt = joinedAt.Format(time.RFC3339)
@@ -151,6 +154,119 @@ func (h *Handlers) HandleToggleMembershipMute(w http.ResponseWriter, r *http.Req
 		 WHERE user_id = $2 AND forum_id = $3`, *body.Muted, userID, forumID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to update mute state"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+func (h *Handlers) HandleJoinForum(w http.ResponseWriter, r *http.Request) {
+	userID := shared.UserIDFromContext(r.Context())
+	ctx := r.Context()
+
+	var body struct {
+		ForumDomain string `json:"forum_domain"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+	if body.ForumDomain == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Missing forum_domain"})
+		return
+	}
+
+	// Look up forum by domain
+	forumID := getForumIDByDomain(ctx, h.Pool, body.ForumDomain)
+
+	// If not found, fetch manifest and auto-register
+	if forumID == "" {
+		manifest, err := fetchForumManifest(body.ForumDomain)
+		if err != nil {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "Forum not found and manifest fetch failed"})
+			return
+		}
+
+		err = h.Pool.QueryRow(ctx,
+			`INSERT INTO forumline_forums (domain, name, icon_url, api_base, web_base, capabilities, approved)
+			 VALUES ($1, $2, $3, $4, $5, $6, true)
+			 ON CONFLICT (domain) DO UPDATE SET domain = EXCLUDED.domain
+			 RETURNING id`,
+			manifest.Domain, manifest.Name, manifest.IconURL,
+			manifest.APIBase, manifest.WebBase, manifest.Capabilities,
+		).Scan(&forumID)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to register forum"})
+			return
+		}
+	}
+
+	// Create membership
+	_, err := h.Pool.Exec(ctx,
+		`INSERT INTO forumline_memberships (user_id, forum_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+		userID, forumID,
+	)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to join forum"})
+		return
+	}
+
+	// Fetch full forum details with joined_at
+	var domain, name, apiBase, webBase string
+	var iconURL *string
+	var capabilities []string
+	var joinedAt time.Time
+
+	err = h.Pool.QueryRow(ctx,
+		`SELECT f.domain, f.name, f.icon_url, f.api_base, f.web_base, f.capabilities, m.joined_at
+		 FROM forumline_forums f
+		 JOIN forumline_memberships m ON m.forum_id = f.id
+		 WHERE f.id = $1 AND m.user_id = $2`, forumID, userID,
+	).Scan(&domain, &name, &iconURL, &apiBase, &webBase, &capabilities, &joinedAt)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to fetch forum details"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"domain":       domain,
+		"name":         name,
+		"icon_url":     iconURL,
+		"api_base":     apiBase,
+		"web_base":     webBase,
+		"capabilities": capabilities,
+		"joined_at":    joinedAt.Format(time.RFC3339),
+	})
+}
+
+func (h *Handlers) HandleLeaveForum(w http.ResponseWriter, r *http.Request) {
+	userID := shared.UserIDFromContext(r.Context())
+	ctx := r.Context()
+
+	var body struct {
+		ForumDomain string `json:"forum_domain"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+	if body.ForumDomain == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Missing forum_domain"})
+		return
+	}
+
+	forumID := getForumIDByDomain(ctx, h.Pool, body.ForumDomain)
+	if forumID == "" {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Forum not found"})
+		return
+	}
+
+	_, err := h.Pool.Exec(ctx,
+		`DELETE FROM forumline_memberships WHERE user_id = $1 AND forum_id = $2`,
+		userID, forumID,
+	)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to leave forum"})
 		return
 	}
 
@@ -674,6 +790,45 @@ func sendPushNotifications(ctx context.Context, pool *pgxpool.Pool, userID, titl
 }
 
 // --- Helpers ---
+
+type forumManifest struct {
+	ForumlineVersion string   `json:"forumline_version"`
+	Name             string   `json:"name"`
+	Domain           string   `json:"domain"`
+	IconURL          string   `json:"icon_url"`
+	APIBase          string   `json:"api_base"`
+	WebBase          string   `json:"web_base"`
+	Capabilities     []string `json:"capabilities"`
+}
+
+func fetchForumManifest(domain string) (*forumManifest, error) {
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(fmt.Sprintf("https://%s/.well-known/forumline-manifest.json", domain))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch manifest: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("manifest returned status %d", resp.StatusCode)
+	}
+
+	var manifest forumManifest
+	if err := json.NewDecoder(resp.Body).Decode(&manifest); err != nil {
+		return nil, fmt.Errorf("failed to decode manifest: %w", err)
+	}
+
+	if manifest.Name == "" || manifest.APIBase == "" || manifest.WebBase == "" {
+		return nil, fmt.Errorf("manifest missing required fields")
+	}
+
+	// Use the requested domain if manifest doesn't specify one
+	if manifest.Domain == "" {
+		manifest.Domain = domain
+	}
+
+	return &manifest, nil
+}
 
 func getForumIDByDomain(ctx context.Context, pool *pgxpool.Pool, domain string) string {
 	var id string

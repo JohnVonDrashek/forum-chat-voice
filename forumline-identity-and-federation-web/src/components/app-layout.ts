@@ -100,11 +100,15 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
   })
   cleanups.push(cleanupDeepLink)
 
-  // ---- Memberships fetch ----
+  // ---- Memberships fetch + server sync ----
   async function fetchMemberships() {
     try {
       const session = auth.getSession()
       if (!session) return
+
+      // Sync forum list from server (merges server + local, persists to localStorage)
+      await forumStore.syncFromServer(session.access_token)
+
       const res = await fetch('/api/memberships', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       })

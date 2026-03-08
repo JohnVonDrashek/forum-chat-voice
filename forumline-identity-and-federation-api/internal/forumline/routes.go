@@ -43,6 +43,8 @@ func NewRouter(pool *pgxpool.Pool, sseHub *shared.SSEHub) *chi.Mux {
 		r.Get("/api/memberships", h.HandleGetMemberships)
 		r.Post("/api/memberships", h.HandleUpdateMembershipAuth)
 		r.Put("/api/memberships", h.HandleToggleMembershipMute)
+		r.Post("/api/memberships/join", h.HandleJoinForum)
+		r.Delete("/api/memberships", h.HandleLeaveForum)
 	})
 
 	// DMs (authenticated)
