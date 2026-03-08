@@ -1,16 +1,14 @@
 #!/usr/bin/env node
 /**
  * Captures screenshots of all forums in the directory and uploads to R2.
- * Outputs SQL to update screenshot_url in forumline_forums.
+ * Updates screenshot_url via the Forumline identity API.
  *
  * Usage:
  *   node scripts/update-forum-screenshots.js
  *
- * Pipe the SQL output to update the database:
- *   node scripts/update-forum-screenshots.js | ssh root@host "pct exec 101 -- docker exec -i forumline-postgres-1 psql -U postgres"
- *
  * Environment variables:
  *   FORUMLINE_API_URL      - default: https://app.forumline.net
+ *   FORUMLINE_SERVICE_KEY  - service role key for API auth
  *   R2_ACCOUNT_ID
  *   R2_ACCESS_KEY_ID
  *   R2_SECRET_ACCESS_KEY
@@ -22,6 +20,7 @@ const { chromium } = require('playwright')
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3')
 
 const API_URL = process.env.FORUMLINE_API_URL || 'https://app.forumline.net'
+const SERVICE_KEY = process.env.FORUMLINE_SERVICE_KEY
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY
@@ -30,9 +29,28 @@ const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL
 
 const log = (msg) => process.stderr.write(msg + '\n')
 
+async function updateScreenshotViaAPI(domain, screenshotUrl) {
+  const res = await fetch(`${API_URL}/api/forums/screenshot`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SERVICE_KEY}`,
+    },
+    body: JSON.stringify({ domain, screenshot_url: screenshotUrl }),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`API returned ${res.status}: ${text}`)
+  }
+}
+
 async function main() {
   if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_PUBLIC_URL) {
     log('Missing R2 environment variables')
+    process.exit(1)
+  }
+  if (!SERVICE_KEY) {
+    log('Missing FORUMLINE_SERVICE_KEY environment variable')
     process.exit(1)
   }
 
@@ -57,7 +75,7 @@ async function main() {
     deviceScaleFactor: 1,
   })
 
-  const sqlStatements = []
+  let updated = 0
 
   for (const forum of realForums) {
     const domain = forum.domain
@@ -82,26 +100,16 @@ async function main() {
       }))
 
       const screenshotUrl = `${R2_PUBLIC_URL}/${key}`
-      log(`  URL: ${screenshotUrl}`)
-
-      const escapedUrl = screenshotUrl.replace(/'/g, "''")
-      const escapedDomain = domain.replace(/'/g, "''")
-      sqlStatements.push(
-        `UPDATE forumline_forums SET screenshot_url = '${escapedUrl}', updated_at = now() WHERE domain = '${escapedDomain}';`
-      )
+      log(`  Updating API: ${domain} -> ${screenshotUrl}`)
+      await updateScreenshotViaAPI(domain, screenshotUrl)
+      updated++
     } catch (err) {
       log(`  Failed: ${err.message}`)
     }
   }
 
   await browser.close()
-
-  // Output SQL to stdout (can be piped to psql)
-  if (sqlStatements.length) {
-    console.log(sqlStatements.join('\n'))
-  }
-
-  log('Done!')
+  log(`Done! Updated ${updated}/${realForums.length} forums.`)
 }
 
 main().catch(err => {

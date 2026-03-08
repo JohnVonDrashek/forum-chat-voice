@@ -61,6 +61,9 @@ func NewRouter(pool *pgxpool.Pool, sseHub *shared.SSEHub) *chi.Mux {
 	r.Get("/api/forums", h.HandleListForums)
 	r.With(shared.AuthMiddleware).Post("/api/forums", h.HandleRegisterForum)
 
+	// Screenshot update (service key auth)
+	r.Put("/api/forums/screenshot", h.HandleUpdateScreenshot)
+
 	// Identity (authenticated)
 	r.With(shared.AuthMiddleware).Get("/api/identity", h.HandleGetIdentity)
 

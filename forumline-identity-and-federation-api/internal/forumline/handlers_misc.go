@@ -298,6 +298,52 @@ func (h *Handlers) HandleRegisterForum(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// --- Screenshot Update (service key auth) ---
+
+func (h *Handlers) HandleUpdateScreenshot(w http.ResponseWriter, r *http.Request) {
+	// Authenticate via service role key
+	authHeader := r.Header.Get("Authorization")
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "missing authorization"})
+		return
+	}
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	serviceKey := os.Getenv("FORUMLINE_SERVICE_ROLE_KEY")
+	if serviceKey == "" || token != serviceKey {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid authorization"})
+		return
+	}
+
+	var body struct {
+		Domain        string `json:"domain"`
+		ScreenshotURL string `json:"screenshot_url"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+	if body.Domain == "" || body.ScreenshotURL == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "domain and screenshot_url are required"})
+		return
+	}
+
+	ctx := r.Context()
+	tag, err := h.Pool.Exec(ctx,
+		`UPDATE forumline_forums SET screenshot_url = $1, updated_at = now() WHERE domain = $2`,
+		body.ScreenshotURL, body.Domain,
+	)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to update screenshot"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "forum not found"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
 // --- Identity ---
 
 func (h *Handlers) HandleGetIdentity(w http.ResponseWriter, r *http.Request) {
