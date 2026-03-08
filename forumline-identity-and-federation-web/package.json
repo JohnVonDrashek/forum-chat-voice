@@ -12,6 +12,10 @@
     "@johnvondrashek/forumline-protocol": "workspace:*"
   },
   "devDependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-autostart": "^2.5.1",
+    "@tauri-apps/plugin-notification": "^2.3.3",
+    "@tauri-apps/plugin-shell": "^2.3.5",
     "typescript": "^5.9.3",
     "vite": "^6.0.0"
   }
