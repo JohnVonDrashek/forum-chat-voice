@@ -25,7 +25,7 @@ func (h *Handlers) HandleVoiceSignal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validTypes := map[string]bool{"offer": true, "answer": true, "ice-candidate": true}
+	validTypes := map[string]bool{"offer": true, "answer": true, "ice-candidate": true, "escalate": true}
 	if !validTypes[body.Type] || body.TargetUserID == "" || body.RoomSlug == "" || len(body.Payload) == 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "target_user_id, type, room_slug, and payload are required"})
 		return

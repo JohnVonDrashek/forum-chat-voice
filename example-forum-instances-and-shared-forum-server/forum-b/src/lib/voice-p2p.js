@@ -21,9 +21,29 @@ let speakingInterval = null
 let localAudioContext = null
 let localAnalyser = null
 let onStoreUpdate = null       // callback to update voiceStore
+let onEscalateRequest = null   // callback when a peer requests escalation to LiveKit
 
 export function setStoreCallback(cb) {
   onStoreUpdate = cb
+}
+
+export function setEscalateCallback(cb) {
+  onEscalateRequest = cb
+}
+
+// Send "escalate" signal to all connected peers
+export async function sendEscalateSignal() {
+  const token = await getAccessToken()
+  if (!token || !currentRoomSlug) return
+
+  for (const [peerID] of peers) {
+    await sendSignal(token, {
+      target_user_id: peerID,
+      type: 'escalate',
+      room_slug: currentRoomSlug,
+      payload: {},
+    })
+  }
 }
 
 export async function joinRoomP2P(slug, name, userID, displayName, accessToken) {
@@ -260,6 +280,9 @@ async function handleIncomingSignal(signal) {
     if (peer) {
       await peer.pc.addIceCandidate(new RTCIceCandidate(payload)).catch(() => {})
     }
+  } else if (type === 'escalate') {
+    // A peer is requesting we switch to LiveKit
+    if (onEscalateRequest) onEscalateRequest()
   }
 }
 

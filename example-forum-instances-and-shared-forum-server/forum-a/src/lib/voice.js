@@ -8,7 +8,8 @@ import { authStore, getAccessToken } from './auth.js'
 import { getConfig } from './config.js'
 import { connectSSE } from './sse.js'
 import {
-  setStoreCallback, joinRoomP2P, leaveRoomP2P, toggleMuteP2P,
+  setStoreCallback, setEscalateCallback, sendEscalateSignal,
+  joinRoomP2P, leaveRoomP2P, toggleMuteP2P,
   toggleDeafenP2P, handlePeerJoined, handlePeerLeft, isP2PActive,
   cleanupP2P, getP2PPeerCount,
 } from './voice-p2p.js'
@@ -47,6 +48,14 @@ async function getLivekit() {
 // Wire up P2P store updates
 setStoreCallback((update) => {
   if (activeBackend === 'p2p') voiceStore.set(update)
+})
+
+// Wire up escalation requests from peers
+setEscalateCallback(() => {
+  if (activeBackend !== 'p2p') return
+  const slug = voiceStore.get().connectedRoomSlug
+  const name = voiceStore.get().connectedRoomName
+  if (slug) escalateToLiveKit(slug, name)
 })
 
 function deletePresence() {
@@ -197,6 +206,8 @@ export async function toggleScreenShare() {
 
     voiceStore.set({ isConnecting: true })
     try {
+      // Tell all peers to escalate to LiveKit too
+      await sendEscalateSignal()
       await escalateToLiveKit(slug, name)
       // Now on LiveKit, start screen share
       if (room) {
