@@ -270,18 +270,22 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
   }
 
   async function fetchOwnedSites() {
-    try {
-      const session = auth.getSession()
-      if (!session) return
-      const res = await fetch('https://forumline.net/api/platform/owned-sites', {
-        headers: { 'X-Forumline-ID': session.user.id },
-      })
-      if (!res.ok) return
-      const sites: { domain: string; slug: string }[] = await res.json()
-      ownedSites = new Map(sites.map(s => [s.domain, s.slug]))
-      // Re-render forum list to show/hide Edit Site buttons
-      rebuildForumRows()
-    } catch { /* non-critical */ }
+    const session = auth.getSession()
+    if (!session) return
+    // Try each forum until we find one that has the platform API (hosted server)
+    const { forums } = forumStore.get()
+    for (const forum of forums) {
+      try {
+        const res = await fetch(`https://${forum.domain}/api/platform/owned-sites`, {
+          headers: { 'X-Forumline-ID': session.user.id },
+        })
+        if (!res.ok) continue
+        const sites: { domain: string; slug: string }[] = await res.json()
+        ownedSites = new Map(sites.map(s => [s.domain, s.slug]))
+        rebuildForumRows()
+        return
+      } catch { continue }
+    }
   }
 
   function rebuildForumRows() {
