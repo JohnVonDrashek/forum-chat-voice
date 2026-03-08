@@ -198,13 +198,19 @@ jobs:
         run: cargo tauri ios init
         working-directory: desktop-and-mobile-tauri-apps
 
+      - name: Disable code signing in Xcode project
+        run: |
+          PBXPROJ="desktop-and-mobile-tauri-apps/gen/apple/forumline-demo.xcodeproj/project.pbxproj"
+          # Set CODE_SIGNING_ALLOWED = NO for all build configurations
+          sed -i '' 's/CODE_SIGN_IDENTITY = .*/CODE_SIGN_IDENTITY = "-";/' "$PBXPROJ"
+          sed -i '' '/buildSettings = {/a\
+            CODE_SIGNING_ALLOWED = NO;\
+            CODE_SIGNING_REQUIRED = NO;
+          ' "$PBXPROJ"
+
       - name: Build iOS (simulator)
         run: |
-          # Disable code signing and build for simulator
           cargo tauri ios build -- \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator'
         working-directory: desktop-and-mobile-tauri-apps
