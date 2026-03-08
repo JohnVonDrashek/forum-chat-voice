@@ -1,6 +1,7 @@
 package forumline
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -660,4 +661,94 @@ func (h *Handlers) HandleDMStream(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	shared.ServeSSE(w, r, client)
+}
+
+// resolveConversationID finds or creates a 1:1 conversation for a legacy userId param.
+func (h *Handlers) resolveConversationID(w http.ResponseWriter, r *http.Request) string {
+	userID := shared.UserIDFromContext(r.Context())
+	otherUserID := chi.URLParam(r, "userId")
+	ctx := r.Context()
+
+	if otherUserID == "" || otherUserID == userID {
+		return ""
+	}
+
+	// Find existing 1:1 conversation
+	var convoID string
+	err := h.Pool.QueryRow(ctx,
+		`SELECT c.id FROM forumline_conversations c
+		 WHERE c.is_group = false
+		   AND EXISTS(SELECT 1 FROM forumline_conversation_members WHERE conversation_id = c.id AND user_id = $1)
+		   AND EXISTS(SELECT 1 FROM forumline_conversation_members WHERE conversation_id = c.id AND user_id = $2)
+		   AND (SELECT count(*) FROM forumline_conversation_members WHERE conversation_id = c.id) = 2`,
+		userID, otherUserID,
+	).Scan(&convoID)
+
+	if err != nil {
+		// Create new 1:1 conversation
+		tx, txErr := h.Pool.Begin(ctx)
+		if txErr != nil {
+			return ""
+		}
+		defer tx.Rollback(ctx)
+
+		err = tx.QueryRow(ctx,
+			`INSERT INTO forumline_conversations (is_group, created_by) VALUES (false, $1) RETURNING id`, userID,
+		).Scan(&convoID)
+		if err != nil {
+			return ""
+		}
+
+		_, err = tx.Exec(ctx,
+			`INSERT INTO forumline_conversation_members (conversation_id, user_id) VALUES ($1, $2), ($1, $3)`,
+			convoID, userID, otherUserID,
+		)
+		if err != nil {
+			return ""
+		}
+
+		if err = tx.Commit(ctx); err != nil {
+			return ""
+		}
+	}
+
+	return convoID
+}
+
+// withConversationID injects a conversationId URL param into the chi route context
+// while preserving all other context values (auth, etc.).
+func withConversationID(r *http.Request, convoID string) *http.Request {
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("conversationId", convoID)
+	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+}
+
+// HandleLegacyGetMessages handles GET /api/dms/{userId} by resolving to a conversation.
+func (h *Handlers) HandleLegacyGetMessages(w http.ResponseWriter, r *http.Request) {
+	convoID := h.resolveConversationID(w, r)
+	if convoID == "" {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Conversation not found"})
+		return
+	}
+	h.HandleGetMessages(w, withConversationID(r, convoID))
+}
+
+// HandleLegacySendMessage handles POST /api/dms/{userId} by resolving to a conversation.
+func (h *Handlers) HandleLegacySendMessage(w http.ResponseWriter, r *http.Request) {
+	convoID := h.resolveConversationID(w, r)
+	if convoID == "" {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Conversation not found"})
+		return
+	}
+	h.HandleSendMessage(w, withConversationID(r, convoID))
+}
+
+// HandleLegacyMarkRead handles POST /api/dms/{userId}/read by resolving to a conversation.
+func (h *Handlers) HandleLegacyMarkRead(w http.ResponseWriter, r *http.Request) {
+	convoID := h.resolveConversationID(w, r)
+	if convoID == "" {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Conversation not found"})
+		return
+	}
+	h.HandleMarkRead(w, withConversationID(r, convoID))
 }

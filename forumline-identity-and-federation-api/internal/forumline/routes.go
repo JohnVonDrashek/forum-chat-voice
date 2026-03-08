@@ -63,6 +63,17 @@ func NewRouter(pool *pgxpool.Pool, sseHub *shared.SSEHub) *chi.Mux {
 	// Conversation stream (authenticated via query param for EventSource)
 	r.Get("/api/conversations/stream", h.HandleDMStream)
 
+	// Legacy /api/dms/* routes — backwards compat for cached frontends / Tauri app.
+	// These resolve a userId to a conversation ID and forward to the new handlers.
+	r.Group(func(r chi.Router) {
+		r.Use(shared.AuthMiddleware)
+		r.Get("/api/dms", h.HandleListConversations)
+		r.Get("/api/dms/{userId}", h.HandleLegacyGetMessages)
+		r.With(dmRL).Post("/api/dms/{userId}", h.HandleLegacySendMessage)
+		r.Post("/api/dms/{userId}/read", h.HandleLegacyMarkRead)
+	})
+	r.Get("/api/dms/{userId}/stream", h.HandleDMStream)
+
 	// Forums (public GET, authenticated POST)
 	r.Get("/api/forums", h.HandleListForums)
 	r.With(shared.AuthMiddleware).Post("/api/forums", h.HandleRegisterForum)

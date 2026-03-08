@@ -29,28 +29,21 @@ CREATE INDEX IF NOT EXISTS idx_convo_members_user ON forumline_conversation_memb
 -- 2. Add conversation_id column to messages (nullable initially)
 ALTER TABLE forumline_direct_messages ADD COLUMN IF NOT EXISTS conversation_id UUID REFERENCES forumline_conversations(id) ON DELETE CASCADE;
 
--- 3. Create a conversation for each distinct pair of users
-INSERT INTO forumline_conversations (id, is_group, created_at)
-SELECT gen_random_uuid(), false, min(created_at)
+-- 3. Build a mapping of user pairs to new conversation IDs using a temp table.
+--    We generate UUIDs in the SELECT so each pair gets exactly one conversation.
+CREATE TEMP TABLE dm_pair_map AS
+SELECT
+  gen_random_uuid() AS conversation_id,
+  least(sender_id, recipient_id) AS user_a,
+  greatest(sender_id, recipient_id) AS user_b,
+  min(created_at) AS first_message_at
 FROM forumline_direct_messages
 GROUP BY least(sender_id, recipient_id), greatest(sender_id, recipient_id);
 
--- 4. Create a temp mapping table to link pairs to conversation IDs
-CREATE TEMP TABLE dm_pair_map AS
-SELECT
-  c.id AS conversation_id,
-  sub.user_a,
-  sub.user_b,
-  sub.min_created
-FROM (
-  SELECT
-    least(sender_id, recipient_id) AS user_a,
-    greatest(sender_id, recipient_id) AS user_b,
-    min(created_at) AS min_created
-  FROM forumline_direct_messages
-  GROUP BY least(sender_id, recipient_id), greatest(sender_id, recipient_id)
-) sub
-JOIN forumline_conversations c ON c.created_at = sub.min_created AND c.is_group = false;
+-- 4. Insert conversations from the mapping
+INSERT INTO forumline_conversations (id, is_group, created_at)
+SELECT conversation_id, false, first_message_at
+FROM dm_pair_map;
 
 -- 5. Insert conversation members
 INSERT INTO forumline_conversation_members (conversation_id, user_id, last_read_at)
@@ -66,14 +59,17 @@ ON CONFLICT DO NOTHING;
 -- 6. Update last_read_at based on existing read flags
 -- For each member, set last_read_at to the latest message they received that was marked read
 UPDATE forumline_conversation_members cm
-SET last_read_at = COALESCE(
-  (SELECT max(dm.created_at) FROM forumline_direct_messages dm
-   JOIN dm_pair_map dpm ON dpm.conversation_id = cm.conversation_id
-   WHERE dm.recipient_id = cm.user_id AND dm.read = true
-     AND ((dm.sender_id = dpm.user_a AND dm.recipient_id = dpm.user_b)
-       OR (dm.sender_id = dpm.user_b AND dm.recipient_id = dpm.user_a))),
-  '1970-01-01'
-);
+SET last_read_at = COALESCE(sub.max_read_at, '1970-01-01')
+FROM (
+  SELECT dpm.conversation_id, dm.recipient_id AS user_id, max(dm.created_at) AS max_read_at
+  FROM forumline_direct_messages dm
+  JOIN dm_pair_map dpm
+    ON least(dm.sender_id, dm.recipient_id) = dpm.user_a
+   AND greatest(dm.sender_id, dm.recipient_id) = dpm.user_b
+  WHERE dm.read = true
+  GROUP BY dpm.conversation_id, dm.recipient_id
+) sub
+WHERE cm.conversation_id = sub.conversation_id AND cm.user_id = sub.user_id;
 
 -- 7. Backfill conversation_id on all existing messages
 UPDATE forumline_direct_messages dm
