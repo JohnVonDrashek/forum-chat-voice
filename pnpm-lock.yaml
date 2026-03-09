@@ -29,6 +29,9 @@ importers:
       '@johnvondrashek/forumline-protocol':
         specifier: workspace:*
         version: link:../published-npm-packages/protocol
+      vanjs-core:
+        specifier: ^1.6.0
+        version: 1.6.0
     devDependencies:
       '@tauri-apps/api':
         specifier: ^2.10.1
@@ -937,6 +940,9 @@ packages:
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
+  vanjs-core@1.6.0:
+    resolution: {integrity: sha512-4KM9mKEji7woioytMNKQ2XrqD31ykG9vde3N1F/gyJJ0oaOSohdeaN2o4UC4Ndu3Raj1SEXWvW7k4etZI8Ovjw==}
+
   vite@6.4.1:
     resolution: {integrity: sha512-+Oxm7q9hDoLMyJOYfUYBuHQo+dkAloi33apOPP56pzj+vsdJDzr+j1NISE5pyaAuKL4A3UD34qd0lx5+kfKp2g==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
@@ -1777,6 +1783,8 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
+  vanjs-core@1.6.0: {}
+
   vite@6.4.1(@types/node@25.3.5):
     dependencies:
       esbuild: 0.25.12
@@ -1798,4 +1806,3 @@ snapshots:
   yocto-queue@0.1.0: {}
 
   zod@4.3.6: {}
-

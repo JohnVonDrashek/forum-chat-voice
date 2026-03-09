@@ -18,7 +18,10 @@
  */
 import type { ForumToForumlineMessage, ForumlineToForumMessage, UnreadCounts, ForumNotification } from '@johnvondrashek/forumline-protocol'
 import type { ForumMembership } from './forum-store.js'
+import { tags } from '../shared/dom.js'
 import { showToast } from '../shared/ui.js'
+
+const { div, span, strong, iframe: iframeTag } = tags
 
 export interface ForumWebviewOptions {
   forum: ForumMembership
@@ -64,23 +67,8 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
   let hasCalledAuthed = false
   let loginAttempted = false
 
-  // Container
-  const container = document.createElement('div')
-  container.className = 'webview-container'
-
   // Login banner
-  const banner = document.createElement('div')
-  banner.className = 'webview-banner'
-  banner.innerHTML = `
-    <span class="webview-banner__text">
-      You're signed in to Forumline. Log in to <strong>${forum.name}</strong> for the full experience.
-    </span>
-    <button class="btn btn--small btn--white">Log in</button>
-  `
-  container.appendChild(banner)
-
-  const bannerBtn = banner.querySelector('button')!
-  bannerBtn.addEventListener('click', () => {
+  const bannerBtn = tags.button({ class: 'btn btn--small btn--white', onclick: () => {
     if (!authUrl) return
     loggingIn = true
     loginAttempted = true
@@ -88,30 +76,36 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
     spinnerWrap.style.display = ''
     iframe.src = authUrl
     updateBanner()
-  })
+  } }, 'Log in')
+
+  const banner = div({ class: 'webview-banner' },
+    span({ class: 'webview-banner__text' },
+      "You're signed in to Forumline. Log in to ",
+      strong(forum.name),
+      ' for the full experience.',
+    ),
+    bannerBtn,
+  )
 
   // Spinner
-  const spinnerWrap = document.createElement('div')
-  spinnerWrap.className = 'webview-spinner-wrap'
-  const spinner = document.createElement('div')
-  spinner.className = 'webview-spinner'
-  const spinnerText = document.createElement('span')
-  spinnerText.className = 'webview-spinner__text'
-  spinnerText.textContent = `Loading ${forum.name}...`
-  spinnerWrap.append(spinner, spinnerText)
+  const spinnerWrap = div({ class: 'webview-spinner-wrap' },
+    div({ class: 'webview-spinner' }),
+    span({ class: 'webview-spinner__text' }, `Loading ${forum.name}...`),
+  )
 
   // Iframe
-  const iframe = document.createElement('iframe')
-  iframe.src = initialUrl
-  iframe.title = `${forum.name} forum`
-  iframe.className = 'webview-iframe'
+  const iframe = iframeTag({
+    src: initialUrl,
+    title: `${forum.name} forum`,
+    class: 'webview-iframe',
+  }) as HTMLIFrameElement
   iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups')
   iframe.setAttribute('allow', 'clipboard-read; clipboard-write; microphone; display-capture')
 
-  const iframeWrap = document.createElement('div')
-  iframeWrap.className = 'webview-iframe-wrap'
-  iframeWrap.append(spinnerWrap, iframe)
-  container.appendChild(iframeWrap)
+  const container = div({ class: 'webview-container' },
+    banner,
+    div({ class: 'webview-iframe-wrap' }, spinnerWrap, iframe),
+  )
 
   function updateBanner() {
     const show = !!authUrl && !loggingIn && !hasCalledAuthed

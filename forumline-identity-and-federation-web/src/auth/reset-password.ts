@@ -1,5 +1,5 @@
 /*
- * Password reset form
+ * Password reset form (Van.js)
  *
  * This file handles the "set new password" step after a user clicks a password recovery email link.
  *
@@ -13,7 +13,10 @@
  * - Auto-redirect to the main app after a 2-second delay on success
  */
 import type { GoTrueAuthClient } from './gotrue-auth.js'
+import { tags, state, html } from '../shared/dom.js'
 import { createButton, createInput } from '../shared/ui.js'
+
+const { div, h3, p, form: formTag } = tags
 
 interface ResetPasswordOptions {
   auth: GoTrueAuthClient
@@ -21,117 +24,85 @@ interface ResetPasswordOptions {
 }
 
 export function createResetPassword({ auth, onComplete }: ResetPasswordOptions) {
-  let password = ''
-  let confirmPassword = ''
-  let error: string | null = null
-  let loading = false
-  let success = false
+  const password = state('')
+  const confirmPassword = state('')
+  const error = state<string | null>(null)
+  const loading = state(false)
+  const success = state(false)
 
-  const el = document.createElement('div')
-  el.className = 'auth-page'
+  async function handleSubmit(e: Event) {
+    e.preventDefault()
+    error.val = null
 
-  function render() {
-    el.innerHTML = ''
-
-    const wrapper = document.createElement('div')
-    wrapper.className = 'auth-form'
-
-    if (success) {
-      const icon = document.createElement('div')
-      icon.className = 'success-icon'
-      icon.innerHTML = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`
-      wrapper.appendChild(icon)
-
-      const h3 = document.createElement('h3')
-      h3.className = 'auth-form__title'
-      h3.textContent = 'Password Updated'
-      wrapper.appendChild(h3)
-
-      const p = document.createElement('p')
-      p.className = 'auth-form__subtitle'
-      p.textContent = 'Your password has been successfully reset. Redirecting...'
-      wrapper.appendChild(p)
-
-      el.appendChild(wrapper)
+    if (password.val.length < 6) {
+      error.val = 'Password must be at least 6 characters'
+      return
+    }
+    if (password.val !== confirmPassword.val) {
+      error.val = 'Passwords do not match'
       return
     }
 
-    const h3 = document.createElement('h3')
-    h3.className = 'auth-form__title'
-    h3.textContent = 'Set New Password'
-    wrapper.appendChild(h3)
-
-    const sub = document.createElement('p')
-    sub.className = 'auth-form__subtitle'
-    sub.textContent = 'Enter your new password below.'
-    wrapper.appendChild(sub)
-
-    const form = document.createElement('form')
-    form.className = 'auth-form__fields'
-
-    const pwInput = createInput({ type: 'password', placeholder: 'New password', required: true, minLength: 6, value: password })
-    pwInput.addEventListener('input', () => { password = pwInput.value })
-    form.appendChild(pwInput)
-
-    const hint = document.createElement('p')
-    hint.className = 'text-xs text-faint'
-    hint.textContent = 'At least 6 characters'
-    form.appendChild(hint)
-
-    const confirmInput = createInput({ type: 'password', placeholder: 'Confirm new password', required: true, value: confirmPassword })
-    confirmInput.addEventListener('input', () => { confirmPassword = confirmInput.value })
-    form.appendChild(confirmInput)
-
-    if (error) {
-      const errEl = document.createElement('p')
-      errEl.className = 'text-sm text-error'
-      errEl.textContent = error
-      form.appendChild(errEl)
+    loading.val = true
+    try {
+      const { error: updateError } = await auth.updateUser({ password: password.val })
+      if (updateError) throw updateError
+      success.val = true
+      setTimeout(() => onComplete(), 2000)
+    } catch (err) {
+      error.val = err instanceof Error ? err.message : String(err)
+      loading.val = false
     }
-
-    form.appendChild(createButton({
-      text: loading ? 'Updating...' : 'Update Password',
-      variant: 'primary',
-      className: 'w-full',
-      type: 'submit',
-      disabled: loading,
-    }))
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault()
-      error = null
-
-      if (password.length < 6) {
-        error = 'Password must be at least 6 characters'
-        render()
-        return
-      }
-      if (password !== confirmPassword) {
-        error = 'Passwords do not match'
-        render()
-        return
-      }
-
-      loading = true
-      render()
-
-      try {
-        const { error: updateError } = await auth.updateUser({ password })
-        if (updateError) throw updateError
-        success = true
-        render()
-        setTimeout(() => onComplete(), 2000)
-      } catch (err) {
-        error = err instanceof Error ? err.message : String(err)
-        loading = false
-        render()
-      }
-    })
-
-    wrapper.appendChild(form)
-    el.appendChild(wrapper)
   }
 
-  render()
-  return { el, destroy() {} }
+  const el = div({ class: 'auth-page' },
+    () => {
+      const wrapper = div({ class: 'auth-form' })
+
+      if (success.val) {
+        const icon = div({ class: 'success-icon' },
+          html(`<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`),
+        )
+        wrapper.append(
+          icon,
+          h3({ class: 'auth-form__title' }, 'Password Updated'),
+          p({ class: 'auth-form__subtitle' }, 'Your password has been successfully reset. Redirecting...'),
+        )
+        return wrapper
+      }
+
+      wrapper.append(
+        h3({ class: 'auth-form__title' }, 'Set New Password'),
+        p({ class: 'auth-form__subtitle' }, 'Enter your new password below.'),
+      )
+
+      const form = formTag({ class: 'auth-form__fields', onsubmit: handleSubmit }) as HTMLFormElement
+
+      const pwInput = createInput({ type: 'password', placeholder: 'New password', required: true, minLength: 6, value: password.val })
+      pwInput.addEventListener('input', () => { password.val = pwInput.value })
+      form.appendChild(pwInput)
+
+      form.appendChild(p({ class: 'text-xs text-faint' }, 'At least 6 characters') as HTMLElement)
+
+      const confirmInput = createInput({ type: 'password', placeholder: 'Confirm new password', required: true, value: confirmPassword.val })
+      confirmInput.addEventListener('input', () => { confirmPassword.val = confirmInput.value })
+      form.appendChild(confirmInput)
+
+      if (error.val) {
+        form.appendChild(p({ class: 'text-sm text-error' }, error.val) as HTMLElement)
+      }
+
+      form.appendChild(createButton({
+        text: loading.val ? 'Updating...' : 'Update Password',
+        variant: 'primary',
+        className: 'w-full',
+        type: 'submit',
+        disabled: loading.val,
+      }))
+      wrapper.appendChild(form)
+      return wrapper
+    },
+  )
+
+  return { el: el as HTMLElement, destroy() {} }
 }

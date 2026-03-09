@@ -1,31 +1,36 @@
 /*
- * Reactive store primitive
+ * Reactive store primitive (Van.js-backed)
  *
- * This file provides a minimal publish-subscribe state container used as the foundation for all app stores.
+ * This file provides a minimal publish-subscribe state container backed by Van.js reactive state.
  *
  * It must:
- * - Hold a single state value that can be read synchronously via get()
+ * - Hold a single state value readable synchronously via get() and reactively via .state.val
  * - Accept new state via set(), supporting both direct values and updater functions
- * - Notify all subscribers synchronously whenever state changes
+ * - Notify all manual subscribers synchronously whenever state changes
+ * - Provide a Van.js State object for reactive UI bindings
  * - Return an unsubscribe function from subscribe() for cleanup
  */
+import van, { type State } from 'vanjs-core'
+
 export type Subscriber<T> = (state: T) => void
 
 export interface Store<T> {
+  state: State<T>
   get: () => T
   set: (value: T | ((prev: T) => T)) => void
   subscribe: (fn: Subscriber<T>) => () => void
 }
 
 export function createStore<T>(initial: T): Store<T> {
-  let state = initial
+  const state = van.state(initial) as State<T>
   const subs = new Set<Subscriber<T>>()
 
   return {
-    get: () => state,
+    state,
+    get: () => state.val,
     set: (value) => {
-      state = typeof value === 'function' ? (value as (prev: T) => T)(state) : value
-      subs.forEach((fn) => fn(state))
+      state.val = typeof value === 'function' ? (value as (prev: T) => T)(state.val) : value
+      subs.forEach((fn) => fn(state.val))
     },
     subscribe: (fn) => {
       subs.add(fn)

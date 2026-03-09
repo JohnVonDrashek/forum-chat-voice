@@ -1,5 +1,5 @@
 /*
- * Mobile forum list
+ * Mobile forum list (Van.js)
  *
  * This file renders the list of the user's connected forums as tappable cards, optimized for mobile.
  *
@@ -12,195 +12,98 @@
  * - Show error messages in the modal if the forum URL is invalid or unreachable
  * - Switch to the tapped forum when a card is clicked
  * - Reactively update when forums are added, removed, or unread counts change
- * - Efficiently update only changed DOM elements (badges, active states) without full re-renders
  */
 import type { ForumStore, ForumMembership } from './forum-store.js'
+import { tags, html } from '../shared/dom.js'
 import { createButton, createInput } from '../shared/ui.js'
+
+const { div, h2, p, button: btn } = tags
 
 interface MobileForumListOptions {
   forumStore: ForumStore
 }
 
+function totalUnread(counts: { notifications: number; chat_mentions: number; dms: number } | undefined): number {
+  if (!counts) return 0
+  return counts.notifications + counts.chat_mentions + counts.dms
+}
+
 export function createMobileForumList({ forumStore }: MobileForumListOptions) {
-  const el = document.createElement('div')
   let modalEl: HTMLElement | null = null
   let addUrl = ''
   let adding = false
   let addError: string | null = null
 
-  // Persistent DOM
-  const h2 = document.createElement('h2')
-  h2.className = 'text-sm font-semibold uppercase tracking-wider text-muted'
-  h2.style.marginBottom = '0.75rem'
-  h2.textContent = 'Your Forums'
-  el.appendChild(h2)
+  function createForumCard(forum: ForumMembership, isActive: boolean, unread: number): HTMLElement {
+    const card = btn({
+      class: `forum-card${isActive ? ' forum-card--active' : ''}`,
+      onclick: () => forumStore.switchForum(forum.domain),
+    }) as HTMLElement
 
-  const list = document.createElement('div')
-  list.style.display = 'flex'
-  list.style.flexDirection = 'column'
-  list.style.gap = '0.5rem'
-  el.appendChild(list)
-
-  const addBtn = document.createElement('button')
-  addBtn.className = 'add-forum-btn'
-  addBtn.innerHTML = `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg> Add Forum`
-  addBtn.addEventListener('click', () => showModal())
-  el.appendChild(addBtn)
-
-  // Track forum card elements
-  const forumCards = new Map<string, {
-    btn: HTMLElement
-    badgeEl: HTMLElement | null
-    lastUnread: number
-    lastActive: boolean
-  }>()
-
-  let prevForums: ForumMembership[] = []
-
-  function createForumCard(forum: ForumMembership, isActive: boolean, unread: number) {
-    const btn = document.createElement('button')
-    btn.className = `forum-card${isActive ? ' forum-card--active' : ''}`
-
-    // Icon
     if (forum.icon_url) {
       const iconSrc = forum.icon_url.startsWith('/') ? `${forum.web_base}${forum.icon_url}` : forum.icon_url
-      const img = document.createElement('img')
-      img.src = iconSrc
-      img.alt = forum.name
-      img.className = 'forum-card__icon'
-      img.addEventListener('error', () => { img.style.display = 'none' })
-      btn.appendChild(img)
+      const img = tags.img({ src: iconSrc, alt: forum.name, class: 'forum-card__icon', onerror: () => { img.style.display = 'none' } }) as HTMLImageElement
+      card.appendChild(img)
     } else {
-      const fallback = document.createElement('div')
-      fallback.className = 'forum-card__icon-fallback'
-      fallback.textContent = forum.name[0].toUpperCase()
-      btn.appendChild(fallback)
+      card.appendChild(div({ class: 'forum-card__icon-fallback' }, forum.name[0].toUpperCase()) as HTMLElement)
     }
 
-    // Text
-    const textDiv = document.createElement('div')
-    textDiv.className = 'flex-1'
-    textDiv.style.textAlign = 'left'
-    const name = document.createElement('p')
-    name.className = 'font-medium text-white'
-    name.textContent = forum.name
-    const domain = document.createElement('p')
-    domain.className = 'text-xs text-muted'
-    domain.textContent = forum.domain
-    textDiv.append(name, domain)
-    btn.appendChild(textDiv)
+    const textDiv = div({ class: 'flex-1', style: 'text-align:left' },
+      p({ class: 'font-medium text-white' }, forum.name),
+      p({ class: 'text-xs text-muted' }, forum.domain),
+    )
+    card.appendChild(textDiv as HTMLElement)
 
-    // Unread badge
-    let badgeEl: HTMLElement | null = null
     if (unread > 0) {
-      badgeEl = document.createElement('div')
-      badgeEl.className = 'badge badge--red badge--inline'
-      badgeEl.style.position = 'static'
-      badgeEl.textContent = unread > 99 ? '99+' : String(unread)
-      btn.appendChild(badgeEl)
+      const badge = div({ class: 'badge badge--red badge--inline', style: 'position:static' }, unread > 99 ? '99+' : String(unread))
+      card.appendChild(badge as HTMLElement)
     }
 
-    btn.addEventListener('click', () => forumStore.switchForum(forum.domain))
-
-    forumCards.set(forum.domain, { btn, badgeEl, lastUnread: unread, lastActive: isActive })
-    return btn
+    return card
   }
 
-  function render() {
-    const state = forumStore.get()
-    const forumsChanged = state.forums !== prevForums
+  const addBtn = btn({
+    class: 'add-forum-btn',
+    onclick: () => showModal(),
+  },
+    html(`<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>`),
+    ' Add Forum',
+  ) as HTMLElement
 
-    if (forumsChanged) {
-      const currentDomains = new Set(state.forums.map(f => f.domain))
-
-      // Remove stale
-      for (const [domain, entry] of forumCards) {
-        if (!currentDomains.has(domain)) {
-          entry.btn.remove()
-          forumCards.delete(domain)
-        }
+  const el = div(
+    h2({
+      class: 'text-sm font-semibold uppercase tracking-wider text-muted',
+      style: 'margin-bottom:0.75rem',
+    }, 'Your Forums'),
+    () => {
+      const { forums, activeForum, unreadCounts } = forumStore.state.val
+      if (forums.length === 0) return div({ style: 'display:flex;flex-direction:column;gap:0.5rem' })
+      const container = div({ style: 'display:flex;flex-direction:column;gap:0.5rem' }) as HTMLElement
+      for (const forum of forums) {
+        const unread = totalUnread(unreadCounts[forum.domain])
+        const isActive = activeForum?.domain === forum.domain
+        container.appendChild(createForumCard(forum, isActive, unread))
       }
-
-      // Add/reorder
-      for (const forum of state.forums) {
-        const counts = state.unreadCounts[forum.domain]
-        const unread = counts ? counts.notifications + counts.chat_mentions + counts.dms : 0
-        const isActive = state.activeForum?.domain === forum.domain
-
-        if (!forumCards.has(forum.domain)) {
-          createForumCard(forum, isActive, unread)
-        }
-        list.appendChild(forumCards.get(forum.domain)!.btn)
-      }
-
-      prevForums = state.forums
-    }
-
-    // Update badges and active states
-    for (const forum of state.forums) {
-      const entry = forumCards.get(forum.domain)
-      if (!entry) continue
-
-      const counts = state.unreadCounts[forum.domain]
-      const unread = counts ? counts.notifications + counts.chat_mentions + counts.dms : 0
-      const isActive = state.activeForum?.domain === forum.domain
-
-      if (entry.lastActive !== isActive) {
-        if (isActive) {
-          entry.btn.classList.add('forum-card--active')
-        } else {
-          entry.btn.classList.remove('forum-card--active')
-        }
-        entry.lastActive = isActive
-      }
-
-      if (entry.lastUnread !== unread) {
-        if (unread > 0) {
-          if (entry.badgeEl) {
-            entry.badgeEl.textContent = unread > 99 ? '99+' : String(unread)
-          } else {
-            entry.badgeEl = document.createElement('div')
-            entry.badgeEl.className = 'badge badge--red badge--inline'
-            entry.badgeEl.style.position = 'static'
-            entry.badgeEl.textContent = unread > 99 ? '99+' : String(unread)
-            entry.btn.appendChild(entry.badgeEl)
-          }
-        } else if (entry.badgeEl) {
-          entry.badgeEl.remove()
-          entry.badgeEl = null
-        }
-        entry.lastUnread = unread
-      }
-    }
-  }
+      return container
+    },
+    addBtn,
+  ) as HTMLElement
 
   function showModal() {
     modalEl?.remove()
-    modalEl = document.createElement('div')
-    modalEl.className = 'modal-backdrop'
+    modalEl = div({ class: 'modal-backdrop' }) as HTMLElement
 
-    const overlay = document.createElement('div')
-    overlay.className = 'modal-backdrop__overlay'
-    overlay.addEventListener('click', closeModal)
+    const overlay = div({ class: 'modal-backdrop__overlay', onclick: closeModal }) as HTMLElement
 
-    const dialog = document.createElement('div')
-    dialog.className = 'modal'
-
-    const title = document.createElement('h3')
-    title.className = 'modal__title'
-    title.textContent = 'Add a Forum'
-    dialog.appendChild(title)
-
-    const subtitle = document.createElement('p')
-    subtitle.className = 'modal__subtitle'
-    subtitle.textContent = 'Enter the URL of a Forumline-compatible forum'
-    dialog.appendChild(subtitle)
+    const dialog = div({ class: 'modal' }) as HTMLElement
+    dialog.appendChild(tags.h3({ class: 'modal__title' }, 'Add a Forum') as HTMLElement)
+    dialog.appendChild(p({ class: 'modal__subtitle' }, 'Enter the URL of a Forumline-compatible forum') as HTMLElement)
 
     const input = createInput({ type: 'url', placeholder: 'https://example-forum.com', value: addUrl, autofocus: true })
     input.className = 'input modal__input'
     input.addEventListener('input', () => {
       addUrl = input.value
-      addBtn.disabled = adding || !addUrl.trim()
+      submitBtn.disabled = adding || !addUrl.trim()
     })
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') handleAdd()
@@ -209,22 +112,18 @@ export function createMobileForumList({ forumStore }: MobileForumListOptions) {
     dialog.appendChild(input)
 
     if (addError) {
-      const err = document.createElement('p')
-      err.className = 'text-sm text-error mt-sm'
-      err.textContent = addError
-      dialog.appendChild(err)
+      dialog.appendChild(p({ class: 'text-sm text-error mt-sm' }, addError) as HTMLElement)
     }
 
-    const actions = document.createElement('div')
-    actions.className = 'modal__actions'
+    const actions = div({ class: 'modal__actions' }) as HTMLElement
     actions.appendChild(createButton({ text: 'Cancel', variant: 'ghost', onClick: closeModal }))
-    const addBtn = createButton({
+    const submitBtn = createButton({
       text: adding ? 'Adding...' : 'Add Forum',
       variant: 'primary',
       disabled: adding || !addUrl.trim(),
       onClick: handleAdd,
-    }) as HTMLButtonElement
-    actions.appendChild(addBtn)
+    })
+    actions.appendChild(submitBtn)
     dialog.appendChild(actions)
 
     modalEl.append(overlay, dialog)
@@ -235,7 +134,7 @@ export function createMobileForumList({ forumStore }: MobileForumListOptions) {
     if (!addUrl.trim() || adding) return
     adding = true
     addError = null
-    showModal() // re-render modal
+    showModal()
     try {
       await forumStore.addForum(addUrl.trim())
       closeModal()
@@ -254,13 +153,9 @@ export function createMobileForumList({ forumStore }: MobileForumListOptions) {
     modalEl = null
   }
 
-  const unsub = forumStore.subscribe(() => render())
-  render()
-
   return {
     el,
     destroy() {
-      unsub()
       closeModal()
     },
   }

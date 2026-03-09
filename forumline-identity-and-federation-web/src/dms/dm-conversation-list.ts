@@ -1,5 +1,5 @@
 /*
- * DM conversation list
+ * DM conversation list (Van.js)
  *
  * This file displays all of a user's direct message conversations, serving as the inbox for cross-forum messaging.
  *
@@ -8,19 +8,21 @@
  * - Show each conversation's avatar, display name, last message preview, and timestamp
  * - Display unread count badges on conversations with new messages
  * - Distinguish group conversations (group icon) from 1:1 conversations (user avatar)
- * - Update in real-time via SSE when new messages arrive, without full re-render
+ * - Update in real-time via SSE when new messages arrive
  * - Fall back to polling every 30 seconds if the SSE connection silently drops
  * - Show a loading spinner during the initial fetch
  * - Show an empty state when the user has no conversations yet
  * - Show an error state if the initial load fails
- * - Efficiently update only changed DOM elements (badges, timestamps, previews) on refresh
  * - Navigate to the conversation thread when a conversation is tapped
  */
 import type { ForumlineStore } from '../shared/forumline-store.js'
 import type { ForumlineDmConversation, ForumlineConversationMember } from '@johnvondrashek/forumline-protocol'
+import { tags, html, state } from '../shared/dom.js'
 import { createAvatar, createSpinner } from '../shared/ui.js'
 import { formatShortTimeAgo } from '../shared/dateFormatters.js'
 import { subscribeDmEvents } from './dm-sse.js'
+
+const { div, span, p, button } = tags
 
 interface DmConversationListOptions {
   forumlineStore: ForumlineStore
@@ -30,27 +32,11 @@ interface DmConversationListOptions {
 type Conversation = ForumlineDmConversation
 
 export function createDmConversationList({ forumlineStore, onSelectConversation }: DmConversationListOptions) {
-  const el = document.createElement('div')
-  el.className = 'flex-1 overflow-y-auto'
+  const conversations = state<Conversation[]>([])
+  const initialLoad = state(true)
+  const loadError = state(false)
 
   let pollInterval: ReturnType<typeof setInterval> | null = null
-  let hasLoaded = false
-
-  // Track rendered conversation elements
-  const renderedConvos = new Map<string, {
-    btn: HTMLElement
-    badgeEl: HTMLElement | null
-    nameEl: HTMLElement
-    timeEl: HTMLElement
-    previewEl: HTMLElement
-    avatarWrap: HTMLElement
-    lastData: { unreadCount: number; lastMessage: string; lastMessageTime: string; displayName: string }
-  }>()
-
-  // Persistent containers
-  const listContainer = document.createElement('div')
-  const emptyState = createEmptyState()
-  const errorState = createErrorState()
 
   function getConvoDisplayName(convo: Conversation): string {
     if (convo.isGroup && convo.name) return convo.name
@@ -74,234 +60,113 @@ export function createDmConversationList({ forumlineStore, onSelectConversation 
     return other?.avatarUrl ?? null
   }
 
-  function createEmptyState(): HTMLElement {
-    const empty = document.createElement('div')
-    empty.className = 'empty-state'
-    const icon = document.createElement('div')
-    icon.className = 'empty-state__icon'
-    icon.innerHTML = `<svg class="icon-lg" style="color:var(--color-text-muted)" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>`
-    empty.appendChild(icon)
-    const p1 = document.createElement('p')
-    p1.className = 'text-sm text-muted'
-    p1.textContent = 'No conversations yet'
-    const p2 = document.createElement('p')
-    p2.className = 'text-xs text-faint mt-sm'
-    p2.textContent = 'Start a new message to begin chatting'
-    empty.append(p1, p2)
-    return empty
-  }
-
-  function createErrorState(): HTMLElement {
-    const empty = document.createElement('div')
-    empty.className = 'empty-state'
-    const icon = document.createElement('div')
-    icon.className = 'empty-state__icon'
-    icon.innerHTML = `<svg class="icon-lg" style="color:var(--color-red)" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>`
-    empty.appendChild(icon)
-    const p1 = document.createElement('p')
-    p1.className = 'text-sm text-error'
-    p1.textContent = 'Failed to load conversations'
-    const p2 = document.createElement('p')
-    p2.className = 'text-xs text-faint mt-sm'
-    p2.textContent = 'Check your connection and try again'
-    empty.append(p1, p2)
-    return empty
-  }
-
-  function createConvoButton(convo: Conversation): typeof renderedConvos extends Map<string, infer V> ? V : never {
-    const btn = document.createElement('button')
-    btn.className = 'conversation-item'
-
+  function createConvoButton(convo: Conversation): HTMLElement {
     const displayName = getConvoDisplayName(convo)
+    const btn = button({ class: 'conversation-item', onclick: () => onSelectConversation(convo.id) }) as HTMLElement
 
     // Avatar with unread indicator
-    const avatarWrap = document.createElement('div')
-    avatarWrap.className = 'relative'
-
+    const avatarWrap = div({ class: 'relative' }) as HTMLElement
     if (convo.isGroup) {
-      // Group avatar: stacked circles
-      const groupAvatar = document.createElement('div')
-      groupAvatar.style.cssText = 'width:40px;height:40px;border-radius:50%;background:var(--color-surface-hover);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--color-text-muted)'
-      groupAvatar.innerHTML = `<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`
+      const groupAvatar = div({
+        style: 'width:40px;height:40px;border-radius:50%;background:var(--color-surface-hover);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--color-text-muted)',
+      }) as HTMLElement
+      groupAvatar.appendChild(html(`<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`))
       avatarWrap.appendChild(groupAvatar)
     } else {
       avatarWrap.appendChild(createAvatar({ avatarUrl: getConvoAvatarUrl(convo), seed: getConvoAvatarSeed(convo), size: 40 }))
     }
-
-    let badgeEl: HTMLElement | null = null
     if (convo.unreadCount > 0) {
-      badgeEl = document.createElement('div')
-      badgeEl.className = 'badge badge--primary'
-      badgeEl.style.cssText = 'position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;font-size:12px'
-      badgeEl.textContent = String(convo.unreadCount)
-      avatarWrap.appendChild(badgeEl)
+      const badge = div({ class: 'badge badge--primary', style: 'position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;font-size:12px' }, String(convo.unreadCount))
+      avatarWrap.appendChild(badge as HTMLElement)
     }
     btn.appendChild(avatarWrap)
 
     // Text
-    const textDiv = document.createElement('div')
-    textDiv.className = 'min-w-0 flex-1'
-
-    const nameRow = document.createElement('div')
-    nameRow.className = 'flex items-center justify-between'
-    const nameEl = document.createElement('span')
-    nameEl.className = `font-medium ${convo.unreadCount > 0 ? 'text-white' : 'text-secondary'}`
-    nameEl.textContent = displayName
-    const timeEl = document.createElement('span')
-    timeEl.className = 'text-xs text-faint'
-    timeEl.textContent = convo.lastMessageTime ? formatShortTimeAgo(new Date(convo.lastMessageTime)) : ''
-    nameRow.append(nameEl, timeEl)
-    textDiv.appendChild(nameRow)
-
-    const previewEl = document.createElement('p')
-    previewEl.className = `truncate text-sm ${convo.unreadCount > 0 ? 'font-medium text-secondary' : 'text-muted'}`
-    previewEl.textContent = convo.lastMessage || 'No messages yet'
-    textDiv.appendChild(previewEl)
-
+    const textDiv = div({ class: 'min-w-0 flex-1' }) as HTMLElement
+    const nameRow = div({ class: 'flex items-center justify-between' },
+      span({ class: `font-medium ${convo.unreadCount > 0 ? 'text-white' : 'text-secondary'}` }, displayName),
+      span({ class: 'text-xs text-faint' }, convo.lastMessageTime ? formatShortTimeAgo(new Date(convo.lastMessageTime)) : ''),
+    )
+    textDiv.appendChild(nameRow as HTMLElement)
+    textDiv.appendChild(
+      p({ class: `truncate text-sm ${convo.unreadCount > 0 ? 'font-medium text-secondary' : 'text-muted'}` },
+        convo.lastMessage || 'No messages yet',
+      ) as HTMLElement,
+    )
     btn.appendChild(textDiv)
-    btn.addEventListener('click', () => onSelectConversation(convo.id))
 
-    return {
-      btn,
-      badgeEl,
-      nameEl,
-      timeEl,
-      previewEl,
-      avatarWrap,
-      lastData: {
-        unreadCount: convo.unreadCount,
-        lastMessage: convo.lastMessage,
-        lastMessageTime: convo.lastMessageTime,
-        displayName,
-      },
-    }
+    return btn
   }
 
-  function updateConvoButton(entry: typeof renderedConvos extends Map<string, infer V> ? V : never, convo: Conversation) {
-    const prev = entry.lastData
-    const displayName = getConvoDisplayName(convo)
-
-    // Update badge
-    if (prev.unreadCount !== convo.unreadCount) {
-      if (convo.unreadCount > 0) {
-        if (entry.badgeEl) {
-          entry.badgeEl.textContent = String(convo.unreadCount)
-        } else {
-          entry.badgeEl = document.createElement('div')
-          entry.badgeEl.className = 'badge badge--primary'
-          entry.badgeEl.style.cssText = 'position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;font-size:12px'
-          entry.badgeEl.textContent = String(convo.unreadCount)
-          entry.avatarWrap.appendChild(entry.badgeEl)
-        }
-      } else if (entry.badgeEl) {
-        entry.badgeEl.remove()
-        entry.badgeEl = null
-      }
-
-      // Update name styling based on unread
-      entry.nameEl.className = `font-medium ${convo.unreadCount > 0 ? 'text-white' : 'text-secondary'}`
-      entry.previewEl.className = `truncate text-sm ${convo.unreadCount > 0 ? 'font-medium text-secondary' : 'text-muted'}`
-    }
-
-    // Update text content
-    if (prev.lastMessage !== convo.lastMessage) {
-      entry.previewEl.textContent = convo.lastMessage || 'No messages yet'
-    }
-    if (prev.lastMessageTime !== convo.lastMessageTime) {
-      entry.timeEl.textContent = convo.lastMessageTime ? formatShortTimeAgo(new Date(convo.lastMessageTime)) : ''
-    }
-    if (prev.displayName !== displayName) {
-      entry.nameEl.textContent = displayName
-    }
-
-    entry.lastData = {
-      unreadCount: convo.unreadCount,
-      lastMessage: convo.lastMessage,
-      lastMessageTime: convo.lastMessageTime,
-      displayName,
-    }
-  }
-
-  function renderConversations(conversations: Conversation[]) {
-    // Clear non-list content (spinner, error, empty)
-    emptyState.remove()
-    errorState.remove()
-
-    if (conversations.length === 0) {
-      listContainer.remove()
-      renderedConvos.clear()
-      el.innerHTML = ''
-      el.appendChild(emptyState)
-      return
-    }
-
-    if (!listContainer.parentNode) {
-      el.innerHTML = ''
-      el.appendChild(listContainer)
-    }
-
-    // Build set of current conversation IDs
-    const currentIds = new Set(conversations.map(c => c.id))
-
-    // Remove stale conversations
-    for (const [id, entry] of renderedConvos) {
-      if (!currentIds.has(id)) {
-        entry.btn.remove()
-        renderedConvos.delete(id)
-      }
-    }
-
-    // Update existing or add new conversations (in order)
-    for (const convo of conversations) {
-      const existing = renderedConvos.get(convo.id)
-      if (existing) {
-        updateConvoButton(existing, convo)
-        // Ensure correct order
-        listContainer.appendChild(existing.btn)
-      } else {
-        const entry = createConvoButton(convo)
-        renderedConvos.set(convo.id, entry)
-        listContainer.appendChild(entry.btn)
-      }
-    }
-  }
-
-  async function fetchAndRender() {
+  async function fetchConversations() {
     const { forumlineClient } = forumlineStore.get()
     if (!forumlineClient) return
-
     try {
-      const conversations = await forumlineClient.getConversations()
-      hasLoaded = true
-      renderConversations(conversations)
+      const data = await forumlineClient.getConversations()
+      conversations.val = data
+      initialLoad.val = false
+      loadError.val = false
     } catch {
-      if (!hasLoaded) {
-        // Only show error on initial load failure
-        el.innerHTML = ''
-        el.appendChild(errorState)
+      if (initialLoad.val) {
+        loadError.val = true
+        initialLoad.val = false
       }
     }
   }
 
-  // Show initial loading spinner
-  const spinnerWrap = document.createElement('div')
-  spinnerWrap.className = 'flex items-center justify-center'
-  spinnerWrap.style.paddingTop = '2rem'
-  spinnerWrap.appendChild(createSpinner())
-  el.appendChild(spinnerWrap)
+  // Reactive child that rebuilds the list automatically when state changes
+  const el = div({ class: 'flex-1 overflow-y-auto' },
+    () => {
+      if (initialLoad.val) {
+        return div({ class: 'flex items-center justify-center', style: 'padding-top:2rem' },
+          createSpinner(),
+        )
+      }
+
+      if (loadError.val) {
+        const empty = div({ class: 'empty-state' }) as HTMLElement
+        const icon = div({ class: 'empty-state__icon' }) as HTMLElement
+        icon.appendChild(html(`<svg class="icon-lg" style="color:var(--color-red)" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>`))
+        empty.append(
+          icon,
+          p({ class: 'text-sm text-error' }, 'Failed to load conversations') as HTMLElement,
+          p({ class: 'text-xs text-faint mt-sm' }, 'Check your connection and try again') as HTMLElement,
+        )
+        return empty
+      }
+
+      if (conversations.val.length === 0) {
+        const empty = div({ class: 'empty-state' }) as HTMLElement
+        const icon = div({ class: 'empty-state__icon' }) as HTMLElement
+        icon.appendChild(html(`<svg class="icon-lg" style="color:var(--color-text-muted)" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>`))
+        empty.append(
+          icon,
+          p({ class: 'text-sm text-muted' }, 'No conversations yet') as HTMLElement,
+          p({ class: 'text-xs text-faint mt-sm' }, 'Start a new message to begin chatting') as HTMLElement,
+        )
+        return empty
+      }
+
+      const container = div()
+      for (const convo of conversations.val) {
+        container.appendChild(createConvoButton(convo))
+      }
+      return container
+    },
+  ) as HTMLElement
 
   // Initial fetch
-  fetchAndRender()
+  fetchConversations()
 
-  // SSE for real-time updates via shared connection (debounced to coalesce rapid events)
+  // SSE for real-time updates
   let sseDebounce: ReturnType<typeof setTimeout> | null = null
   const unsubSSE = subscribeDmEvents(() => {
     if (sseDebounce) clearTimeout(sseDebounce)
-    sseDebounce = setTimeout(fetchAndRender, 200)
+    sseDebounce = setTimeout(fetchConversations, 200)
   })
 
-  // Fallback poll (in case SSE drops without error)
-  pollInterval = setInterval(fetchAndRender, 30_000)
+  // Polling fallback
+  pollInterval = setInterval(fetchConversations, 30_000)
 
   return {
     el,

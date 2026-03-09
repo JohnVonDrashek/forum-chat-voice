@@ -1,5 +1,5 @@
 /*
- * Direct Messages panel
+ * Direct Messages panel (Van.js)
  *
  * This file is the top-level container for all DM functionality, managing navigation between DM sub-views.
  *
@@ -16,11 +16,14 @@
  * - Destroy ephemeral child views (conversation thread, new message, new group) on navigation
  */
 import type { ForumlineStore } from '../shared/forumline-store.js'
+import { tags, html } from '../shared/dom.js'
 import { createButton } from '../shared/ui.js'
 import { createDmConversationList } from './dm-conversation-list.js'
 import { createDmMessageView } from './dm-message-view.js'
 import { createDmNewMessage } from './dm-new-message.js'
 import { createDmNewGroup } from './dm-new-group.js'
+
+const { div, h2, button } = tags
 
 type DmView = 'list' | 'conversation' | 'new' | 'new-group'
 
@@ -33,30 +36,17 @@ interface DmPanelOptions {
 export function createDmPanel({ forumlineStore, onClose, onGoToSettings }: DmPanelOptions) {
   let dmView: DmView = 'list'
   let selectedConversationId: string | null = null
-
-  // Ephemeral child (conversation thread, new message, new group) — destroyed on navigation
   let ephemeralChild: { el: HTMLElement; destroy: () => void } | null = null
-
-  // Persistent conversation list — created once, kept alive
   let listChild: { el: HTMLElement; destroy: () => void } | null = null
 
-  const el = document.createElement('div')
-  el.className = 'flex flex-col w-full overflow-hidden'
-  el.style.height = '100%'
-  el.style.background = 'var(--color-bg)'
+  const el = div({
+    class: 'flex flex-col w-full overflow-hidden',
+    style: 'height:100%;background:var(--color-bg)',
+  }) as HTMLElement
 
-  // Persistent header and content containers
-  const header = document.createElement('div')
-  header.className = 'dm-header'
-
-  const content = document.createElement('div')
-  content.className = 'flex-1 overflow-hidden'
-
-  el.appendChild(header)
-  el.appendChild(content)
-
-  function showEl(e: HTMLElement) { e.style.display = '' }
-  function hideEl(e: HTMLElement) { e.style.display = 'none' }
+  const header = div({ class: 'dm-header' }) as HTMLElement
+  const content = div({ class: 'flex-1 overflow-hidden' }) as HTMLElement
+  el.append(header, content)
 
   function destroyEphemeral() {
     if (ephemeralChild) {
@@ -80,67 +70,53 @@ export function createDmPanel({ forumlineStore, onClose, onGoToSettings }: DmPan
   }
 
   function render() {
-    // Clean up ephemeral views
     destroyEphemeral()
-
     const { isForumlineConnected } = forumlineStore.get()
 
-    // ---- Header ----
+    // Header
     header.innerHTML = ''
-
-    const headerLeft = document.createElement('div')
-    headerLeft.className = 'flex items-center gap-sm'
+    const headerLeft = div({ class: 'flex items-center gap-sm' }) as HTMLElement
 
     if (dmView !== 'list') {
-      const backBtn = document.createElement('button')
-      backBtn.className = 'btn--icon'
-      backBtn.innerHTML = `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>`
-      backBtn.addEventListener('click', () => {
-        dmView = 'list'
-        selectedConversationId = null
-        render()
-      })
+      const backBtn = button({
+        class: 'btn--icon',
+        onclick: () => { dmView = 'list'; selectedConversationId = null; render() },
+      }, html(`<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>`)) as HTMLButtonElement
       headerLeft.appendChild(backBtn)
     }
 
-    const title = document.createElement('h2')
-    title.className = 'font-semibold text-white'
-    title.textContent = dmView === 'new' ? 'New Message' : dmView === 'new-group' ? 'New Group' : 'Messages'
-    headerLeft.appendChild(title)
+    headerLeft.appendChild(
+      h2({ class: 'font-semibold text-white' },
+        dmView === 'new' ? 'New Message' : dmView === 'new-group' ? 'New Group' : 'Messages',
+      ) as HTMLElement,
+    )
     header.appendChild(headerLeft)
 
-    const headerRight = document.createElement('div')
-    headerRight.className = 'flex items-center gap-sm'
+    const headerRight = div({ class: 'flex items-center gap-sm' }) as HTMLElement
     if (dmView === 'list' && isForumlineConnected) {
-      // New group button
-      const groupBtn = document.createElement('button')
-      groupBtn.className = 'btn--icon'
-      groupBtn.title = 'New group'
-      groupBtn.innerHTML = `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`
-      groupBtn.addEventListener('click', () => { dmView = 'new-group'; render() })
+      const groupBtn = button({
+        class: 'btn--icon',
+        title: 'New group',
+        onclick: () => { dmView = 'new-group'; render() },
+      }, html(`<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`)) as HTMLButtonElement
       headerRight.appendChild(groupBtn)
 
-      // New message button
-      const newBtn = document.createElement('button')
-      newBtn.className = 'btn--icon'
-      newBtn.title = 'New message'
-      newBtn.innerHTML = `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>`
-      newBtn.addEventListener('click', () => { dmView = 'new'; render() })
+      const newBtn = button({
+        class: 'btn--icon',
+        title: 'New message',
+        onclick: () => { dmView = 'new'; render() },
+      }, html(`<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>`)) as HTMLButtonElement
       headerRight.appendChild(newBtn)
     }
     header.appendChild(headerRight)
 
-    // ---- Content ----
+    // Content
     if (!isForumlineConnected) {
-      // Hide list if it exists
-      if (listChild) hideEl(listChild.el)
-
-      const empty = document.createElement('div')
-      empty.className = 'empty-state'
-      const p = document.createElement('p')
-      p.className = 'text-muted'
-      p.textContent = 'Sign in to send direct messages across forums'
-      empty.appendChild(p)
+      if (listChild) listChild.el.style.display = 'none'
+      const empty = div({ class: 'empty-state' }) as HTMLElement
+      empty.appendChild(
+        tags.p({ class: 'text-muted' }, 'Sign in to send direct messages across forums') as HTMLElement,
+      )
       empty.appendChild(createButton({
         text: 'Sign in',
         variant: 'primary',
@@ -150,7 +126,7 @@ export function createDmPanel({ forumlineStore, onClose, onGoToSettings }: DmPan
       ephemeralChild = { el: empty, destroy() {} }
       content.appendChild(empty)
     } else if (dmView === 'new') {
-      if (listChild) hideEl(listChild.el)
+      if (listChild) listChild.el.style.display = 'none'
       const newMsg = createDmNewMessage({
         forumlineStore,
         onSelectUser: async (userId) => {
@@ -169,7 +145,7 @@ export function createDmPanel({ forumlineStore, onClose, onGoToSettings }: DmPan
       ephemeralChild = newMsg
       content.appendChild(newMsg.el)
     } else if (dmView === 'new-group') {
-      if (listChild) hideEl(listChild.el)
+      if (listChild) listChild.el.style.display = 'none'
       const newGroup = createDmNewGroup({
         forumlineStore,
         onCreated: (conversationId) => {
@@ -181,7 +157,7 @@ export function createDmPanel({ forumlineStore, onClose, onGoToSettings }: DmPan
       ephemeralChild = newGroup
       content.appendChild(newGroup.el)
     } else if (dmView === 'conversation' && selectedConversationId) {
-      if (listChild) hideEl(listChild.el)
+      if (listChild) listChild.el.style.display = 'none'
       const msgView = createDmMessageView({
         forumlineStore,
         conversationId: selectedConversationId,
@@ -189,9 +165,8 @@ export function createDmPanel({ forumlineStore, onClose, onGoToSettings }: DmPan
       ephemeralChild = msgView
       content.appendChild(msgView.el)
     } else {
-      // List view — show persistent conversation list
       ensureListChild()
-      showEl(listChild!.el)
+      listChild!.el.style.display = ''
     }
   }
 

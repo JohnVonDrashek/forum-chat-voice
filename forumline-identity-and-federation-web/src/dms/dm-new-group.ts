@@ -1,5 +1,5 @@
 /*
- * New group conversation creator
+ * New group conversation creator (Van.js)
  *
  * This file lets users create a new group DM conversation with multiple Forumline users.
  *
@@ -16,7 +16,10 @@
  */
 import type { ForumlineStore } from '../shared/forumline-store.js'
 import type { ForumlineProfile } from '@johnvondrashek/forumline-protocol'
+import { tags, state } from '../shared/dom.js'
 import { createAvatar, createButton, createInput, createSpinner } from '../shared/ui.js'
+
+const { div, span, button: btn } = tags
 
 interface DmNewGroupOptions {
   forumlineStore: ForumlineStore
@@ -24,208 +27,148 @@ interface DmNewGroupOptions {
 }
 
 export function createDmNewGroup({ forumlineStore, onCreated }: DmNewGroupOptions) {
-  let searchQuery = ''
-  let results: ForumlineProfile[] = []
-  let searching = false
+  const searchQuery = state('')
+  const results = state<ForumlineProfile[]>([])
+  const searching = state(false)
+  const selectedMembers = state<ForumlineProfile[]>([])
+  const groupName = state('')
+  const creating = state(false)
+  const validationText = state('')
   let searchTimer: ReturnType<typeof setTimeout> | null = null
-  let selectedMembers: ForumlineProfile[] = []
-  let groupName = ''
-  let creating = false
+  let validationTimer: ReturnType<typeof setTimeout> | null = null
 
-  const el = document.createElement('div')
-  el.className = 'flex flex-col'
-  el.style.height = '100%'
+  const el = div({ class: 'flex flex-col', style: 'height:100%' }) as HTMLElement
 
-  // Group name input
-  const nameWrap = document.createElement('div')
-  nameWrap.className = 'p-lg'
-  nameWrap.style.paddingBottom = '0'
+  // Group name
   const nameInput = createInput({ type: 'text', placeholder: 'Group name...' })
-  nameInput.addEventListener('input', () => { groupName = nameInput.value })
-  nameWrap.appendChild(nameInput)
-  el.appendChild(nameWrap)
+  nameInput.addEventListener('input', () => { groupName.val = nameInput.value })
+  el.appendChild(div({ class: 'p-lg', style: 'padding-bottom:0' }, nameInput) as HTMLElement)
 
-  // Selected members chips
-  const chipsWrap = document.createElement('div')
-  chipsWrap.className = 'flex flex-wrap gap-xs p-lg'
-  chipsWrap.style.paddingTop = '0.5rem'
-  chipsWrap.style.paddingBottom = '0'
+  // Chips — reactive child rebuilds when selectedMembers changes
+  const chipsWrap = div(
+    { class: 'flex flex-wrap gap-xs p-lg', style: 'padding-top:0.5rem;padding-bottom:0' },
+    () => {
+      const container = div({ class: 'contents' }) as HTMLElement
+      for (const member of selectedMembers.val) {
+        const chip = div({
+          class: 'flex items-center gap-xs',
+          style: 'background:var(--color-surface-hover);border-radius:999px;padding:4px 10px 4px 4px;font-size:13px;color:var(--color-text-secondary)',
+        }) as HTMLElement
+        chip.appendChild(createAvatar({ avatarUrl: member.avatar_url, seed: member.username, size: 20 }))
+        chip.appendChild(span({}, member.display_name || member.username) as HTMLElement)
+        chip.appendChild(btn({
+          style: 'background:none;border:none;color:var(--color-text-muted);cursor:pointer;padding:0 0 0 4px;font-size:16px;line-height:1',
+          onclick: () => {
+            selectedMembers.val = selectedMembers.val.filter(m => m.id !== member.id)
+          },
+        }, '×') as HTMLElement)
+        container.appendChild(chip)
+      }
+      return container
+    },
+  ) as HTMLElement
   el.appendChild(chipsWrap)
 
   // Search input
-  const searchWrap = document.createElement('div')
-  searchWrap.className = 'p-lg'
-  searchWrap.style.paddingTop = '0.5rem'
-  const input = createInput({ type: 'text', placeholder: 'Search users to add...' })
-  input.addEventListener('input', () => {
-    searchQuery = input.value
+  const searchInput = createInput({ type: 'text', placeholder: 'Search users to add...' })
+  searchInput.addEventListener('input', () => {
+    searchQuery.val = searchInput.value
     if (searchTimer) clearTimeout(searchTimer)
-    if (!searchQuery.trim()) {
-      results = []
-      renderResults()
+    if (!searchQuery.val.trim()) {
+      results.val = []
       return
     }
     searchTimer = setTimeout(doSearch, 300)
   })
-  searchWrap.appendChild(input)
-  el.appendChild(searchWrap)
+  el.appendChild(div({ class: 'p-lg', style: 'padding-top:0.5rem' }, searchInput) as HTMLElement)
 
-  // Results container
-  const resultsEl = document.createElement('div')
-  resultsEl.className = 'flex-1 overflow-y-auto'
+  // Results — reactive child rebuilds when results/searching/selectedMembers change
+  const resultsEl = div({ class: 'flex-1 overflow-y-auto' },
+    () => {
+      if (searching.val) {
+        const wrap = div({ class: 'flex items-center justify-center', style: 'padding-top:2rem' }) as HTMLElement
+        wrap.appendChild(createSpinner(true))
+        return wrap
+      }
+      if (searchQuery.val.trim() && results.val.length === 0) {
+        return div({ class: 'text-center text-sm text-muted', style: 'padding:0.75rem 1rem' }, 'No Forumline users found')
+      }
+      const { forumlineUserId } = forumlineStore.get()
+      const selectedIds = new Set(selectedMembers.val.map(m => m.id))
+      const container = div() as HTMLElement
+      for (const profile of results.val) {
+        if (profile.id === forumlineUserId || selectedIds.has(profile.id)) continue
+        const profileBtn = btn({
+          class: 'conversation-item',
+          onclick: () => { selectedMembers.val = [...selectedMembers.val, profile] },
+        }) as HTMLElement
+        profileBtn.appendChild(createAvatar({ avatarUrl: profile.avatar_url, seed: profile.username, size: 40 }))
+        profileBtn.appendChild(
+          div({ class: 'min-w-0' },
+            div({ class: 'font-medium text-white' }, profile.display_name || profile.username),
+            div({ class: 'text-sm text-muted' }, `@${profile.username}`),
+          ) as HTMLElement,
+        )
+        container.appendChild(profileBtn)
+      }
+      return container
+    },
+  ) as HTMLElement
   el.appendChild(resultsEl)
 
-  // Create button at bottom
-  const bottomBar = document.createElement('div')
-  bottomBar.className = 'p-lg'
-  bottomBar.style.borderTop = '1px solid var(--color-border)'
+  // Validation — reactive visibility and text
+  const validationMsg = div(
+    { class: 'text-sm text-error', style: () => `padding:0 1rem;display:${validationText.val ? 'block' : 'none'}` },
+    () => validationText.val,
+  ) as HTMLElement
+  el.appendChild(validationMsg)
+
+  // Create button — reactive text and disabled state
   const createBtn = createButton({
     text: 'Create Group',
     variant: 'primary',
     className: 'w-full',
     onClick: handleCreate,
   })
-  bottomBar.appendChild(createBtn)
+  const bottomBar = div({ class: 'p-lg', style: 'border-top:1px solid var(--color-border)' }, createBtn) as HTMLElement
   el.appendChild(bottomBar)
-
-  function renderChips() {
-    chipsWrap.innerHTML = ''
-    for (const member of selectedMembers) {
-      const chip = document.createElement('div')
-      chip.className = 'flex items-center gap-xs'
-      chip.style.cssText = 'background:var(--color-surface-hover);border-radius:999px;padding:4px 10px 4px 4px;font-size:13px;color:var(--color-text-secondary)'
-
-      chip.appendChild(createAvatar({ avatarUrl: member.avatar_url, seed: member.username, size: 20 }))
-
-      const name = document.createElement('span')
-      name.textContent = member.display_name || member.username
-      chip.appendChild(name)
-
-      const removeBtn = document.createElement('button')
-      removeBtn.style.cssText = 'background:none;border:none;color:var(--color-text-muted);cursor:pointer;padding:0 0 0 4px;font-size:16px;line-height:1'
-      removeBtn.innerHTML = '&times;'
-      removeBtn.addEventListener('click', () => {
-        selectedMembers = selectedMembers.filter(m => m.id !== member.id)
-        renderChips()
-        renderResults()
-      })
-      chip.appendChild(removeBtn)
-
-      chipsWrap.appendChild(chip)
-    }
-  }
 
   async function doSearch() {
     const { forumlineClient } = forumlineStore.get()
-    if (!forumlineClient || !searchQuery.trim()) return
-
-    searching = true
-    renderResults()
-
+    if (!forumlineClient || !searchQuery.val.trim()) return
+    searching.val = true
     try {
-      results = await forumlineClient.searchProfiles(searchQuery)
+      results.val = await forumlineClient.searchProfiles(searchQuery.val)
     } catch (err) {
       console.error('[Forumline:DM] Profile search failed:', err)
-      results = []
+      results.val = []
     }
-
-    searching = false
-    renderResults()
+    searching.val = false
   }
-
-  function renderResults() {
-    resultsEl.innerHTML = ''
-
-    if (searching) {
-      const spinnerWrap = document.createElement('div')
-      spinnerWrap.className = 'flex items-center justify-center'
-      spinnerWrap.style.paddingTop = '2rem'
-      spinnerWrap.appendChild(createSpinner(true))
-      resultsEl.appendChild(spinnerWrap)
-      return
-    }
-
-    if (searchQuery.trim() && results.length === 0) {
-      const p = document.createElement('div')
-      p.className = 'text-center text-sm text-muted'
-      p.style.padding = '0.75rem 1rem'
-      p.textContent = 'No Forumline users found'
-      resultsEl.appendChild(p)
-      return
-    }
-
-    const { forumlineUserId } = forumlineStore.get()
-    const selectedIds = new Set(selectedMembers.map(m => m.id))
-
-    for (const profile of results) {
-      // Skip self and already selected
-      if (profile.id === forumlineUserId || selectedIds.has(profile.id)) continue
-
-      const btn = document.createElement('button')
-      btn.className = 'conversation-item'
-
-      btn.appendChild(createAvatar({ avatarUrl: profile.avatar_url, seed: profile.username, size: 40 }))
-
-      const info = document.createElement('div')
-      info.className = 'min-w-0'
-      const name = document.createElement('div')
-      name.className = 'font-medium text-white'
-      name.textContent = profile.display_name || profile.username
-      const username = document.createElement('div')
-      username.className = 'text-sm text-muted'
-      username.textContent = `@${profile.username}`
-      info.append(name, username)
-      btn.appendChild(info)
-
-      btn.addEventListener('click', () => {
-        selectedMembers.push(profile)
-        renderChips()
-        renderResults()
-      })
-      resultsEl.appendChild(btn)
-    }
-  }
-
-  // Validation message element
-  const validationMsg = document.createElement('div')
-  validationMsg.className = 'text-sm text-error'
-  validationMsg.style.cssText = 'padding:0 1rem;display:none'
-  el.insertBefore(validationMsg, bottomBar)
 
   function showValidation(msg: string) {
-    validationMsg.textContent = msg
-    validationMsg.style.display = 'block'
-    setTimeout(() => { validationMsg.style.display = 'none' }, 3000)
+    validationText.val = msg
+    if (validationTimer) clearTimeout(validationTimer)
+    validationTimer = setTimeout(() => { validationText.val = '' }, 3000)
   }
 
   async function handleCreate() {
-    if (creating) return
-    const name = groupName.trim()
-    if (!name) {
-      showValidation('Please enter a group name')
-      nameInput.focus()
-      return
-    }
-    if (selectedMembers.length < 2) {
-      showValidation('Add at least 2 members to create a group')
-      return
-    }
+    if (creating.val) return
+    const name = groupName.val.trim()
+    if (!name) { showValidation('Please enter a group name'); nameInput.focus(); return }
+    if (selectedMembers.val.length < 2) { showValidation('Add at least 2 members to create a group'); return }
 
     const { forumlineClient } = forumlineStore.get()
     if (!forumlineClient) return
 
-    creating = true
+    creating.val = true
     createBtn.textContent = 'Creating...'
-
     try {
-      const convo = await forumlineClient.createGroupConversation(
-        selectedMembers.map(m => m.id),
-        name,
-      )
+      const convo = await forumlineClient.createGroupConversation(selectedMembers.val.map(m => m.id), name)
       onCreated(convo.id)
     } catch (err) {
       console.error('[Forumline:DM] Failed to create group:', err)
-      creating = false
+      creating.val = false
       createBtn.textContent = 'Create Group'
     }
   }
@@ -234,6 +177,7 @@ export function createDmNewGroup({ forumlineStore, onCreated }: DmNewGroupOption
     el,
     destroy() {
       if (searchTimer) clearTimeout(searchTimer)
+      if (validationTimer) clearTimeout(validationTimer)
     },
   }
 }

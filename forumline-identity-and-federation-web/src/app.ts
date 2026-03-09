@@ -1,5 +1,5 @@
 /*
- * Application root
+ * Application root (Van.js)
  *
  * This file orchestrates the top-level app lifecycle based on authentication state.
  *
@@ -18,6 +18,9 @@ import { createForumlineStore, type ForumlineStore } from './shared/forumline-st
 import { createResetPassword } from './auth/reset-password.js'
 import { createForumlineAuth } from './auth/forumline-auth.js'
 import { createAppLayout } from './shell/app-layout.js'
+import { tags } from './shared/dom.js'
+
+const { div } = tags
 
 export const forumlineAuth = new GoTrueAuthClient()
 
@@ -32,11 +35,8 @@ export function createApp(root: HTMLElement) {
   function renderLoading() {
     cleanup()
     root.innerHTML = ''
-    const screen = document.createElement('div')
-    screen.className = 'loading-screen'
-    const spinner = document.createElement('div')
-    spinner.className = 'spinner'
-    screen.appendChild(spinner)
+    const screen = div({ class: 'loading-screen' }) as HTMLElement
+    screen.appendChild(div({ class: 'spinner' }) as HTMLElement)
     root.appendChild(screen)
   }
 
@@ -57,8 +57,7 @@ export function createApp(root: HTMLElement) {
   function renderAuth() {
     cleanup()
     root.innerHTML = ''
-    const page = document.createElement('div')
-    page.className = 'auth-page'
+    const page = div({ class: 'auth-page' }) as HTMLElement
     const { el } = createForumlineAuth({ auth: forumlineAuth })
     page.appendChild(el)
     root.appendChild(page)
@@ -68,7 +67,6 @@ export function createApp(root: HTMLElement) {
     cleanup()
     root.innerHTML = ''
 
-    // Init Forumline store with the direct session
     forumlineStore.init({
       access_token: session.access_token,
       user_id: session.user.id,
@@ -85,22 +83,13 @@ export function createApp(root: HTMLElement) {
   }
 
   function renderForSession(session: ForumlineSession | null) {
-    if (passwordRecovery) {
-      renderResetPassword()
-      return
-    }
-    if (!session) {
-      renderAuth()
-      return
-    }
+    if (passwordRecovery) { renderResetPassword(); return }
+    if (!session) { renderAuth(); return }
     renderApp(session)
   }
 
   function cleanup() {
-    if (currentDestroy) {
-      currentDestroy()
-      currentDestroy = null
-    }
+    if (currentDestroy) { currentDestroy(); currentDestroy = null }
   }
 
   let currentSession: ForumlineSession | null = null
@@ -109,7 +98,6 @@ export function createApp(root: HTMLElement) {
 
   renderLoading()
 
-  // Check for URL hash tokens (password recovery links)
   forumlineAuth.restoreSessionFromUrl()
 
   const unsubscribe = forumlineAuth.onAuthStateChange((event, session) => {
@@ -126,14 +114,12 @@ export function createApp(root: HTMLElement) {
         hasRenderedApp = !!session
       }
     } else {
-      // SIGNED_OUT or other events
       hasRenderedApp = false
       forumStore.clear()
       renderForSession(session)
     }
   })
 
-  // Return top-level cleanup
   return () => {
     unsubscribe()
     cleanup()

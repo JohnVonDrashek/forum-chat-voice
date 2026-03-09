@@ -1,5 +1,5 @@
 /*
- * New 1:1 message user picker
+ * New 1:1 message user picker (Van.js)
  *
  * This file lets users start a new direct message by searching for and selecting a Forumline user.
  *
@@ -13,7 +13,10 @@
  */
 import type { ForumlineStore } from '../shared/forumline-store.js'
 import type { ForumlineProfile } from '@johnvondrashek/forumline-protocol'
+import { tags, state } from '../shared/dom.js'
 import { createAvatar, createInput, createSpinner } from '../shared/ui.js'
+
+const { div, button } = tags
 
 interface DmNewMessageOptions {
   forumlineStore: ForumlineStore
@@ -21,102 +24,66 @@ interface DmNewMessageOptions {
 }
 
 export function createDmNewMessage({ forumlineStore, onSelectUser }: DmNewMessageOptions) {
-  let searchQuery = ''
-  let results: ForumlineProfile[] = []
-  let searching = false
+  const searchQuery = state('')
+  const results = state<ForumlineProfile[]>([])
+  const searching = state(false)
   let searchTimer: ReturnType<typeof setTimeout> | null = null
 
-  const el = document.createElement('div')
-  el.className = 'flex flex-col'
-  el.style.height = '100%'
+  const el = div({ class: 'flex flex-col', style: 'height:100%' }) as HTMLElement
 
-  // Search input
-  const searchWrap = document.createElement('div')
-  searchWrap.className = 'p-lg'
   const input = createInput({ type: 'text', placeholder: 'Search Forumline users...', autofocus: true })
   input.addEventListener('input', () => {
-    searchQuery = input.value
+    searchQuery.val = input.value
     if (searchTimer) clearTimeout(searchTimer)
-    if (!searchQuery.trim()) {
-      results = []
-      renderResults()
+    if (!searchQuery.val.trim()) {
+      results.val = []
       return
     }
     searchTimer = setTimeout(doSearch, 300)
   })
-  searchWrap.appendChild(input)
-  el.appendChild(searchWrap)
-
-  // Results container
-  const resultsEl = document.createElement('div')
-  resultsEl.className = 'flex-1 overflow-y-auto'
-  el.appendChild(resultsEl)
+  el.appendChild(div({ class: 'p-lg' }, input) as HTMLElement)
 
   async function doSearch() {
     const { forumlineClient } = forumlineStore.get()
-    if (!forumlineClient || !searchQuery.trim()) return
-
-    searching = true
-    renderResults()
-
+    if (!forumlineClient || !searchQuery.val.trim()) return
+    searching.val = true
     try {
-      results = await forumlineClient.searchProfiles(searchQuery)
+      results.val = await forumlineClient.searchProfiles(searchQuery.val)
     } catch (err) {
       console.error('[Forumline:DM] Profile search failed:', err)
-      results = []
+      results.val = []
     }
-
-    searching = false
-    renderResults()
+    searching.val = false
   }
 
-  function renderResults() {
-    resultsEl.innerHTML = ''
-
-    if (searching) {
-      const spinnerWrap = document.createElement('div')
-      spinnerWrap.className = 'flex items-center justify-center'
-      spinnerWrap.style.paddingTop = '2rem'
-      spinnerWrap.appendChild(createSpinner(true))
-      resultsEl.appendChild(spinnerWrap)
-      return
-    }
-
-    if (searchQuery.trim() && results.length === 0) {
-      const p = document.createElement('div')
-      p.className = 'text-center text-sm text-muted'
-      p.style.padding = '0.75rem 1rem'
-      p.textContent = 'No Forumline users found'
-      resultsEl.appendChild(p)
-      return
-    }
-
-    for (const profile of results) {
-      const btn = document.createElement('button')
-      btn.className = 'conversation-item'
-
-      btn.appendChild(createAvatar({ avatarUrl: profile.avatar_url, seed: profile.username, size: 40 }))
-
-      const info = document.createElement('div')
-      info.className = 'min-w-0'
-      const name = document.createElement('div')
-      name.className = 'font-medium text-white'
-      name.textContent = profile.display_name || profile.username
-      const username = document.createElement('div')
-      username.className = 'text-sm text-muted'
-      username.textContent = `@${profile.username}`
-      info.append(name, username)
-      btn.appendChild(info)
-
-      btn.addEventListener('click', () => onSelectUser(profile.id))
-      resultsEl.appendChild(btn)
-    }
-  }
+  const resultsEl = div({ class: 'flex-1 overflow-y-auto' },
+    () => {
+      if (searching.val) {
+        const wrap = div({ class: 'flex items-center justify-center', style: 'padding-top:2rem' }) as HTMLElement
+        wrap.appendChild(createSpinner(true))
+        return wrap
+      }
+      if (searchQuery.val.trim() && results.val.length === 0) {
+        return div({ class: 'text-center text-sm text-muted', style: 'padding:0.75rem 1rem' }, 'No Forumline users found')
+      }
+      const container = div() as HTMLElement
+      for (const profile of results.val) {
+        const btn = button({ class: 'conversation-item', onclick: () => onSelectUser(profile.id) }) as HTMLElement
+        btn.appendChild(createAvatar({ avatarUrl: profile.avatar_url, seed: profile.username, size: 40 }))
+        const info = div({ class: 'min-w-0' },
+          div({ class: 'font-medium text-white' }, profile.display_name || profile.username),
+          div({ class: 'text-sm text-muted' }, `@${profile.username}`),
+        )
+        btn.appendChild(info as HTMLElement)
+        container.appendChild(btn)
+      }
+      return container
+    },
+  ) as HTMLElement
+  el.appendChild(resultsEl)
 
   return {
     el,
-    destroy() {
-      if (searchTimer) clearTimeout(searchTimer)
-    },
+    destroy() { if (searchTimer) clearTimeout(searchTimer) },
   }
 }

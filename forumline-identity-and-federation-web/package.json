@@ -9,7 +9,8 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@johnvondrashek/forumline-protocol": "workspace:*"
+    "@johnvondrashek/forumline-protocol": "workspace:*",
+    "vanjs-core": "^1.6.0"
   },
   "devDependencies": {
     "@tauri-apps/api": "^2.10.1",

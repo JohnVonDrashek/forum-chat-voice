@@ -1,5 +1,5 @@
 /*
- * Voice call overlay
+ * Voice call overlay (Van.js)
  *
  * This file renders the user-facing UI for 1:1 voice calls across the entire app.
  *
@@ -25,15 +25,18 @@ import {
   type CallState,
   type CallInfo,
 } from './call-manager.js'
+import { tags, state, derive, html } from '../shared/dom.js'
 import { createAvatar } from '../shared/ui.js'
 import { playRingtone } from './call-ringtone.js'
 
-export function createCallOverlay() {
-  const el = document.createElement('div')
+const { div, span, button } = tags
 
-  let currentState: CallState = 'idle'
-  let currentInfo: CallInfo | null = null
-  let callDuration = 0
+export function createCallOverlay() {
+  const currentState = state<CallState>('idle')
+  const currentInfo = state<CallInfo | null>(null)
+  const callDuration = state(0)
+  const muted = state(false)
+
   let durationInterval: ReturnType<typeof setInterval> | null = null
   let stopRingtone: (() => void) | null = null
 
@@ -43,177 +46,149 @@ export function createCallOverlay() {
     return `${m}:${s.toString().padStart(2, '0')}`
   }
 
-  function applyFullScreenStyle() {
-    el.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;display:flex;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;gap:1.5rem'
+  function startDurationTimer() {
+    if (durationInterval) clearInterval(durationInterval)
+    durationInterval = setInterval(() => {
+      callDuration.val++
+    }, 1000)
   }
 
-  function applyBarStyle() {
-    el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;align-items:center;gap:0.75rem;padding:0.5rem 1rem;background:var(--color-green, #22c55e);color:white;font-size:0.875rem;cursor:pointer'
+  function stopDurationTimer() {
+    if (durationInterval) { clearInterval(durationInterval); durationInterval = null }
   }
 
-  function render() {
-    el.innerHTML = ''
+  function renderActiveBar(info: CallInfo): HTMLElement {
+    return div(
+      {
+        style: 'display:flex;align-items:center;gap:0.75rem;padding:0.5rem 1rem;cursor:pointer',
+      },
+      span({ style: 'font-weight:600' }, () => formatDuration(callDuration.val)),
+      span(
+        { style: 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' },
+        info.remoteDisplayName,
+      ),
+      button(
+        {
+          style: () =>
+            'background:none;border:none;color:white;cursor:pointer;padding:0.25rem;opacity:' +
+            (muted.val ? '0.5' : '1'),
+          title: () => (muted.val ? 'Unmute' : 'Mute'),
+          onclick: (e: MouseEvent) => {
+            e.stopPropagation()
+            toggleMute()
+            muted.val = isMuted()
+          },
+        },
+        () => html(muted.val ? muteOffIconSm : muteIconSm),
+      ),
+      button(
+        {
+          style:
+            'background:#ef4444;border:none;color:white;cursor:pointer;padding:0.25rem 0.5rem;border-radius:1rem;font-size:0.75rem;font-weight:600',
+          onclick: (e: MouseEvent) => {
+            e.stopPropagation()
+            endCall()
+          },
+        },
+        'End',
+      ),
+    ) as HTMLElement
+  }
 
-    if (currentState === 'idle' || !currentInfo) {
-      el.style.cssText = 'display:none'
-      if (durationInterval) { clearInterval(durationInterval); durationInterval = null }
-      callDuration = 0
-      return
-    }
-
-    // --- Active call: compact top bar ---
-    if (currentState === 'active') {
-      applyBarStyle()
-
-      // Stop any ringtone
-      if (stopRingtone) { stopRingtone(); stopRingtone = null }
-
-      // Duration
-      const durationEl = document.createElement('span')
-      durationEl.style.fontWeight = '600'
-      durationEl.textContent = formatDuration(callDuration)
-      if (durationInterval) clearInterval(durationInterval)
-      durationInterval = setInterval(() => {
-        callDuration++
-        durationEl.textContent = formatDuration(callDuration)
-      }, 1000)
-      el.appendChild(durationEl)
-
-      // Name
-      const nameEl = document.createElement('span')
-      nameEl.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'
-      nameEl.textContent = currentInfo.remoteDisplayName
-      el.appendChild(nameEl)
-
-      // Mute button (small)
-      const muteBtn = document.createElement('button')
-      muteBtn.style.cssText = 'background:none;border:none;color:white;cursor:pointer;padding:0.25rem;opacity:' + (isMuted() ? '0.5' : '1')
-      muteBtn.title = isMuted() ? 'Unmute' : 'Mute'
-      muteBtn.innerHTML = isMuted() ? muteOffIconSm : muteIconSm
-      muteBtn.addEventListener('click', (e) => {
-        e.stopPropagation()
-        toggleMute()
-        render()
-      })
-      el.appendChild(muteBtn)
-
-      // Hangup button (small)
-      const hangBtn = document.createElement('button')
-      hangBtn.style.cssText = 'background:#ef4444;border:none;color:white;cursor:pointer;padding:0.25rem 0.5rem;border-radius:1rem;font-size:0.75rem;font-weight:600'
-      hangBtn.textContent = 'End'
-      hangBtn.addEventListener('click', (e) => {
-        e.stopPropagation()
-        endCall()
-      })
-      el.appendChild(hangBtn)
-
-      return
-    }
-
-    // --- Ringing states: full-screen overlay ---
-    applyFullScreenStyle()
-
-    // Avatar
-    const avatar = createAvatar({
-      avatarUrl: currentInfo.remoteAvatarUrl,
-      seed: currentInfo.remoteDisplayName,
-      size: 96,
-    })
+  function renderRingingOverlay(info: CallInfo, ringState: 'ringing-outgoing' | 'ringing-incoming'): HTMLElement {
+    const avatar = createAvatar({ avatarUrl: info.remoteAvatarUrl, seed: info.remoteDisplayName, size: 96 })
     avatar.style.borderRadius = '50%'
-    el.appendChild(avatar)
 
-    // Name
-    const name = document.createElement('div')
-    name.style.cssText = 'font-size:1.25rem;font-weight:600;color:white'
-    name.textContent = currentInfo.remoteDisplayName
-    el.appendChild(name)
+    const statusText = ringState === 'ringing-outgoing' ? 'Calling...' : 'Incoming call'
 
-    // Status text
-    const status = document.createElement('div')
-    status.style.cssText = 'font-size:0.875rem;color:rgba(255,255,255,0.6)'
-    el.appendChild(status)
+    const btnRow =
+      ringState === 'ringing-outgoing'
+        ? div({ style: 'display:flex;gap:1.5rem;margin-top:1rem' }, makeCircleBtn('red', hangUpIcon, () => endCall()))
+        : div(
+            { style: 'display:flex;gap:2rem;margin-top:1rem' },
+            makeCircleBtn('red', hangUpIcon, () => declineCall()),
+            makeCircleBtn('green', phoneIcon, () => acceptCall()),
+          )
 
-    if (currentState === 'ringing-outgoing') {
-      status.textContent = 'Calling...'
-
-      const btnRow = document.createElement('div')
-      btnRow.style.cssText = 'display:flex;gap:1.5rem;margin-top:1rem'
-
-      const cancelBtn = makeCircleBtn('red', hangUpIcon)
-      cancelBtn.addEventListener('click', () => endCall())
-      btnRow.appendChild(cancelBtn)
-
-      el.appendChild(btnRow)
-    } else if (currentState === 'ringing-incoming') {
-      status.textContent = 'Incoming call'
-
-      const btnRow = document.createElement('div')
-      btnRow.style.cssText = 'display:flex;gap:2rem;margin-top:1rem'
-
-      const declineBtn = makeCircleBtn('red', hangUpIcon)
-      declineBtn.addEventListener('click', () => declineCall())
-      btnRow.appendChild(declineBtn)
-
-      const acceptBtn = makeCircleBtn('green', phoneIcon)
-      acceptBtn.addEventListener('click', () => acceptCall())
-      btnRow.appendChild(acceptBtn)
-
-      el.appendChild(btnRow)
-    }
+    return div(
+      { style: 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;flex:1' },
+      avatar,
+      div({ style: 'font-size:1.25rem;font-weight:600;color:white' }, info.remoteDisplayName),
+      div({ style: 'font-size:0.875rem;color:rgba(255,255,255,0.6)' }, statusText),
+      btnRow,
+    ) as HTMLElement
   }
+
+  const el = div(
+    {
+      style: () => {
+        const s = currentState.val
+        const info = currentInfo.val
+        if (s === 'idle' || !info) return 'display:none'
+        if (s === 'active')
+          return 'position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;align-items:center;background:var(--color-green, #22c55e);color:white;font-size:0.875rem'
+        return 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;display:flex;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center'
+      },
+    },
+    () => {
+      const s = currentState.val
+      const info = currentInfo.val
+      if (s === 'idle' || !info) return span({ style: 'display:none' })
+      if (s === 'active') return renderActiveBar(info)
+      if (s === 'ringing-outgoing' || s === 'ringing-incoming') return renderRingingOverlay(info, s)
+      return span({ style: 'display:none' })
+    },
+  ) as HTMLElement
 
   const unsub = onCallStateChange((newState, info) => {
-    const prevState = currentState
-    currentState = newState
-    currentInfo = info
+    const prevState = currentState.val
 
-    // Stop ringtone when leaving a ringing state
-    if (prevState !== newState && stopRingtone) {
-      stopRingtone()
-      stopRingtone = null
-    }
+    if (prevState !== newState && stopRingtone) { stopRingtone(); stopRingtone = null }
 
-    // Start ringtone when entering a ringing state
     if (newState === 'ringing-outgoing' && prevState !== 'ringing-outgoing') {
       stopRingtone = playRingtone('outgoing')
     } else if (newState === 'ringing-incoming' && prevState !== 'ringing-incoming') {
       stopRingtone = playRingtone('incoming')
     }
 
-    if (newState !== 'active' && prevState === 'active') {
-      if (durationInterval) { clearInterval(durationInterval); durationInterval = null }
-      callDuration = 0
+    if (newState === 'active' && prevState !== 'active') {
+      callDuration.val = 0
+      muted.val = isMuted()
+      startDurationTimer()
     }
 
-    render()
-  })
+    if (newState !== 'active' && prevState === 'active') {
+      stopDurationTimer()
+      callDuration.val = 0
+    }
 
-  render()
+    if (newState === 'idle') {
+      stopDurationTimer()
+      callDuration.val = 0
+    }
+
+    currentState.val = newState
+    currentInfo.val = info
+  })
 
   return {
     el,
     destroy() {
       unsub()
-      if (durationInterval) clearInterval(durationInterval)
+      stopDurationTimer()
       if (stopRingtone) stopRingtone()
     },
   }
 }
 
-// --- Button helpers ---
-
-function makeCircleBtn(color: string, iconSvg: string): HTMLButtonElement {
-  const btn = document.createElement('button')
-  const bgColors: Record<string, string> = {
-    red: '#ef4444',
-    green: '#22c55e',
-    gray: 'rgba(255,255,255,0.15)',
-    orange: '#f97316',
-  }
-  btn.style.cssText = `width:56px;height:56px;border-radius:50%;border:none;background:${bgColors[color] || bgColors.gray};cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;transition:opacity 0.15s`
-  btn.innerHTML = iconSvg
-  btn.addEventListener('mouseenter', () => { btn.style.opacity = '0.8' })
-  btn.addEventListener('mouseleave', () => { btn.style.opacity = '1' })
+function makeCircleBtn(color: string, iconSvg: string, onclick?: () => void): HTMLButtonElement {
+  const bgColors: Record<string, string> = { red: '#ef4444', green: '#22c55e', gray: 'rgba(255,255,255,0.15)', orange: '#f97316' }
+  const btn = button({
+    style: `width:56px;height:56px;border-radius:50%;border:none;background:${bgColors[color] || bgColors.gray};cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;transition:opacity 0.15s`,
+    onclick,
+    onmouseenter: () => { (btn as HTMLButtonElement).style.opacity = '0.8' },
+    onmouseleave: () => { (btn as HTMLButtonElement).style.opacity = '1' },
+  }, html(iconSvg)) as HTMLButtonElement
   return btn
 }
 

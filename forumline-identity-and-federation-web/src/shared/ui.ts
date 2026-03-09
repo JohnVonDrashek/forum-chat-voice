@@ -1,5 +1,5 @@
 /*
- * Shared UI component factories
+ * Shared UI component factories (Van.js)
  *
  * This file provides reusable, styled UI primitives used across the entire Forumline app.
  *
@@ -12,6 +12,11 @@
  * - Provide a toast notification system that stacks messages at the bottom of the screen
  * - Support error, success, and info toast variants with auto-dismiss
  */
+import type { PropValueOrDerived } from 'vanjs-core'
+import { tags } from './dom.js'
+
+const { div, button, img, span } = tags
+
 /** Create a styled button element. */
 export function createButton(opts: {
   text?: string
@@ -23,15 +28,17 @@ export function createButton(opts: {
   title?: string
   onClick?: (e: MouseEvent) => void
 }): HTMLButtonElement {
-  const btn = document.createElement('button')
-  btn.type = opts.type ?? 'button'
   const variant = opts.variant ?? 'primary'
-  btn.className = `btn btn--${variant}${opts.className ? ` ${opts.className}` : ''}`
+  const props: Record<string, PropValueOrDerived> = {
+    type: opts.type ?? 'button',
+    class: `btn btn--${variant}${opts.className ? ` ${opts.className}` : ''}`,
+  }
+  if (opts.disabled) props.disabled = true
+  if (opts.title) props.title = opts.title
+  if (opts.onClick) props.onclick = opts.onClick
+  const btn = button(props) as HTMLButtonElement
   if (opts.text) btn.textContent = opts.text
   if (opts.html) btn.innerHTML = opts.html
-  if (opts.disabled) btn.disabled = true
-  if (opts.title) btn.title = opts.title
-  if (opts.onClick) btn.addEventListener('click', opts.onClick)
   return btn
 }
 
@@ -45,22 +52,22 @@ export function createInput(opts?: {
   className?: string
   autofocus?: boolean
 }): HTMLInputElement {
-  const input = document.createElement('input')
-  input.type = opts?.type ?? 'text'
-  input.className = `input${opts?.className ? ` ${opts.className}` : ''}`
-  if (opts?.placeholder) input.placeholder = opts.placeholder
-  if (opts?.value) input.value = opts.value
-  if (opts?.required) input.required = true
-  if (opts?.minLength) input.minLength = opts.minLength
-  if (opts?.autofocus) input.autofocus = true
-  return input
+  const props: Record<string, PropValueOrDerived> = {
+    type: opts?.type ?? 'text',
+    class: `input${opts?.className ? ` ${opts.className}` : ''}`,
+  }
+  if (opts?.placeholder) props.placeholder = opts.placeholder
+  if (opts?.value) props.value = opts.value
+  if (opts?.required) props.required = true
+  if (opts?.minLength) props.minlength = opts.minLength
+  if (opts?.autofocus) props.autofocus = true
+  const el = tags.input(props) as HTMLInputElement
+  return el
 }
 
 /** Create a styled card element. */
 export function createCard(className?: string): HTMLDivElement {
-  const div = document.createElement('div')
-  div.className = `card${className ? ` ${className}` : ''}`
-  return div
+  return div({ class: `card${className ? ` ${className}` : ''}` }) as HTMLDivElement
 }
 
 /** Create an avatar element (img with DiceBear fallback). */
@@ -73,30 +80,27 @@ export function createAvatar(opts: {
   const src = opts.avatarUrl || (opts.seed ? `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(opts.seed)}&size=256` : null)
 
   if (src) {
-    const img = document.createElement('img')
-    img.src = src
-    img.alt = ''
-    img.loading = 'lazy'
-    img.decoding = 'async'
-    img.className = 'avatar'
-    img.style.width = `${size}px`
-    img.style.height = `${size}px`
-    return img
+    return img({
+      src,
+      alt: '',
+      loading: 'lazy',
+      decoding: 'async',
+      class: 'avatar',
+      style: `width:${size}px;height:${size}px`,
+    }) as HTMLElement
   }
 
-  const div = document.createElement('div')
-  div.className = 'avatar--placeholder'
-  div.style.width = `${size}px`
-  div.style.height = `${size}px`
-  div.innerHTML = `<svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>`
-  return div
+  const el = div({
+    class: 'avatar--placeholder',
+    style: `width:${size}px;height:${size}px`,
+  }) as HTMLElement
+  el.innerHTML = `<svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>`
+  return el
 }
 
 /** Create a loading spinner. */
 export function createSpinner(small?: boolean): HTMLDivElement {
-  const div = document.createElement('div')
-  div.className = small ? 'spinner spinner--sm' : 'spinner'
-  return div
+  return div({ class: small ? 'spinner spinner--sm' : 'spinner' }) as HTMLDivElement
 }
 
 /** Show a toast notification. */
@@ -107,8 +111,7 @@ export function showToast(message: string, variant: 'error' | 'success' | 'info'
   logFn(`[Toast:${variant}] ${message}`)
 
   if (!toastContainer) {
-    toastContainer = document.createElement('div')
-    toastContainer.className = 'toast-container'
+    toastContainer = div({ class: 'toast-container' }) as HTMLElement
     document.body.appendChild(toastContainer)
   }
 
@@ -118,8 +121,7 @@ export function showToast(message: string, variant: 'error' | 'success' | 'info'
     info: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
   }
 
-  const toast = document.createElement('div')
-  toast.className = `toast toast--${variant}`
+  const toast = div({ class: `toast toast--${variant}` }) as HTMLElement
   toast.innerHTML = `
     <svg class="toast__icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icons[variant]}</svg>
     <span class="toast__text">${message}</span>

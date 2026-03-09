@@ -1,5 +1,5 @@
 /*
- * Settings page
+ * Settings page (Van.js)
  *
  * This file provides the user's account and forum management settings.
  *
@@ -21,7 +21,10 @@ import type { ForumStore } from '../forums/forum-store.js'
 import type { ForumlineStore } from '../shared/forumline-store.js'
 import { createForumlineAuth } from '../auth/forumline-auth.js'
 import { createSiteManager } from './site-manager.js'
+import { tags, html, state } from '../shared/dom.js'
 import { createAvatar, createButton, createCard } from '../shared/ui.js'
+
+const { div, h1, h2, p } = tags
 
 interface SettingsPageOptions {
   forumlineSession: ForumlineSession | null
@@ -32,36 +35,23 @@ interface SettingsPageOptions {
 }
 
 export function createSettingsPage({ forumlineSession, forumStore, forumlineStore, auth, onClose }: SettingsPageOptions) {
-  let memberships: { forum_domain: string; notifications_muted: boolean }[] = []
-  let removingDomain: string | null = null
+  const membershipsState = state<{ forum_domain: string; notifications_muted: boolean }[]>([])
   let avatarUrl: string | null = null
   let siteManagerChild: { el: HTMLElement; destroy: () => void } | null = null
-  let ownedSites: Map<string, string> = new Map() // domain -> slug
+  let ownedSites: Map<string, string> = new Map()
 
-  const el = document.createElement('div')
-  el.className = 'page-scroll'
+  const el = div({ class: 'page-scroll' }) as HTMLElement
+  const settingsWrapper = div() as HTMLElement
 
-  // Wrapper for the main settings content (hidden when site manager is open)
-  const settingsWrapper = document.createElement('div')
-
-  // ---- Persistent DOM structure ----
   // Header
-  const header = document.createElement('div')
-  header.className = 'settings-header'
-  const backBtn = document.createElement('button')
-  backBtn.className = 'btn--icon'
-  backBtn.innerHTML = `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>`
-  backBtn.addEventListener('click', onClose)
-  header.appendChild(backBtn)
-  const title = document.createElement('h1')
-  title.className = 'text-xl font-bold text-white'
-  title.textContent = 'Settings'
-  header.appendChild(title)
+  const header = div({ class: 'settings-header' }) as HTMLElement
+  const backBtn = tags.button({ class: 'btn--icon', onclick: onClose },
+    html(`<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>`),
+  ) as HTMLButtonElement
+  header.append(backBtn, h1({ class: 'text-xl font-bold text-white' }, 'Settings') as HTMLElement)
   settingsWrapper.appendChild(header)
 
-  // Content
-  const content = document.createElement('div')
-  content.className = 'page-content'
+  const content = div({ class: 'page-content' }) as HTMLElement
   settingsWrapper.appendChild(content)
   el.appendChild(settingsWrapper)
 
@@ -85,20 +75,11 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
     el.appendChild(siteManagerChild.el)
   }
 
-  // Forumline account card
+  // Account card
   const accountCard = createCard()
-  const accountTitle = document.createElement('h2')
-  accountTitle.className = 'text-lg font-semibold text-white'
-  accountTitle.textContent = 'Forumline'
-  accountCard.appendChild(accountTitle)
-  const accountSub = document.createElement('p')
-  accountSub.className = 'text-sm text-muted mt-sm'
-  accountSub.textContent = 'Connect to the Forumline for cross-forum direct messages'
-  accountCard.appendChild(accountSub)
-
-  // Forumline profile/auth area (rendered once based on session state)
-  const accountContentArea = document.createElement('div')
-  accountContentArea.className = 'mt-lg'
+  accountCard.appendChild(h2({ class: 'text-lg font-semibold text-white' }, 'Forumline') as HTMLElement)
+  accountCard.appendChild(p({ class: 'text-sm text-muted mt-sm' }, 'Connect to the Forumline for cross-forum direct messages') as HTMLElement)
+  const accountContentArea = div({ class: 'mt-lg' }) as HTMLElement
   accountCard.appendChild(accountContentArea)
   content.appendChild(accountCard)
 
@@ -106,28 +87,21 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
     accountContentArea.innerHTML = ''
     const { isForumlineConnected } = forumlineStore.get()
     if (isForumlineConnected && forumlineSession) {
-      const profileRow = document.createElement('div')
-      profileRow.className = 'settings-profile-row'
+      const profileRow = div({ class: 'settings-profile-row' }) as HTMLElement
       profileRow.appendChild(createAvatar({
         avatarUrl,
         seed: forumlineSession.user.user_metadata?.username as string || forumlineSession.user.email || undefined,
         size: 40,
       }))
-      const info = document.createElement('div')
-      info.className = 'flex-1'
-      const name = document.createElement('p')
-      name.className = 'font-medium text-white'
-      name.textContent = (forumlineSession.user.user_metadata?.username as string) || forumlineSession.user.email || ''
-      const emailEl = document.createElement('p')
-      emailEl.className = 'text-sm text-muted'
-      emailEl.textContent = forumlineSession.user.email || ''
-      info.append(name, emailEl)
+      const info = div({ class: 'flex-1' }) as HTMLElement
+      info.append(
+        p({ class: 'font-medium text-white' },
+          (forumlineSession.user.user_metadata?.username as string) || forumlineSession.user.email || '',
+        ) as HTMLElement,
+        p({ class: 'text-sm text-muted' }, forumlineSession.user.email || '') as HTMLElement,
+      )
       profileRow.appendChild(info)
-      profileRow.appendChild(createButton({
-        text: 'Sign Out',
-        variant: 'secondary',
-        onClick: () => auth.signOut(),
-      }))
+      profileRow.appendChild(createButton({ text: 'Sign Out', variant: 'secondary', onClick: () => auth.signOut() }))
       accountContentArea.appendChild(profileRow)
     } else {
       const { el: authEl } = createForumlineAuth({ auth })
@@ -137,161 +111,88 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
 
   // Forums card
   const forumsCard = createCard()
-  const forumsTitle = document.createElement('h2')
-  forumsTitle.className = 'text-lg font-semibold text-white'
-  forumsTitle.textContent = 'Forums'
-  forumsCard.appendChild(forumsTitle)
-  const forumsSub = document.createElement('p')
-  forumsSub.className = 'text-sm text-muted mt-sm'
-  forumsSub.textContent = 'Manage your connected forums'
-  forumsCard.appendChild(forumsSub)
-
-  // Forum list container
-  const forumListContainer = document.createElement('div')
-  forumListContainer.style.display = 'flex'
-  forumListContainer.style.flexDirection = 'column'
-  forumListContainer.style.gap = '0.5rem'
-  forumListContainer.style.marginTop = '1rem'
-  forumsCard.appendChild(forumListContainer)
-
-  const forumsEmptyEl = document.createElement('p')
-  forumsEmptyEl.className = 'text-sm text-faint mt-lg'
-  forumsEmptyEl.textContent = 'No forums added yet. Go to Home and tap Add Forum to add one.'
-
-  content.appendChild(forumsCard)
-
-  // Track forum row elements
-  const forumRows = new Map<string, {
-    row: HTMLElement
-    muteBtn: HTMLElement
-    removeBtn: HTMLElement
-  }>()
+  forumsCard.appendChild(h2({ class: 'text-lg font-semibold text-white' }, 'Forums') as HTMLElement)
+  forumsCard.appendChild(p({ class: 'text-sm text-muted mt-sm' }, 'Manage your connected forums') as HTMLElement)
 
   function isMuted(domain: string): boolean {
-    return memberships.find((m) => m.forum_domain === domain)?.notifications_muted ?? false
+    return membershipsState.val.find(m => m.forum_domain === domain)?.notifications_muted ?? false
   }
 
-  function createForumRow(forum: { name: string; domain: string; icon_url?: string; web_base: string }) {
-    const row = document.createElement('div')
-    row.className = 'settings-forum-row'
+  function buildMuteButton(domain: string): HTMLElement {
+    const muted = isMuted(domain)
+    const muteBtn = tags.button({
+      class: 'btn--icon',
+      title: muted ? 'Unmute notifications' : 'Mute notifications',
+      onclick: () => toggleMute(domain, !isMuted(domain)),
+    }) as HTMLButtonElement
+    muteBtn.innerHTML = muted
+      ? `<svg class="icon-sm" style="color:var(--color-text-faint)" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>`
+      : `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>`
+    return muteBtn
+  }
 
-    // Icon
+  function buildForumRow(forum: { name: string; domain: string; icon_url?: string; web_base: string }) {
+    const row = div({ class: 'settings-forum-row' }) as HTMLElement
+
     if (forum.icon_url) {
       const iconSrc = forum.icon_url.startsWith('/') ? `${forum.web_base}${forum.icon_url}` : forum.icon_url
-      const img = document.createElement('img')
-      img.src = iconSrc
-      img.alt = forum.name
-      img.className = 'forum-card__icon'
-      img.addEventListener('error', () => { img.style.display = 'none' })
+      const img = tags.img({ src: iconSrc, alt: forum.name, class: 'forum-card__icon', onerror: () => { img.style.display = 'none' } }) as HTMLImageElement
       row.appendChild(img)
     } else {
-      const fallback = document.createElement('div')
-      fallback.className = 'forum-card__icon-fallback'
-      fallback.textContent = forum.name[0].toUpperCase()
-      row.appendChild(fallback)
+      row.appendChild(div({ class: 'forum-card__icon-fallback' }, forum.name[0].toUpperCase()) as HTMLElement)
     }
 
-    // Info
-    const info = document.createElement('div')
-    info.className = 'flex-1'
-    const name = document.createElement('p')
-    name.className = 'font-medium text-white'
-    name.textContent = forum.name
-    const domain = document.createElement('p')
-    domain.className = 'text-sm text-muted'
-    domain.textContent = forum.domain
-    info.append(name, domain)
+    const info = div({ class: 'flex-1' },
+      p({ class: 'font-medium text-white' }, forum.name),
+      p({ class: 'text-sm text-muted' }, forum.domain),
+    ) as HTMLElement
     row.appendChild(info)
 
-    // Edit Site button (only for forums the user owns on the hosted platform)
     if (ownedSites.has(forum.domain)) {
-      row.appendChild(createButton({
-        text: 'Edit Site',
-        variant: 'ghost',
-        className: 'text-sm',
-        onClick: () => openSiteManager(forum),
-      }))
+      row.appendChild(createButton({ text: 'Edit Site', variant: 'ghost', className: 'text-sm', onClick: () => openSiteManager(forum) }))
     }
 
-    // Mute button
-    const muteBtn = document.createElement('button')
-    muteBtn.className = 'btn--icon'
-    updateMuteButton(muteBtn, forum.domain)
-    muteBtn.addEventListener('click', () => toggleMute(forum.domain, !isMuted(forum.domain)))
-    row.appendChild(muteBtn)
+    row.appendChild(buildMuteButton(forum.domain))
 
-    // Remove button
     const removeBtn = createButton({
       text: 'Remove',
       variant: 'danger',
       className: 'text-sm',
-      onClick: () => handleRemoveForum(forum.domain),
+      onClick: () => handleRemoveForum(forum.domain, removeBtn),
     })
     row.appendChild(removeBtn)
 
-    forumRows.set(forum.domain, { row, muteBtn, removeBtn })
     return row
   }
 
-  function updateMuteButton(muteBtn: HTMLElement, domain: string) {
-    const muted = isMuted(domain)
-    muteBtn.title = muted ? 'Unmute notifications' : 'Mute notifications'
-    muteBtn.innerHTML = muted
-      ? `<svg class="icon-sm" style="color:var(--color-text-faint)" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>`
-      : `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>`
-  }
-
-  function renderForumList() {
-    const { forums } = forumStore.get()
-
-    if (forums.length === 0) {
-      forumListContainer.style.display = 'none'
-      if (!forumsEmptyEl.parentNode) forumsCard.appendChild(forumsEmptyEl)
-      return
-    }
-
-    forumsEmptyEl.remove()
-    forumListContainer.style.display = ''
-
-    const currentDomains = new Set(forums.map(f => f.domain))
-
-    // Remove stale rows
-    for (const [domain, entry] of forumRows) {
-      if (!currentDomains.has(domain)) {
-        entry.row.remove()
-        forumRows.delete(domain)
+  // Reactive forum list — automatically re-renders when forumStore or memberships state changes
+  const reactiveForumList = div(
+    () => {
+      const { forums } = forumStore.state.val
+      void membershipsState.val // read to subscribe to membership changes
+      if (forums.length === 0) {
+        return p({ class: 'text-sm text-faint mt-lg' }, 'No forums added yet. Go to Home and tap Add Forum to add one.') as HTMLElement
       }
-    }
-
-    // Add/reorder rows
-    for (const forum of forums) {
-      if (!forumRows.has(forum.domain)) {
-        createForumRow(forum)
-      }
-      forumListContainer.appendChild(forumRows.get(forum.domain)!.row)
-    }
-  }
+      const container = div({ style: 'display:flex;flex-direction:column;gap:0.5rem;margin-top:1rem' }) as HTMLElement
+      forums.forEach(f => container.appendChild(buildForumRow(f)))
+      return container
+    },
+  ) as HTMLElement
+  forumsCard.appendChild(reactiveForumList)
 
   async function fetchMemberships() {
     try {
       const session = auth.getSession()
       if (!session) return
-      const res = await fetch('/api/memberships', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
+      const res = await fetch('/api/memberships', { headers: { Authorization: `Bearer ${session.access_token}` } })
       if (!res.ok) return
-      memberships = await res.json()
-      // Update mute buttons for all existing rows
-      for (const [domain, entry] of forumRows) {
-        updateMuteButton(entry.muteBtn, domain)
-      }
+      membershipsState.val = await res.json()
     } catch { /* non-critical */ }
   }
 
   async function fetchOwnedSites() {
     const session = auth.getSession()
     if (!session) return
-    // Race all forums in parallel to find the hosted server quickly
     const { forums } = forumStore.get()
     const results = await Promise.allSettled(
       forums.map(async (forum) => {
@@ -300,24 +201,16 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
         })
         if (!res.ok) throw new Error('not found')
         return res.json() as Promise<{ domain: string; slug: string }[]>
-      })
+      }),
     )
     for (const result of results) {
       if (result.status === 'fulfilled' && result.value.length >= 0) {
         ownedSites = new Map(result.value.map(s => [s.domain, s.slug]))
-        rebuildForumRows()
+        // Trigger reactive re-render by re-setting the store state
+        forumStore.set(prev => ({ ...prev }))
         return
       }
     }
-  }
-
-  function rebuildForumRows() {
-    // Clear and rebuild all forum rows so Edit Site buttons reflect ownership
-    for (const [, entry] of forumRows) {
-      entry.row.remove()
-    }
-    forumRows.clear()
-    renderForumList()
   }
 
   async function fetchAvatar() {
@@ -326,82 +219,42 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
     try {
       const session = auth.getSession()
       if (!session) return
-      // Use the identity endpoint to get profile info including avatar
-      const res = await fetch('/api/identity', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
+      const res = await fetch('/api/identity', { headers: { Authorization: `Bearer ${session.access_token}` } })
       if (!res.ok) return
       const data = await res.json()
-      if (data.avatar_url) {
-        avatarUrl = data.avatar_url
-        renderHubContent()
-      }
+      if (data.avatar_url) { avatarUrl = data.avatar_url; renderHubContent() }
     } catch { /* ignore */ }
   }
 
   async function toggleMute(forumDomain: string, muted: boolean) {
-    // Optimistic update
-    memberships = memberships.map((m) =>
-      m.forum_domain === forumDomain ? { ...m, notifications_muted: muted } : m,
-    )
-    const entry = forumRows.get(forumDomain)
-    if (entry) updateMuteButton(entry.muteBtn, forumDomain)
-
+    membershipsState.val = membershipsState.val.map(m => m.forum_domain === forumDomain ? { ...m, notifications_muted: muted } : m)
     try {
       const session = auth.getSession()
       if (!session) throw new Error('No session')
       const res = await fetch('/api/memberships', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ forum_domain: forumDomain, muted }),
       })
       if (!res.ok) throw new Error('Failed to toggle mute')
     } catch {
-      // Revert
-      memberships = memberships.map((m) =>
-        m.forum_domain === forumDomain ? { ...m, notifications_muted: !muted } : m,
-      )
-      if (entry) updateMuteButton(entry.muteBtn, forumDomain)
+      membershipsState.val = membershipsState.val.map(m => m.forum_domain === forumDomain ? { ...m, notifications_muted: !muted } : m)
     }
   }
 
-  async function handleRemoveForum(domain: string) {
-    removingDomain = domain
-    const entry = forumRows.get(domain)
-    if (entry) {
-      (entry.removeBtn as HTMLButtonElement).disabled = true
-      entry.removeBtn.textContent = 'Removing...'
-    }
-    try {
-      forumStore.removeForum(domain)
-      // Row will be removed by the store subscription triggering renderForumList
-    } finally {
-      removingDomain = null
-    }
+  function handleRemoveForum(domain: string, removeBtn: HTMLElement) {
+    (removeBtn as HTMLButtonElement).disabled = true
+    removeBtn.textContent = 'Removing...'
+    forumStore.removeForum(domain)
   }
 
-  // Only re-render forum list when forums array actually changes
-  let prevForums = forumStore.get().forums
-  const unsub = forumStore.subscribe(() => {
-    const { forums } = forumStore.get()
-    if (forums !== prevForums) {
-      prevForums = forums
-      renderForumList()
-    }
-  })
-
-  // Init
   renderHubContent()
-  renderForumList()
   fetchMemberships()
   fetchAvatar()
   fetchOwnedSites()
 
   return {
     el,
-    destroy() { unsub(); siteManagerChild?.destroy() },
+    destroy() { siteManagerChild?.destroy() },
   }
 }

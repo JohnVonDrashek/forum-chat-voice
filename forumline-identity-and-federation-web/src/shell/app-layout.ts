@@ -33,6 +33,9 @@ import { subscribeDmEvents } from '../dms/dm-sse.js'
 import { initCallManager, destroyCallManager } from '../calls/call-manager.js'
 import { createCallOverlay } from '../calls/call-overlay.js'
 import { warmAudioContext } from '../calls/call-ringtone.js'
+import { tags, html } from '../shared/dom.js'
+
+const { div } = tags
 
 /** Persist auth state change to Forumline DB */
 async function updateForumAuthState(auth: GoTrueAuthClient, forumDomain: string, authed: boolean) {
@@ -79,18 +82,13 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
   let tabBarInstance: ReturnType<typeof createMobileTabBar> | null = null
 
   // View containers — persistent wrappers for each view
-  const forumContainer = document.createElement('div')
-  forumContainer.className = 'flex flex-col flex-1 overflow-hidden'
+  const forumContainer = div({ class: 'flex flex-col flex-1 overflow-hidden' }) as HTMLDivElement
 
   const cleanups: (() => void)[] = []
 
   // Root element
-  const root = document.createElement('div')
-  root.className = 'app-root'
-
-  const mainArea = document.createElement('div')
-  mainArea.className = 'app-main'
-  root.appendChild(mainArea)
+  const mainArea = div({ class: 'app-main' }) as HTMLDivElement
+  const root = div({ class: 'app-root' }, mainArea) as HTMLDivElement
 
   // Tab bar
   tabBarInstance = createMobileTabBar({
@@ -288,28 +286,23 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
   function renderForumHeader(): HTMLElement {
     const { activeForum } = forumStore.get()
     if (!forumHeaderEl) {
-      forumHeaderEl = document.createElement('div')
-      forumHeaderEl.className = 'forum-header'
+      forumHeaderEl = div({ class: 'forum-header' }) as HTMLElement
     }
     forumHeaderEl.innerHTML = ''
 
-    const backBtn = document.createElement('button')
-    backBtn.className = 'forum-header__back'
-    backBtn.innerHTML = `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg><span>${activeForum?.name ?? ''}</span>`
-    backBtn.addEventListener('click', () => forumStore.goHome())
-    forumHeaderEl.appendChild(backBtn)
+    const backBtn = tags.button({ class: 'forum-header__back', onclick: () => forumStore.goHome() },
+      html(`<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>`),
+      tags.span(activeForum?.name ?? ''),
+    )
 
-    const shareBtn = document.createElement('button')
-    shareBtn.className = 'forum-header__share'
-    shareBtn.title = 'Copy link to this page'
-    if (copied) {
-      shareBtn.innerHTML = `<svg class="icon-sm" style="color:var(--color-green)" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`
-    } else {
-      shareBtn.innerHTML = `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>`
-    }
-    shareBtn.addEventListener('click', handleShare)
-    forumHeaderEl.appendChild(shareBtn)
+    const shareIcon = copied
+      ? `<svg class="icon-sm" style="color:var(--color-green)" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`
+      : `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>`
+    const shareBtn = tags.button({ class: 'forum-header__share', title: 'Copy link to this page', onclick: handleShare },
+      html(shareIcon),
+    )
 
+    forumHeaderEl.append(backBtn, shareBtn)
     return forumHeaderEl
   }
 
