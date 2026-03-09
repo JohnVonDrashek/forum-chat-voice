@@ -18,7 +18,7 @@ const ICE_SERVERS = [
  */
 async function acquireMic(): Promise<MediaStream> {
   try {
-    return await acquireMic()
+    return await navigator.mediaDevices.getUserMedia({ audio: true })
   } catch {
     // No mic available — generate a silent audio stream so the call
     // flow (signaling, UI, WebRTC negotiation) still works.
