@@ -72,7 +72,7 @@ func (h *SSEHub) listenAll(ctx context.Context) {
 		log.Printf("SSEHub: failed to connect for LISTEN: %v", err)
 		return
 	}
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 
 	for _, channel := range h.channels {
 		_, err = conn.Exec(ctx, fmt.Sprintf("LISTEN %s", channel))
@@ -176,7 +176,7 @@ func ServeSSE(w http.ResponseWriter, r *http.Request, client *SSEClient) {
 		case <-client.Done:
 			return
 		case data := <-client.Send:
-			fmt.Fprintf(w, "data: %s\n\n", data)
+			_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
 			flusher.Flush()
 		}
 	}

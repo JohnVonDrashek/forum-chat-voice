@@ -812,7 +812,7 @@ func sendPushNotifications(ctx context.Context, pool *pgxpool.Pool, userID, titl
 			if err != nil {
 				return
 			}
-			resp.Body.Close()
+			_ = resp.Body.Close()
 
 			if resp.StatusCode == 410 || resp.StatusCode == 404 {
 				mu.Lock()
@@ -854,7 +854,7 @@ func fetchForumManifest(domain string) (*forumManifest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch manifest: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("manifest returned status %d", resp.StatusCode)

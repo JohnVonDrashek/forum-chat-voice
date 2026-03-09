@@ -1,13 +1,15 @@
+version: "2"
+
 linters:
   enable:
     - errcheck
     - staticcheck
     - govet
 
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: false
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
 
 issues:
   exclude-dirs:
