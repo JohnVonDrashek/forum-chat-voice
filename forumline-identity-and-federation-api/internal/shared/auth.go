@@ -105,7 +105,7 @@ func fetchJWKS() error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var jwksResp struct {
 		Keys []struct {

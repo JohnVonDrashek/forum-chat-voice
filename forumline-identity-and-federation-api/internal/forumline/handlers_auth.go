@@ -44,7 +44,7 @@ func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "auth service unavailable"})
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -165,7 +165,7 @@ func (h *Handlers) HandleSignup(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "auth service unavailable"})
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -307,7 +307,7 @@ func deleteGoTrueUser(userID string) {
 		slog.Error("deleteGoTrueUser: request failed", "err", err)
 		return
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func extractTokenFromRequest(r *http.Request) string {
