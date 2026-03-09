@@ -16,12 +16,13 @@
  * - Provide mute/unmute toggle for the local microphone
  * - Fall back to a synthetic silent audio stream when no microphone is available
  * - Show native Tauri notifications with accept/decline actions for incoming calls on desktop
- * - Notify all registered UI listeners when call state changes
+ * - Expose a VanX reactive object so UI consumers can bind directly to call state
  * - Clean up all WebRTC, media, and SSE resources when a call ends
  */
 import { forumlineAuth } from '../app.js'
 import type { ForumlineStore } from '../shared/forumline-store.js'
 import { isTauri, getTauriNotification } from '../shared/tauri.js'
+import { reactive, noreactive } from 'vanjs-ext'
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -60,10 +61,16 @@ export interface CallInfo {
   remoteAvatarUrl: string | null
 }
 
-export type CallStateListener = (state: CallState, info: CallInfo | null) => void
+// --- Reactive state (UI reads from this directly) ---
 
-let state: CallState = 'idle'
-let callInfo: CallInfo | null = null
+export const callState = reactive({
+  state: 'idle' as CallState,
+  callInfo: null as CallInfo | null,
+  muted: false,
+})
+
+// --- Non-reactive module variables (WebRTC, media, timers) ---
+
 let pc: RTCPeerConnection | null = null
 let localStream: MediaStream | null = null
 let remoteAudioEl: HTMLAudioElement | null = null
@@ -77,7 +84,6 @@ let webrtcStarted = false
 let signalQueue: Promise<void> = Promise.resolve()
 let iceRestartAttempted = false
 
-const listeners = new Set<CallStateListener>()
 let tauriActionCleanup: (() => void) | null = null
 
 const CALL_NOTIFICATION_ID = 99001
@@ -162,20 +168,9 @@ async function dismissNativeCallNotification() {
   } catch {}
 }
 
-export function onCallStateChange(fn: CallStateListener): () => void {
-  listeners.add(fn)
-  fn(state, callInfo)
-  return () => listeners.delete(fn)
-}
-
-function notify() {
-  for (const fn of listeners) fn(state, callInfo)
-}
-
-function setState(newState: CallState, info: CallInfo | null = callInfo) {
-  state = newState
-  callInfo = info
-  notify()
+function setState(newState: CallState, info: CallInfo | null = callState.callInfo) {
+  callState.state = newState
+  callState.callInfo = info ? noreactive(info) : null
 }
 
 // --- SSE for incoming call signals ---
@@ -219,7 +214,7 @@ async function handleSignal(signal: any) {
   const { type } = signal
 
   if (type === 'incoming_call') {
-    if (state !== 'idle') return // busy
+    if (callState.state !== 'idle') return // busy
     setState('ringing-incoming', {
       callId: signal.call_id,
       conversationId: signal.conversation_id,
@@ -232,13 +227,13 @@ async function handleSignal(signal: any) {
 
     // Auto-dismiss after 30s
     callTimer = setTimeout(() => {
-      if (state === 'ringing-incoming') cleanup()
+      if (callState.state === 'ringing-incoming') cleanup()
     }, 30000)
     return
   }
 
   if (type === 'call_accepted') {
-    if (state !== 'ringing-outgoing') return
+    if (callState.state !== 'ringing-outgoing') return
     setState('active')
     await startWebRTC(true)
     return
@@ -289,7 +284,7 @@ async function handleSignal(signal: any) {
 // --- Outgoing call ---
 
 export async function initiateCall(conversationId: string, remoteUserId: string, remoteDisplayName: string, remoteAvatarUrl: string | null) {
-  if (state !== 'idle') return
+  if (callState.state !== 'idle') return
   const { forumlineClient } = forumlineStore!.get()
   if (!forumlineClient) return
 
@@ -314,7 +309,7 @@ export async function initiateCall(conversationId: string, remoteUserId: string,
 
     // Auto-cancel after 30s if not answered
     callTimer = setTimeout(() => {
-      if (state === 'ringing-outgoing') endCall()
+      if (callState.state === 'ringing-outgoing') endCall()
     }, 30000)
   } catch (err: any) {
     console.error('[Call] Failed to initiate call:', err)
@@ -329,7 +324,7 @@ export async function initiateCall(conversationId: string, remoteUserId: string,
 // --- Respond to incoming call ---
 
 export async function acceptCall() {
-  if (state !== 'ringing-incoming' || !callInfo) return
+  if (callState.state !== 'ringing-incoming' || !callState.callInfo) return
   const { forumlineClient } = forumlineStore!.get()
   if (!forumlineClient) return
 
@@ -349,7 +344,7 @@ export async function acceptCall() {
   }
 
   try {
-    await forumlineClient.respondToCall(callInfo.callId, 'accept')
+    await forumlineClient.respondToCall(callState.callInfo.callId, 'accept')
     setState('active')
     // We are the callee — DON'T start WebRTC here.
     // The offer will arrive via SSE and the offer handler will call startWebRTC(false).
@@ -361,14 +356,14 @@ export async function acceptCall() {
 }
 
 export async function declineCall() {
-  if (state !== 'ringing-incoming' || !callInfo) return
+  if (callState.state !== 'ringing-incoming' || !callState.callInfo) return
   const { forumlineClient } = forumlineStore!.get()
   if (!forumlineClient) return
 
   if (callTimer) { clearTimeout(callTimer); callTimer = null }
 
   try {
-    await forumlineClient.respondToCall(callInfo.callId, 'decline')
+    await forumlineClient.respondToCall(callState.callInfo.callId, 'decline')
   } catch {}
   cleanup()
 }
@@ -376,35 +371,30 @@ export async function declineCall() {
 // --- End call ---
 
 export async function endCall() {
-  if (!callInfo) return
+  if (!callState.callInfo) return
   const { forumlineClient } = forumlineStore!.get()
   if (!forumlineClient) return
 
   try {
-    await forumlineClient.endCall(callInfo.callId)
+    await forumlineClient.endCall(callState.callInfo.callId)
   } catch {}
   cleanup()
 }
 
 // --- Toggle mute ---
 
-let muted = false
 export function toggleMute(): boolean {
-  muted = !muted
+  callState.muted = !callState.muted
   if (localStream) {
-    localStream.getAudioTracks().forEach(t => { t.enabled = !muted })
+    localStream.getAudioTracks().forEach(t => { t.enabled = !callState.muted })
   }
-  return muted
-}
-
-export function isMuted(): boolean {
-  return muted
+  return callState.muted
 }
 
 // --- WebRTC ---
 
 async function startWebRTC(isInitiator: boolean) {
-  if (!callInfo) return
+  if (!callState.callInfo) return
   if (webrtcStarted) return
   webrtcStarted = true
 
@@ -419,7 +409,7 @@ async function startWebRTC(isInitiator: boolean) {
     }
   }
 
-  muted = false
+  callState.muted = false
 
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
 
@@ -488,12 +478,12 @@ async function startWebRTC(isInitiator: boolean) {
 }
 
 async function sendSignal(type: string, payload: any) {
-  if (!callInfo) return
+  if (!callState.callInfo) return
   const { forumlineClient } = forumlineStore!.get()
   if (!forumlineClient) return
 
   try {
-    await forumlineClient.sendCallSignal(callInfo.callId, callInfo.remoteUserId, type, payload)
+    await forumlineClient.sendCallSignal(callState.callInfo.callId, callState.callInfo.remoteUserId, type, payload)
   } catch (err) {
     console.error('[Call] Failed to send signal:', err)
   }
@@ -518,12 +508,13 @@ function cleanup() {
     remoteAudioEl = null
   }
 
-  muted = false
   webrtcStarted = false
   iceRestartAttempted = false
   pendingCandidates = []
   signalQueue = Promise.resolve()
   setState('idle', null)
+  // Reset muted after setState so the UI sees idle+unmuted together
+  callState.muted = false
 }
 
 export function destroyCallManager() {
@@ -534,8 +525,4 @@ export function destroyCallManager() {
     signalSSE = null
   }
   if (tauriActionCleanup) { tauriActionCleanup(); tauriActionCleanup = null }
-  listeners.clear()
 }
-
-export function getCallState(): CallState { return state }
-export function getCallInfo(): CallInfo | null { return callInfo }

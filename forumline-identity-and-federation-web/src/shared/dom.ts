@@ -10,8 +10,9 @@
  * - Bind event listeners on non-element targets (window, document) with cleanup functions
  */
 import van from 'vanjs-core'
+import * as vanX from 'vanjs-ext'
 
-export { van }
+export { van, vanX }
 export const { add, state, derive } = van
 export const tags = van.tags
 

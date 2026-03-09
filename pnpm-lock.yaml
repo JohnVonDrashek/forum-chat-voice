@@ -29,6 +29,9 @@ importers:
       vanjs-core:
         specifier: ^1.6.0
         version: 1.6.0
+      vanjs-ext:
+        specifier: ^0.6.3
+        version: 0.6.3
     devDependencies:
       '@tauri-apps/api':
         specifier: ^2.10.1
@@ -906,6 +909,9 @@ packages:
   vanjs-core@1.6.0:
     resolution: {integrity: sha512-4KM9mKEji7woioytMNKQ2XrqD31ykG9vde3N1F/gyJJ0oaOSohdeaN2o4UC4Ndu3Raj1SEXWvW7k4etZI8Ovjw==}
 
+  vanjs-ext@0.6.3:
+    resolution: {integrity: sha512-Jmaeqx9nCjelwDVSQEaRtt7R4Y/Kj/zJBG3bZSiIPj8Wtr8nEFRsJX9K5qcGl1o3cGEEFBE9suyoSqs/6tiOBg==}
+
   vite@6.4.1:
     resolution: {integrity: sha512-+Oxm7q9hDoLMyJOYfUYBuHQo+dkAloi33apOPP56pzj+vsdJDzr+j1NISE5pyaAuKL4A3UD34qd0lx5+kfKp2g==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
@@ -1720,6 +1726,10 @@ snapshots:
       punycode: 2.3.1
 
   vanjs-core@1.6.0: {}
+
+  vanjs-ext@0.6.3:
+    dependencies:
+      vanjs-core: 1.6.0
 
   vite@6.4.1(@types/node@25.3.5):
     dependencies:

@@ -8,19 +8,18 @@
  * - Show each conversation's avatar, display name, last message preview, and timestamp
  * - Display unread count badges on conversations with new messages
  * - Distinguish group conversations (group icon) from 1:1 conversations (user avatar)
- * - Update in real-time via SSE when new messages arrive
- * - Fall back to polling every 30 seconds if the SSE connection silently drops
+ * - Update in real-time via the shared dm-store (SSE + poll driven)
  * - Show a loading spinner during the initial fetch
  * - Show an empty state when the user has no conversations yet
  * - Show an error state if the initial load fails
  * - Navigate to the conversation thread when a conversation is tapped
  */
 import type { ForumlineStore } from '../shared/forumline-store.js'
-import type { ForumlineDmConversation, ForumlineConversationMember } from '@johnvondrashek/forumline-protocol'
-import { tags, html, state } from '../shared/dom.js'
+import type { ForumlineConversationMember } from '@johnvondrashek/forumline-protocol'
+import { tags, html } from '../shared/dom.js'
 import { createAvatar, createSpinner } from '../shared/ui.js'
 import { formatShortTimeAgo } from '../shared/dateFormatters.js'
-import { subscribeDmEvents } from './dm-sse.js'
+import { conversations, initialLoad, loadError, startUpdates, type Conversation } from './dm-store.js'
 
 const { div, span, p, button } = tags
 
@@ -29,14 +28,8 @@ interface DmConversationListOptions {
   onSelectConversation: (conversationId: string) => void
 }
 
-type Conversation = ForumlineDmConversation
-
 export function createDmConversationList({ forumlineStore, onSelectConversation }: DmConversationListOptions) {
-  const conversations = state<Conversation[]>([])
-  const initialLoad = state(true)
-  const loadError = state(false)
-
-  let pollInterval: ReturnType<typeof setInterval> | null = null
+  const stopUpdates = startUpdates(forumlineStore)
 
   function getConvoDisplayName(convo: Conversation): string {
     if (convo.isGroup && convo.name) return convo.name
@@ -60,7 +53,7 @@ export function createDmConversationList({ forumlineStore, onSelectConversation 
     return other?.avatarUrl ?? null
   }
 
-  function createConvoButton(convo: Conversation): HTMLElement {
+  function createConvoItem(convo: Conversation): HTMLElement {
     const displayName = getConvoDisplayName(convo)
     const btn = button({ class: 'conversation-item', onclick: () => onSelectConversation(convo.id) }) as HTMLElement
 
@@ -98,23 +91,7 @@ export function createDmConversationList({ forumlineStore, onSelectConversation 
     return btn
   }
 
-  async function fetchConversations() {
-    const { forumlineClient } = forumlineStore.get()
-    if (!forumlineClient) return
-    try {
-      const data = await forumlineClient.getConversations()
-      conversations.val = data
-      initialLoad.val = false
-      loadError.val = false
-    } catch {
-      if (initialLoad.val) {
-        loadError.val = true
-        initialLoad.val = false
-      }
-    }
-  }
-
-  // Reactive child that rebuilds the list automatically when state changes
+  // Reactive child that shows loading/error/empty states, or the list
   const el = div({ class: 'flex-1 overflow-y-auto' },
     () => {
       if (initialLoad.val) {
@@ -149,31 +126,16 @@ export function createDmConversationList({ forumlineStore, onSelectConversation 
 
       const container = div()
       for (const convo of conversations.val) {
-        container.appendChild(createConvoButton(convo))
+        container.appendChild(createConvoItem(convo))
       }
       return container
     },
   ) as HTMLElement
 
-  // Initial fetch
-  fetchConversations()
-
-  // SSE for real-time updates
-  let sseDebounce: ReturnType<typeof setTimeout> | null = null
-  const unsubSSE = subscribeDmEvents(() => {
-    if (sseDebounce) clearTimeout(sseDebounce)
-    sseDebounce = setTimeout(fetchConversations, 200)
-  })
-
-  // Polling fallback
-  pollInterval = setInterval(fetchConversations, 30_000)
-
   return {
     el,
     destroy() {
-      if (pollInterval) clearInterval(pollInterval)
-      if (sseDebounce) clearTimeout(sseDebounce)
-      unsubSSE()
+      stopUpdates()
     },
   }
 }

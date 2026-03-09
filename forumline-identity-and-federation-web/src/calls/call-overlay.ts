@@ -1,5 +1,5 @@
 /*
- * Voice call overlay (Van.js)
+ * Voice call overlay (Van.js + VanX)
  *
  * This file renders the user-facing UI for 1:1 voice calls across the entire app.
  *
@@ -13,29 +13,25 @@
  * - Provide an "End" button to hang up during active calls
  * - Track and display a live call duration timer (minutes:seconds)
  * - Hide completely when no call is in progress
- * - React to call state changes pushed from the call manager
+ * - Read call state directly from the call manager's VanX reactive object (no duplicate state)
  */
 import {
-  onCallStateChange,
+  callState,
   acceptCall,
   declineCall,
   endCall,
   toggleMute,
-  isMuted,
-  type CallState,
   type CallInfo,
 } from './call-manager.js'
-import { tags, state, derive, html } from '../shared/dom.js'
+import { tags, html, van } from '../shared/dom.js'
 import { createAvatar } from '../shared/ui.js'
 import { playRingtone } from './call-ringtone.js'
 
 const { div, span, button } = tags
 
 export function createCallOverlay() {
-  const currentState = state<CallState>('idle')
-  const currentInfo = state<CallInfo | null>(null)
-  const callDuration = state(0)
-  const muted = state(false)
+  // Local overlay-specific state: call duration counter
+  const callDuration = van.state(0)
 
   let durationInterval: ReturnType<typeof setInterval> | null = null
   let stopRingtone: (() => void) | null = null
@@ -48,6 +44,7 @@ export function createCallOverlay() {
 
   function startDurationTimer() {
     if (durationInterval) clearInterval(durationInterval)
+    callDuration.val = 0
     durationInterval = setInterval(() => {
       callDuration.val++
     }, 1000)
@@ -55,6 +52,7 @@ export function createCallOverlay() {
 
   function stopDurationTimer() {
     if (durationInterval) { clearInterval(durationInterval); durationInterval = null }
+    callDuration.val = 0
   }
 
   function renderActiveBar(info: CallInfo): HTMLElement {
@@ -71,15 +69,14 @@ export function createCallOverlay() {
         {
           style: () =>
             'background:none;border:none;color:white;cursor:pointer;padding:0.25rem;opacity:' +
-            (muted.val ? '0.5' : '1'),
-          title: () => (muted.val ? 'Unmute' : 'Mute'),
+            (callState.muted ? '0.5' : '1'),
+          title: () => (callState.muted ? 'Unmute' : 'Mute'),
           onclick: (e: MouseEvent) => {
             e.stopPropagation()
             toggleMute()
-            muted.val = isMuted()
           },
         },
-        () => html(muted.val ? muteOffIconSm : muteIconSm),
+        () => html(callState.muted ? muteOffIconSm : muteIconSm),
       ),
       button(
         {
@@ -122,8 +119,8 @@ export function createCallOverlay() {
   const el = div(
     {
       style: () => {
-        const s = currentState.val
-        const info = currentInfo.val
+        const s = callState.state
+        const info = callState.callInfo
         if (s === 'idle' || !info) return 'display:none'
         if (s === 'active')
           return 'position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;align-items:center;background:var(--color-green, #22c55e);color:white;font-size:0.875rem'
@@ -131,8 +128,8 @@ export function createCallOverlay() {
       },
     },
     () => {
-      const s = currentState.val
-      const info = currentInfo.val
+      const s = callState.state
+      const info = callState.callInfo
       if (s === 'idle' || !info) return span({ style: 'display:none' })
       if (s === 'active') return renderActiveBar(info)
       if (s === 'ringing-outgoing' || s === 'ringing-incoming') return renderRingingOverlay(info, s)
@@ -140,41 +137,39 @@ export function createCallOverlay() {
     },
   ) as HTMLElement
 
-  const unsub = onCallStateChange((newState, info) => {
-    const prevState = currentState.val
+  // React to state changes for ringtone and duration timer.
+  // van.derive runs whenever its reactive dependencies change.
+  let prevState: string = 'idle'
+  van.derive(() => {
+    const s = callState.state
 
-    if (prevState !== newState && stopRingtone) { stopRingtone(); stopRingtone = null }
+    // Stop ringtone on any state transition
+    if (prevState !== s && stopRingtone) { stopRingtone(); stopRingtone = null }
 
-    if (newState === 'ringing-outgoing' && prevState !== 'ringing-outgoing') {
+    // Start ringtone for ringing states
+    if (s === 'ringing-outgoing' && prevState !== 'ringing-outgoing') {
       stopRingtone = playRingtone('outgoing')
-    } else if (newState === 'ringing-incoming' && prevState !== 'ringing-incoming') {
+    } else if (s === 'ringing-incoming' && prevState !== 'ringing-incoming') {
       stopRingtone = playRingtone('incoming')
     }
 
-    if (newState === 'active' && prevState !== 'active') {
-      callDuration.val = 0
-      muted.val = isMuted()
+    // Start/stop duration timer on active state transitions
+    if (s === 'active' && prevState !== 'active') {
       startDurationTimer()
     }
-
-    if (newState !== 'active' && prevState === 'active') {
+    if (s !== 'active' && prevState === 'active') {
       stopDurationTimer()
-      callDuration.val = 0
+    }
+    if (s === 'idle') {
+      stopDurationTimer()
     }
 
-    if (newState === 'idle') {
-      stopDurationTimer()
-      callDuration.val = 0
-    }
-
-    currentState.val = newState
-    currentInfo.val = info
+    prevState = s
   })
 
   return {
     el,
     destroy() {
-      unsub()
       stopDurationTimer()
       if (stopRingtone) stopRingtone()
     },

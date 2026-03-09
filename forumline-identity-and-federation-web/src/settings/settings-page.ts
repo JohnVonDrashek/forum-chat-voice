@@ -1,5 +1,5 @@
 /*
- * Settings page (Van.js)
+ * Settings page (Van.js + VanX)
  *
  * This file provides the user's account and forum management settings.
  *
@@ -21,7 +21,7 @@ import type { ForumStore } from '../forums/forum-store.js'
 import type { ForumlineStore } from '../shared/forumline-store.js'
 import { createForumlineAuth } from '../auth/forumline-auth.js'
 import { createSiteManager } from './site-manager.js'
-import { tags, html, state } from '../shared/dom.js'
+import { tags, html, vanX } from '../shared/dom.js'
 import { createAvatar, createButton, createCard } from '../shared/ui.js'
 
 const { div, h1, h2, p } = tags
@@ -35,10 +35,13 @@ interface SettingsPageOptions {
 }
 
 export function createSettingsPage({ forumlineSession, forumStore, forumlineStore, auth, onClose }: SettingsPageOptions) {
-  const membershipsState = state<{ forum_domain: string; notifications_muted: boolean }[]>([])
-  let avatarUrl: string | null = null
+  const settings = vanX.reactive({
+    memberships: [] as { forum_domain: string; notifications_muted: boolean }[],
+    avatarUrl: null as string | null,
+    ownedSites: {} as Record<string, string>, // domain -> slug
+  })
+
   let siteManagerChild: { el: HTMLElement; destroy: () => void } | null = null
-  let ownedSites: Map<string, string> = new Map()
 
   const el = div({ class: 'page-scroll' }) as HTMLElement
   const settingsWrapper = div() as HTMLElement
@@ -56,7 +59,7 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
   el.appendChild(settingsWrapper)
 
   function openSiteManager(forum: { name: string; domain: string }) {
-    const slug = ownedSites.get(forum.domain)
+    const slug = settings.ownedSites[forum.domain]
     if (!slug) return
     settingsWrapper.style.display = 'none'
     siteManagerChild?.destroy()
@@ -89,7 +92,7 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
     if (isForumlineConnected && forumlineSession) {
       const profileRow = div({ class: 'settings-profile-row' }) as HTMLElement
       profileRow.appendChild(createAvatar({
-        avatarUrl,
+        avatarUrl: settings.avatarUrl,
         seed: forumlineSession.user.user_metadata?.username as string || forumlineSession.user.email || undefined,
         size: 40,
       }))
@@ -115,7 +118,7 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
   forumsCard.appendChild(p({ class: 'text-sm text-muted mt-sm' }, 'Manage your connected forums') as HTMLElement)
 
   function isMuted(domain: string): boolean {
-    return membershipsState.val.find(m => m.forum_domain === domain)?.notifications_muted ?? false
+    return settings.memberships.find(m => m.forum_domain === domain)?.notifications_muted ?? false
   }
 
   function buildMuteButton(domain: string): HTMLElement {
@@ -148,7 +151,7 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
     ) as HTMLElement
     row.appendChild(info)
 
-    if (ownedSites.has(forum.domain)) {
+    if (settings.ownedSites[forum.domain]) {
       row.appendChild(createButton({ text: 'Edit Site', variant: 'ghost', className: 'text-sm', onClick: () => openSiteManager(forum) }))
     }
 
@@ -169,7 +172,8 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
   const reactiveForumList = div(
     () => {
       const { forums } = forumStore.state.val
-      void membershipsState.val // read to subscribe to membership changes
+      void settings.memberships // read to subscribe to membership changes
+      void settings.ownedSites  // read to subscribe to owned sites changes
       if (forums.length === 0) {
         return p({ class: 'text-sm text-faint mt-lg' }, 'No forums added yet. Go to Home and tap Add Forum to add one.') as HTMLElement
       }
@@ -186,7 +190,7 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
       if (!session) return
       const res = await fetch('/api/memberships', { headers: { Authorization: `Bearer ${session.access_token}` } })
       if (!res.ok) return
-      membershipsState.val = await res.json()
+      vanX.replace(settings.memberships, await res.json())
     } catch { /* non-critical */ }
   }
 
@@ -205,9 +209,9 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
     )
     for (const result of results) {
       if (result.status === 'fulfilled' && result.value.length >= 0) {
-        ownedSites = new Map(result.value.map(s => [s.domain, s.slug]))
-        // Trigger reactive re-render by re-setting the store state
-        forumStore.set(prev => ({ ...prev }))
+        const newOwned: Record<string, string> = {}
+        for (const s of result.value) newOwned[s.domain] = s.slug
+        vanX.replace(settings.ownedSites, newOwned)
         return
       }
     }
@@ -222,12 +226,15 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
       const res = await fetch('/api/identity', { headers: { Authorization: `Bearer ${session.access_token}` } })
       if (!res.ok) return
       const data = await res.json()
-      if (data.avatar_url) { avatarUrl = data.avatar_url; renderHubContent() }
+      if (data.avatar_url) { settings.avatarUrl = data.avatar_url; renderHubContent() }
     } catch { /* ignore */ }
   }
 
   async function toggleMute(forumDomain: string, muted: boolean) {
-    membershipsState.val = membershipsState.val.map(m => m.forum_domain === forumDomain ? { ...m, notifications_muted: muted } : m)
+    // Optimistic update
+    vanX.replace(settings.memberships, settings.memberships.map(
+      m => m.forum_domain === forumDomain ? { ...m, notifications_muted: muted } : m,
+    ))
     try {
       const session = auth.getSession()
       if (!session) throw new Error('No session')
@@ -238,7 +245,10 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
       })
       if (!res.ok) throw new Error('Failed to toggle mute')
     } catch {
-      membershipsState.val = membershipsState.val.map(m => m.forum_domain === forumDomain ? { ...m, notifications_muted: !muted } : m)
+      // Revert on failure
+      vanX.replace(settings.memberships, settings.memberships.map(
+        m => m.forum_domain === forumDomain ? { ...m, notifications_muted: !muted } : m,
+      ))
     }
   }
 

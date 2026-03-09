@@ -1,5 +1,5 @@
 /*
- * DM message thread view (Van.js)
+ * DM message thread view (Van.js + VanX)
  *
  * This file renders a single conversation's full message history and compose interface.
  *
@@ -17,14 +17,19 @@
  * - Mark the conversation as read on open and on each new message fetch
  * - Update in real-time via SSE, filtered to the current conversation
  * - Initiate a voice call to the other user in 1:1 conversations
+ *
+ * Uses reactive for view state and list with replace for
+ * efficient message list diffing — only new/changed messages touch the DOM.
  */
 import type { ForumlineStore } from '../shared/forumline-store.js'
 import type { ForumlineDirectMessage, ForumlineDmConversation, ForumlineConversationMember } from '@johnvondrashek/forumline-protocol'
-import { tags, html } from '../shared/dom.js'
+import { reactive, list, replace, noreactive } from 'vanjs-ext'
+import { tags, html, state } from '../shared/dom.js'
 import { createAvatar, createButton, createInput, createSpinner } from '../shared/ui.js'
 import { formatMessageTime } from '../shared/dateFormatters.js'
 import { subscribeDmEvents } from './dm-sse.js'
-import { initiateCall, getCallState } from '../calls/call-manager.js'
+import { fetchConversations as refreshDmConversations } from './dm-store.js'
+import { initiateCall, callState } from '../calls/call-manager.js'
 
 const { div, h3, p, span, button } = tags
 
@@ -34,33 +39,36 @@ interface DmMessageViewOptions {
 }
 
 export function createDmMessageView({ forumlineStore, conversationId }: DmMessageViewOptions) {
-  let messages: ForumlineDirectMessage[] = []
-  let conversation: ForumlineDmConversation | null = null
-  let newMessage = ''
+  // Reactive keyed object for messages: message id -> message data
+  const messages = reactive<Record<string, ForumlineDirectMessage>>({})
+  const conversationState = state<ForumlineDmConversation | null>(null)
+  const isInitialLoad = state(true)
   let sending = false
-  let initialLoad = true
 
   const el = div({ class: 'flex flex-col', style: 'height:100%' }) as HTMLElement
 
   function getDisplayName(): string {
-    if (!conversation) return 'Chat'
-    if (conversation.isGroup && conversation.name) return conversation.name
+    const convo = conversationState.val
+    if (!convo) return 'Chat'
+    if (convo.isGroup && convo.name) return convo.name
     const { forumlineUserId } = forumlineStore.get()
-    const others = conversation.members.filter((m: ForumlineConversationMember) => m.id !== forumlineUserId)
+    const others = convo.members.filter((m: ForumlineConversationMember) => m.id !== forumlineUserId)
     return others.map((m: ForumlineConversationMember) => m.displayName || m.username).join(', ')
   }
 
   function getAvatarInfo(): { url: string | null; seed: string } {
-    if (!conversation) return { url: null, seed: 'chat' }
-    if (conversation.isGroup) return { url: null, seed: conversation.name || conversation.id }
+    const convo = conversationState.val
+    if (!convo) return { url: null, seed: 'chat' }
+    if (convo.isGroup) return { url: null, seed: convo.name || convo.id }
     const { forumlineUserId } = forumlineStore.get()
-    const other = conversation.members.find((m: ForumlineConversationMember) => m.id !== forumlineUserId)
-    return { url: other?.avatarUrl ?? null, seed: other?.username || conversation.id }
+    const other = convo.members.find((m: ForumlineConversationMember) => m.id !== forumlineUserId)
+    return { url: other?.avatarUrl ?? null, seed: other?.username || convo.id }
   }
 
   function getMemberName(senderId: string): string {
-    if (!conversation) return 'User'
-    const member = conversation.members.find((m: ForumlineConversationMember) => m.id === senderId)
+    const convo = conversationState.val
+    if (!convo) return 'User'
+    const member = convo.members.find((m: ForumlineConversationMember) => m.id === senderId)
     return member?.displayName || member?.username || 'User'
   }
 
@@ -83,9 +91,10 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
     style: 'background:none;border:none;cursor:pointer;padding:0.25rem;color:var(--color-text-secondary);display:none',
     title: 'Start voice call',
     onclick: () => {
-      if (!conversation || conversation.isGroup || getCallState() !== 'idle') return
+      const convo = conversationState.val
+      if (!convo || convo.isGroup || callState.state !== 'idle') return
       const { forumlineUserId } = forumlineStore.get()
-      const other = conversation.members.find((m: ForumlineConversationMember) => m.id !== forumlineUserId)
+      const other = convo.members.find((m: ForumlineConversationMember) => m.id !== forumlineUserId)
       if (!other) return
       initiateCall(conversationId, other.id, other.displayName || other.username, (other as any).avatarUrl ?? null)
     },
@@ -102,6 +111,7 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
   let memberPanelOpen = false
 
   function renderMemberPanel() {
+    const conversation = conversationState.val
     if (!conversation?.isGroup) return
     memberPanel.innerHTML = ''
     const { forumlineUserId } = forumlineStore.get()
@@ -123,11 +133,78 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
   const messagesContainer = div({ class: 'flex-1 overflow-y-auto p-lg' }) as HTMLElement
   el.appendChild(messagesContainer)
 
-  const messageList = div({ style: 'display:flex;flex-direction:column;gap:0.25rem' }) as HTMLElement
   const emptyState = div({ class: 'text-center text-faint', style: 'padding:3rem 0' }, 'No messages yet. Say hello!') as HTMLElement
+
+  function createMessageRow(msg: ForumlineDirectMessage): HTMLElement {
+    const conversation = conversationState.val
+    const { forumlineUserId } = forumlineStore.get()
+    const isMe = msg.sender_id === forumlineUserId
+    const row = div({ class: isMe ? 'dm-row dm-row--mine' : 'dm-row dm-row--theirs' }) as HTMLElement
+    const wrap = div({ style: 'max-width:75%' }) as HTMLElement
+
+    if (conversation?.isGroup && !isMe) {
+      wrap.appendChild(div({ class: 'text-xs text-muted', style: 'margin-bottom:2px' }, getMemberName(msg.sender_id)) as HTMLElement)
+    }
+
+    wrap.appendChild(div({ class: isMe ? 'dm-bubble dm-bubble--mine' : 'dm-bubble dm-bubble--theirs' }, msg.content) as HTMLElement)
+    wrap.appendChild(div({ class: `dm-time ${isMe ? 'text-right' : 'text-left'}` }, formatMessageTime(new Date(msg.created_at))) as HTMLElement)
+
+    row.appendChild(wrap)
+    return row
+  }
+
+  function isAtBottom(): boolean {
+    return messagesContainer.scrollTop + messagesContainer.clientHeight >= messagesContainer.scrollHeight - 50
+  }
+
+  function scrollToBottom() {
+    messagesContainer.scrollTop = messagesContainer.scrollHeight
+  }
+
+  // Create the vanX.list element once — it lives in the DOM permanently
+  // and updates incrementally when `replace(messages, ...)` is called.
+  const listEl = list(
+    div({ style: 'display:flex;flex-direction:column;gap:0.25rem' }),
+    messages,
+    (v, _deleter, _k) => {
+      const msg = v.val as ForumlineDirectMessage
+      return createMessageRow(msg)
+    },
+  )
+
+  // Track previous message count to detect changes for scroll handling
+  let prevMessageCount = 0
+
+  function onMessagesUpdated() {
+    const count = Object.keys(messages).length
+
+    // Toggle empty state vs list visibility
+    if (count === 0) {
+      listEl.style.display = 'none'
+      if (!emptyState.parentNode) messagesContainer.appendChild(emptyState)
+      emptyState.style.display = ''
+    } else {
+      listEl.style.display = ''
+      emptyState.style.display = 'none'
+    }
+
+    // Scroll handling: on initial load or when at bottom and new messages arrive
+    const wasAtBottom = isAtBottom()
+    const hasNewMessages = count > prevMessageCount
+    prevMessageCount = count
+
+    if (isInitialLoad.val && count > 0) {
+      // Use requestAnimationFrame so the DOM has rendered the list items
+      requestAnimationFrame(() => scrollToBottom())
+      isInitialLoad.val = false
+    } else if (wasAtBottom && hasNewMessages) {
+      requestAnimationFrame(() => scrollToBottom())
+    }
+  }
 
   // Compose bar
   const messageInput = createInput({ type: 'text', placeholder: 'Type a message...' })
+  let newMessage = ''
   messageInput.addEventListener('input', () => { newMessage = messageInput.value })
   messageInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
@@ -142,6 +219,7 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
   el.appendChild(div({ class: 'compose-bar' }, messageInput, sendBtn) as HTMLElement)
 
   function updateHeader() {
+    const conversation = conversationState.val
     const { url, seed } = getAvatarInfo()
     const displayName = getDisplayName()
 
@@ -177,59 +255,15 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
     }
   }
 
-  function isAtBottom(): boolean {
-    return messagesContainer.scrollTop + messagesContainer.clientHeight >= messagesContainer.scrollHeight - 50
-  }
-
-  function scrollToBottom() {
-    messagesContainer.scrollTop = messagesContainer.scrollHeight
-  }
-
-  function createMessageRow(msg: ForumlineDirectMessage): HTMLElement {
-    const { forumlineUserId } = forumlineStore.get()
-    const isMe = msg.sender_id === forumlineUserId
-    const row = div({ class: isMe ? 'dm-row dm-row--mine' : 'dm-row dm-row--theirs' }) as HTMLElement
-    const wrap = div({ style: 'max-width:75%' }) as HTMLElement
-
-    if (conversation?.isGroup && !isMe) {
-      wrap.appendChild(div({ class: 'text-xs text-muted', style: 'margin-bottom:2px' }, getMemberName(msg.sender_id)) as HTMLElement)
-    }
-
-    wrap.appendChild(div({ class: isMe ? 'dm-bubble dm-bubble--mine' : 'dm-bubble dm-bubble--theirs' }, msg.content) as HTMLElement)
-    wrap.appendChild(div({ class: `dm-time ${isMe ? 'text-right' : 'text-left'}` }, formatMessageTime(new Date(msg.created_at))) as HTMLElement)
-
-    row.appendChild(wrap)
-    return row
-  }
-
-  function renderMessages() {
-    const wasAtBottom = isAtBottom()
-
-    if (messages.length === 0) {
-      messagesContainer.innerHTML = ''
-      messagesContainer.appendChild(emptyState)
-      return
-    }
-
-    messagesContainer.innerHTML = ''
-    messageList.innerHTML = ''
-    for (const msg of messages) {
-      messageList.appendChild(createMessageRow(msg))
-    }
-    messagesContainer.appendChild(messageList)
-
-    if (wasAtBottom || initialLoad) {
-      scrollToBottom()
-      initialLoad = false
-    }
-  }
-
   async function fetchConversationInfo() {
     const { forumlineClient } = forumlineStore.get()
     if (!forumlineClient) return
     try {
       const convo = await forumlineClient.getConversation(conversationId)
-      if (convo) { conversation = convo; updateHeader() }
+      if (convo) {
+        conversationState.val = convo
+        updateHeader()
+      }
     } catch (err) {
       console.error('[Forumline:DM] Failed to fetch conversation:', err)
     }
@@ -239,11 +273,19 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
     const { forumlineClient } = forumlineStore.get()
     if (!forumlineClient) return
     try {
-      messages = await forumlineClient.getMessages(conversationId)
-      renderMessages()
-      if (messages.length > 0) {
+      const data = await forumlineClient.getMessages(conversationId)
+      // Convert array to keyed object for replace smart diffing
+      const keyed: Record<string, ForumlineDirectMessage> = {}
+      for (const msg of data) {
+        keyed[msg.id] = noreactive(msg)
+      }
+      replace(messages, keyed)
+      // Remove the loading spinner on first successful fetch
+      if (spinnerWrap.parentNode) spinnerWrap.remove()
+      onMessagesUpdated()
+      if (data.length > 0) {
         forumlineClient.markRead(conversationId).then(() => {
-          window.dispatchEvent(new CustomEvent('forumline:dm-read'))
+          refreshDmConversations()
         }).catch(console.error)
       }
     } catch (err) {
@@ -259,33 +301,38 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
     const content = newMessage.trim()
     sending = true
 
+    const optimisticId = `temp-${Date.now()}`
     const optimistic: ForumlineDirectMessage = {
-      id: `temp-${Date.now()}`,
+      id: optimisticId,
       conversation_id: conversationId,
       sender_id: forumlineUserId || '',
       content,
       created_at: new Date().toISOString(),
     }
-    messages = [...messages, optimistic]
+    messages[optimisticId] = noreactive(optimistic)
     newMessage = ''
     messageInput.value = ''
-    renderMessages()
+    onMessagesUpdated()
 
     try {
       await forumlineClient.sendMessage(conversationId, content)
     } catch (err) {
-      messages = messages.filter((m) => m.id !== optimistic.id)
-      renderMessages()
+      delete messages[optimisticId]
+      onMessagesUpdated()
       console.error('[Forumline:DM] Failed to send message:', err)
     } finally {
       sending = false
     }
   }
 
-  // Initial loading
+  // Initial loading — show spinner, hide list and empty state until first fetch
   const spinnerWrap = div({ class: 'flex items-center justify-center flex-1' }) as HTMLElement
   spinnerWrap.appendChild(createSpinner())
   messagesContainer.appendChild(spinnerWrap)
+  listEl.style.display = 'none'
+  emptyState.style.display = 'none'
+  messagesContainer.appendChild(listEl)
+  messagesContainer.appendChild(emptyState)
 
   fetchConversationInfo()
   fetchMessages()

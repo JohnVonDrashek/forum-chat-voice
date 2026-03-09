@@ -1,5 +1,5 @@
 /*
- * Mobile bottom tab bar (Van.js)
+ * Mobile bottom tab bar (Van.js + VanX)
  *
  * This file renders the bottom navigation bar with tabs for Forums, DMs, and Settings.
  *
@@ -12,7 +12,7 @@
  * - Efficiently update only when the active view or DM unread count changes
  */
 import type { ForumStore } from '../forums/forum-store.js'
-import { tags, state, html } from '../shared/dom.js'
+import { tags, html, vanX } from '../shared/dom.js'
 
 const { div, span, button: btn } = tags
 
@@ -30,18 +30,20 @@ export interface MobileTabBarInstance {
 }
 
 export function createMobileTabBar({ forumStore, onChangeView }: MobileTabBarOptions): MobileTabBarInstance {
-  const currentView = state<AppView>('forums')
-  const dmUnread = state(0)
+  const tabState = vanX.reactive({
+    currentView: 'forums' as AppView,
+    dmUnread: 0,
+  })
 
   function tabBtn(view: AppView, iconSvg: string, label: string) {
     const iconContent = [html(iconSvg)] as (Element | (() => Element | Text))[]
 
     if (view === 'dms') {
       iconContent.push(() => {
-        if (dmUnread.val > 0) {
+        if (tabState.dmUnread > 0) {
           const badge = div({ class: 'badge badge--red badge--inline' }) as HTMLElement
           badge.style.cssText = 'position:absolute;right:-8px;top:-4px;min-width:16px;height:16px;font-size:9px'
-          badge.textContent = dmUnread.val > 99 ? '99+' : String(dmUnread.val)
+          badge.textContent = tabState.dmUnread > 99 ? '99+' : String(tabState.dmUnread)
           return badge
         }
         return document.createTextNode('')
@@ -51,15 +53,15 @@ export function createMobileTabBar({ forumStore, onChangeView }: MobileTabBarOpt
     const iconWrap = div({ class: view === 'dms' ? 'relative' : '' }, ...iconContent)
 
     return btn({
-      class: () => `tab-bar__item${currentView.val === view ? ' tab-bar__item--active' : ''}`,
+      class: () => `tab-bar__item${tabState.currentView === view ? ' tab-bar__item--active' : ''}`,
       onclick: () => {
         if (view === 'forums') {
-          if (currentView.val === 'forums' && forumStore.get().activeForum) {
+          if (tabState.currentView === 'forums' && forumStore.get().activeForum) {
             forumStore.goHome()
           }
           onChangeView('forums')
         } else {
-          onChangeView(currentView.val === view ? 'forums' : view)
+          onChangeView(tabState.currentView === view ? 'forums' : view)
         }
       },
     }, iconWrap, span({ class: 'tab-bar__label' }, label))
@@ -81,8 +83,8 @@ export function createMobileTabBar({ forumStore, onChangeView }: MobileTabBarOpt
     el,
     destroy() {},
     update(view: AppView, dmUnreadCount: number) {
-      currentView.val = view
-      dmUnread.val = dmUnreadCount
+      tabState.currentView = view
+      tabState.dmUnread = dmUnreadCount
     },
   }
 }

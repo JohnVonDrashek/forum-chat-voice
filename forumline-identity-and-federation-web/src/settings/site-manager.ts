@@ -1,5 +1,5 @@
 /*
- * Hosted site file manager (Van.js)
+ * Hosted site file manager (Van.js + VanX)
  *
  * This file lets forum owners manage the custom frontend files of their hosted Forumline forum.
  *
@@ -17,7 +17,7 @@
  * - Navigate between the file list view and the editor view with back navigation
  */
 import type { GoTrueAuthClient } from '../auth/gotrue-auth.js'
-import { tags, state, html } from '../shared/dom.js'
+import { tags, html, vanX } from '../shared/dom.js'
 import { createButton, createInput, createCard, createSpinner, showToast } from '../shared/ui.js'
 
 const { div, h1, h2, p } = tags
@@ -65,11 +65,13 @@ function fileIcon(name: string): string {
 }
 
 export function createSiteManager({ slug, forumName, domain, auth, onClose }: SiteManagerOptions) {
-  const manifest = state<SiteManifest | null>(null)
-  const editingFile = state<string | null>(null)
-  const editingContent = state<string | null>(null)
-  const loading = state(true)
-  const uploading = state(false)
+  const ui = vanX.reactive({
+    manifest: null as SiteManifest | null,
+    editingFile: null as string | null,
+    editingContent: null as string | null,
+    loading: true,
+    uploading: false,
+  })
 
   function apiUrl(path: string): string {
     return `https://${domain}/api/platform/sites/${slug}${path}`
@@ -82,22 +84,22 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
   }
 
   async function fetchManifest() {
-    loading.val = true
+    ui.loading = true
     try {
       const res = await fetch(apiUrl('/files'), { headers: authHeaders() })
       if (res.status === 403) { showToast("You don't have permission to edit this site", 'error'); onClose(); return }
       if (!res.ok) throw new Error(await res.text())
-      manifest.val = await res.json()
+      ui.manifest = await res.json()
     } catch (err) {
       showToast(err instanceof Error ? `Failed to load files: ${err.message}` : 'Failed to load files', 'error')
-      manifest.val = { files: {}, updated: '', storage_bytes: 0, storage_limit: 52428800 }
+      ui.manifest = { files: {}, updated: '', storage_bytes: 0, storage_limit: 52428800 }
     }
-    loading.val = false
+    ui.loading = false
   }
 
   async function uploadFiles(files: FileList) {
-    if (uploading.val) return
-    uploading.val = true
+    if (ui.uploading) return
+    ui.uploading = true
     const formData = new FormData()
     for (const file of files) formData.append('file', file, file.name.toLowerCase())
     try {
@@ -109,7 +111,7 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
       await fetchManifest()
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Upload failed', 'error')
-    } finally { uploading.val = false }
+    } finally { ui.uploading = false }
   }
 
   async function deleteFile(path: string) {
@@ -159,8 +161,8 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
   async function openEditor(path: string) {
     const fileContent = await loadFileContent(path)
     if (fileContent === null) return
-    editingFile.val = path
-    editingContent.val = fileContent
+    ui.editingFile = path
+    ui.editingContent = fileContent
   }
 
   async function createNewFile() {
@@ -171,19 +173,19 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
     if (clean.includes('..') || clean.startsWith('/') || clean.split('/').some(s => s.startsWith('.'))) {
       showToast('Invalid filename: path traversal or hidden files not allowed', 'error'); return
     }
-    editingFile.val = clean
-    editingContent.val = ''
+    ui.editingFile = clean
+    ui.editingContent = ''
   }
 
   function buildEditorView(): HTMLElement {
     const editorCard = createCard()
     editorCard.style.cssText = 'display:flex;flex-direction:column;gap:0.75rem'
 
-    editorCard.appendChild(div({ class: 'text-sm font-medium text-white' }, editingFile.val ?? '') as HTMLElement)
+    editorCard.appendChild(div({ class: 'text-sm font-medium text-white' }, ui.editingFile ?? '') as HTMLElement)
 
     const textarea = tags.textarea({
       class: 'site-editor',
-      value: editingContent.val || '',
+      value: ui.editingContent || '',
       spellcheck: false,
       onkeydown: (e: KeyboardEvent) => {
         if (e.key === 'Tab') {
@@ -199,8 +201,8 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
 
     const btnRow = div({ style: 'display:flex;gap:0.5rem' }) as HTMLElement
     btnRow.append(
-      createButton({ text: 'Save', variant: 'primary', onClick: () => { if (editingFile.val) saveFile(editingFile.val, textarea.value) } }),
-      createButton({ text: 'Cancel', variant: 'secondary', onClick: () => { editingFile.val = null; editingContent.val = null } }),
+      createButton({ text: 'Save', variant: 'primary', onClick: () => { if (ui.editingFile) saveFile(ui.editingFile, textarea.value) } }),
+      createButton({ text: 'Cancel', variant: 'secondary', onClick: () => { ui.editingFile = null; ui.editingContent = null } }),
     )
     editorCard.appendChild(btnRow)
     return editorCard
@@ -208,7 +210,7 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
 
   function buildFileListView(): HTMLElement {
     const wrapper = div() as HTMLElement
-    const m = manifest.val
+    const m = ui.manifest
     if (!m) return wrapper
 
     // Storage bar
@@ -232,7 +234,7 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
     }) as HTMLInputElement
     actionsCard.appendChild(uploadInput)
     actionsCard.append(
-      createButton({ text: uploading.val ? 'Uploading...' : 'Upload Files', variant: 'primary', disabled: uploading.val, onClick: () => uploadInput.click() }),
+      createButton({ text: ui.uploading ? 'Uploading...' : 'Upload Files', variant: 'primary', disabled: ui.uploading, onClick: () => uploadInput.click() }),
       createButton({ text: 'New File', variant: 'secondary', onClick: createNewFile }),
       createButton({ html: `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="vertical-align:middle"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg> Preview`, variant: 'ghost', onClick: () => window.open(`https://${domain}`, '_blank') }),
     )
@@ -292,7 +294,7 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
   // Header
   const header = div({ class: 'settings-header' }) as HTMLElement
   const backBtn = tags.button({ class: 'btn--icon', onclick: () => {
-    if (editingFile.val) { editingFile.val = null; editingContent.val = null }
+    if (ui.editingFile) { ui.editingFile = null; ui.editingContent = null }
     else onClose()
   }},
     html(`<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>`),
@@ -303,12 +305,12 @@ export function createSiteManager({ slug, forumName, domain, auth, onClose }: Si
     header,
     div({ class: 'page-content' },
       () => {
-        if (loading.val) {
+        if (ui.loading) {
           const spinWrap = div({ style: 'display:flex;justify-content:center;padding:2rem' }) as HTMLElement
           spinWrap.appendChild(createSpinner())
           return spinWrap
         }
-        if (editingFile.val !== null) return buildEditorView()
+        if (ui.editingFile !== null) return buildEditorView()
         return buildFileListView()
       },
     ),

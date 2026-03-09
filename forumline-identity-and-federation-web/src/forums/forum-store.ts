@@ -209,7 +209,7 @@ export function createForumStore(): ForumStore {
           joined_at: string
         }[] = await res.json()
 
-        // Server is the source of truth
+        // Server is the source of truth — build new list and replace
         const forums: ForumMembership[] = memberships.map(m => ({
           domain: m.forum_domain,
           name: m.forum_name,

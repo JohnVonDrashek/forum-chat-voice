@@ -16,7 +16,8 @@
  */
 import type { ForumStore, ForumMembership } from './forum-store.js'
 import type { UnreadCounts } from '@johnvondrashek/forumline-protocol'
-import { tags, html, state } from '../shared/dom.js'
+import { tags, html, state, add } from '../shared/dom.js'
+import { reactive, list, replace, noreactive } from 'vanjs-ext'
 
 const { div, p, button, img: imgTag, h3, input: inputTag } = tags
 
@@ -40,12 +41,16 @@ function totalUnread(counts: UnreadCounts | undefined): number {
 
 export function createForumRail(opts: ForumRailOptions): ForumRailInstance {
   const { forumStore, onDmClick, onSettingsClick } = opts
-  let dmUnreadCount = opts.dmUnreadCount ?? 0
 
-  const showAddModal = state(false)
-  const addUrl = state('')
-  const adding = state(false)
-  const addError = state<string | null>(null)
+  // Local reactive state for DM unread badge and add-forum modal
+  const dmUnread = state(opts.dmUnreadCount ?? 0)
+
+  const modal = reactive({
+    show: false,
+    url: '',
+    adding: false,
+    error: null as string | null,
+  })
 
   const rail = div({ class: 'forum-rail' }) as HTMLElement
 
@@ -67,26 +72,48 @@ export function createForumRail(opts: ForumRailOptions): ForumRailInstance {
   }) as HTMLElement
   rail.appendChild(dividerEl)
 
-  // Reactive forum list — rebuilds when forums, activeForum, or unreadCounts change
-  const forumsContainer = div(
-    { style: 'display:contents' },
-    () => {
-      const { forums, activeForum, unreadCounts } = forumStore.state.val
-      const activeDomain = activeForum?.domain ?? null
-      const wrapper = div({ style: 'display:contents' })
-      for (const forum of forums) {
-        const unread = totalUnread(unreadCounts[forum.domain])
-        const isActive = forum.domain === activeDomain
-        wrapper.appendChild(createForumButton(forum, isActive, unread))
-      }
-      return wrapper
+  // Per-item reactive state so individual forum buttons update independently
+  const activeDomain = state<string | null>(forumStore.state.val.activeForum?.domain ?? null)
+  const unreadMap = state<Record<string, UnreadCounts>>(forumStore.state.val.unreadCounts)
+
+  // Reactive keyed object for the forum list — domain is the key
+  const forumsMap = reactive<Record<string, ForumMembership>>({})
+
+  // Seed initial forums
+  {
+    const initial: Record<string, ForumMembership> = {}
+    for (const f of forumStore.state.val.forums) {
+      initial[f.domain] = noreactive(f)
+    }
+    replace(forumsMap, initial)
+  }
+
+  // Sync reactive proxies when the store changes
+  const unsub = forumStore.subscribe((s) => {
+    activeDomain.val = s.activeForum?.domain ?? null
+    unreadMap.val = s.unreadCounts
+
+    const keyed: Record<string, ForumMembership> = {}
+    for (const f of s.forums) {
+      keyed[f.domain] = noreactive(f)
+    }
+    replace(forumsMap, keyed)
+  })
+
+  // vanX.list renders each forum once; adds/removes touch only that DOM node
+  const forumsContainer = list(
+    div({ style: 'display:contents' }),
+    forumsMap,
+    (v, _deleter, domain) => {
+      const forum = v.val as ForumMembership
+      return createForumButton(forum, domain)
     },
   ) as HTMLElement
   rail.appendChild(forumsContainer)
 
   // Add forum button
   const addBtn = button(
-    { class: 'forum-rail__icon forum-rail__icon--add', title: 'Add a forum', onclick: () => { showAddModal.val = true } },
+    { class: 'forum-rail__icon forum-rail__icon--add', title: 'Add a forum', onclick: () => { modal.show = true } },
     html(`<svg class="icon-md" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>`),
   ) as HTMLButtonElement
   rail.appendChild(addBtn)
@@ -94,13 +121,14 @@ export function createForumRail(opts: ForumRailOptions): ForumRailInstance {
   // Spacer
   rail.appendChild(div({ class: 'forum-rail__spacer' }) as HTMLElement)
 
-  // DM button
-  let dmBtn: HTMLElement | null = null
-  let dmBadgeEl: HTMLElement | null = null
+  // DM button with reactive badge
   if (onDmClick) {
-    dmBtn = button(
+    const dmBtn = button(
       { class: 'forum-rail__icon forum-rail__icon--bottom', title: 'Direct Messages', onclick: onDmClick },
       html(`<svg class="icon-md" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>`),
+      () => dmUnread.val > 0
+        ? div({ class: 'badge badge--red' }, dmUnread.val > 99 ? '99+' : String(dmUnread.val))
+        : document.createTextNode(''),
     ) as HTMLElement
     rail.appendChild(dmBtn)
   }
@@ -123,26 +151,12 @@ export function createForumRail(opts: ForumRailOptions): ForumRailInstance {
   ) as HTMLButtonElement
   rail.appendChild(settingsBtn)
 
-  function updateDmBadge() {
-    if (!dmBtn) return
-    if (dmUnreadCount > 0) {
-      if (!dmBadgeEl) {
-        dmBadgeEl = div({ class: 'badge badge--red' }) as HTMLElement
-        dmBtn.appendChild(dmBadgeEl)
-      }
-      dmBadgeEl.textContent = dmUnreadCount > 99 ? '99+' : String(dmUnreadCount)
-    } else if (dmBadgeEl) {
-      dmBadgeEl.remove()
-      dmBadgeEl = null
-    }
-  }
-
-  function createForumButton(forum: ForumMembership, isActive: boolean, unread: number): HTMLElement {
+  function createForumButton(forum: ForumMembership, domain: string): HTMLElement {
     const btn = button(
       {
-        class: `forum-rail__icon${isActive ? ' forum-rail__icon--active' : ''}`,
+        class: () => `forum-rail__icon${activeDomain.val === domain ? ' forum-rail__icon--active' : ''}`,
         title: forum.name,
-        onclick: () => forumStore.switchForum(forum.domain),
+        onclick: () => forumStore.switchForum(domain),
       },
     ) as HTMLButtonElement
 
@@ -164,45 +178,51 @@ export function createForumRail(opts: ForumRailOptions): ForumRailInstance {
       btn.classList.add('forum-rail__icon--text')
     }
 
-    if (isActive) {
-      btn.appendChild(div({ class: 'forum-rail__active-indicator' }) as HTMLElement)
-    }
+    // Reactive active indicator — appears/disappears without rebuilding the button
+    add(btn, () => activeDomain.val === domain
+      ? div({ class: 'forum-rail__active-indicator' })
+      : document.createTextNode(''),
+    )
 
-    if (unread > 0) {
-      btn.appendChild(div({ class: 'badge badge--red' }, unread > 99 ? '99+' : String(unread)) as HTMLElement)
-    }
+    // Reactive unread badge — updates independently per forum
+    add(btn, () => {
+      const unread = totalUnread(unreadMap.val[domain])
+      return unread > 0
+        ? div({ class: 'badge badge--red' }, unread > 99 ? '99+' : String(unread))
+        : document.createTextNode('')
+    })
 
     return btn
   }
 
   async function handleAdd() {
-    if (!addUrl.val.trim() || adding.val) return
-    adding.val = true
-    addError.val = null
+    if (!modal.url.trim() || modal.adding) return
+    modal.adding = true
+    modal.error = null
     try {
-      await forumStore.addForum(addUrl.val.trim())
+      await forumStore.addForum(modal.url.trim())
       closeModal()
     } catch (err) {
-      addError.val = String(err)
-      adding.val = false
+      modal.error = String(err)
+      modal.adding = false
     }
   }
 
   function closeModal() {
-    showAddModal.val = false
-    addUrl.val = ''
-    addError.val = null
-    adding.val = false
+    modal.show = false
+    modal.url = ''
+    modal.error = null
+    modal.adding = false
   }
 
-  // Reactive modal — appended once, visibility driven by showAddModal state
+  // Reactive modal — visibility and content driven by modal reactive object
   const modalInput = inputTag({
     type: 'url',
     class: 'input modal__input',
     placeholder: 'https://example-forum.com',
     autofocus: true,
-    disabled: () => adding.val,
-    oninput: (e: Event) => { addUrl.val = (e.target as HTMLInputElement).value },
+    disabled: () => modal.adding,
+    oninput: (e: Event) => { modal.url = (e.target as HTMLInputElement).value },
     onkeydown: (e: KeyboardEvent) => {
       if (e.key === 'Enter') handleAdd()
       if (e.key === 'Escape') closeModal()
@@ -210,15 +230,15 @@ export function createForumRail(opts: ForumRailOptions): ForumRailInstance {
   }) as HTMLInputElement
 
   const modalEl = div(
-    { class: 'modal-backdrop', style: () => `display:${showAddModal.val ? '' : 'none'}` },
+    { class: 'modal-backdrop', style: () => `display:${modal.show ? '' : 'none'}` },
     div({ class: 'modal-backdrop__overlay', onclick: closeModal }),
     div(
       { class: 'modal' },
       h3({ class: 'modal__title' }, 'Add a Forum'),
       p({ class: 'modal__subtitle' }, 'Enter the URL of a Forumline-compatible forum'),
       modalInput,
-      () => addError.val
-        ? p({ class: 'text-error mt-sm' }, addError.val)
+      () => modal.error
+        ? p({ class: 'text-error mt-sm' }, modal.error)
         : document.createTextNode(''),
       div(
         { class: 'modal__actions' },
@@ -226,10 +246,10 @@ export function createForumRail(opts: ForumRailOptions): ForumRailInstance {
         button(
           {
             class: 'btn btn--primary',
-            disabled: () => adding.val || !addUrl.val.trim(),
+            disabled: () => modal.adding || !modal.url.trim(),
             onclick: handleAdd,
           },
-          () => adding.val ? 'Adding...' : 'Add Forum',
+          () => modal.adding ? 'Adding...' : 'Add Forum',
         ),
       ),
     ),
@@ -239,14 +259,13 @@ export function createForumRail(opts: ForumRailOptions): ForumRailInstance {
   return {
     el: rail,
     destroy() {
+      unsub()
       closeModal()
       modalEl.remove()
       rail.remove()
     },
     setDmUnreadCount(count: number) {
-      if (dmUnreadCount === count) return
-      dmUnreadCount = count
-      updateDmBadge()
+      dmUnread.val = count
     },
   }
 }

@@ -18,7 +18,7 @@
  */
 import type { ForumToForumlineMessage, ForumlineToForumMessage, UnreadCounts, ForumNotification } from '@johnvondrashek/forumline-protocol'
 import type { ForumMembership } from './forum-store.js'
-import { tags } from '../shared/dom.js'
+import { tags, vanX } from '../shared/dom.js'
 import { showToast } from '../shared/ui.js'
 
 const { div, span, strong, iframe: iframeTag } = tags
@@ -58,27 +58,32 @@ export interface ForumWebviewInstance {
 
 export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInstance {
   const { forum, onAuthed, onSignedOut, onUnreadCounts, onNotification, onNavigate } = opts
-  let authUrl = opts.authUrl ?? null
   const initialUrl = opts.initialPath ? `${forum.web_base}${opts.initialPath}` : forum.web_base
   const forumOrigin = new URL(forum.web_base).origin
 
-  let loading = true
-  let loggingIn = false
-  let hasCalledAuthed = false
-  let loginAttempted = false
+  // Reactive state — banner and spinner visibility derive automatically
+  const ui = vanX.reactive({
+    authUrl: (opts.authUrl ?? null) as string | null,
+    loading: true,
+    loggingIn: false,
+    hasCalledAuthed: false,
+    loginAttempted: false,
+  })
 
   // Login banner
   const bannerBtn = tags.button({ class: 'btn btn--small btn--white', onclick: () => {
-    if (!authUrl) return
-    loggingIn = true
-    loginAttempted = true
-    loading = true
-    spinnerWrap.style.display = ''
-    iframe.src = authUrl
-    updateBanner()
+    if (!ui.authUrl) return
+    ui.loggingIn = true
+    ui.loginAttempted = true
+    ui.loading = true
+    iframe.src = ui.authUrl
   } }, 'Log in')
 
-  const banner = div({ class: 'webview-banner' },
+  const banner = div({
+      class: 'webview-banner',
+      // Banner visible when authUrl is set, not logging in, and forum hasn't confirmed auth
+      style: () => `display:${ui.authUrl && !ui.loggingIn && !ui.hasCalledAuthed ? '' : 'none'}`,
+    },
     span({ class: 'webview-banner__text' },
       "You're signed in to Forumline. Log in to ",
       strong(forum.name),
@@ -87,8 +92,11 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
     bannerBtn,
   )
 
-  // Spinner
-  const spinnerWrap = div({ class: 'webview-spinner-wrap' },
+  // Spinner — visible while the iframe is loading
+  const spinnerWrap = div({
+      class: 'webview-spinner-wrap',
+      style: () => `display:${ui.loading ? '' : 'none'}`,
+    },
     div({ class: 'webview-spinner' }),
     span({ class: 'webview-spinner__text' }, `Loading ${forum.name}...`),
   )
@@ -107,11 +115,6 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
     div({ class: 'webview-iframe-wrap' }, spinnerWrap, iframe),
   )
 
-  function updateBanner() {
-    const show = !!authUrl && !loggingIn && !hasCalledAuthed
-    banner.style.display = show ? '' : 'none'
-  }
-
   function postToForum(msg: ForumlineToForumMessage) {
     iframe.contentWindow?.postMessage(msg, forumOrigin)
   }
@@ -128,21 +131,19 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
         break
       case 'forumline:auth_state':
         if (msg.signedIn) {
-          if (onAuthed && !hasCalledAuthed) {
-            hasCalledAuthed = true
-            loginAttempted = false
+          if (onAuthed && !ui.hasCalledAuthed) {
+            ui.hasCalledAuthed = true
+            ui.loginAttempted = false
             onAuthed(forum.domain)
-            updateBanner()
           }
         } else {
-          if (loginAttempted && !hasCalledAuthed && !loggingIn) {
+          if (ui.loginAttempted && !ui.hasCalledAuthed && !ui.loggingIn) {
             showToast(`Login to ${forum.name} did not complete. The forum reported you are not signed in.`, 'error', 8000)
           }
-          loginAttempted = false
+          ui.loginAttempted = false
           if (onSignedOut) {
-            hasCalledAuthed = false
+            ui.hasCalledAuthed = false
             onSignedOut(forum.domain)
-            updateBanner()
           }
         }
         break
@@ -159,10 +160,9 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
   }
 
   iframe.addEventListener('load', () => {
-    loading = false
-    spinnerWrap.style.display = 'none'
+    ui.loading = false
 
-    if (loggingIn) {
+    if (ui.loggingIn) {
       // Check if the iframe landed on an error URL
       try {
         const iframeUrl = new URL(iframe.contentWindow?.location.href ?? '')
@@ -178,14 +178,13 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
         // Cross-origin — can't read iframe URL, that's expected for success redirects
       }
 
-      loggingIn = false
-      loginAttempted = false
-      updateBanner()
+      ui.loggingIn = false
+      ui.loginAttempted = false
       // After auth redirect, delay the auth state check to give the forum
       // time to restore the session from URL hash tokens
       setTimeout(() => {
-        if (!hasCalledAuthed) {
-          loginAttempted = true
+        if (!ui.hasCalledAuthed) {
+          ui.loginAttempted = true
           postToForum({ type: 'forumline:request_auth_state' })
         }
       }, 1500)
@@ -196,7 +195,6 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
   })
 
   window.addEventListener('message', handleMessage)
-  updateBanner()
 
   return {
     el: container,
@@ -205,8 +203,7 @@ export function createForumWebview(opts: ForumWebviewOptions): ForumWebviewInsta
       container.remove()
     },
     setAuthUrl(url: string | null) {
-      authUrl = url
-      updateBanner()
+      ui.authUrl = url
     },
   }
 }

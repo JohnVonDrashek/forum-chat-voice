@@ -15,7 +15,7 @@
  */
 import type { ForumStore, ForumMembership } from './forum-store.js'
 import { tags, html } from '../shared/dom.js'
-import { createButton, createInput } from '../shared/ui.js'
+import { reactive } from 'vanjs-ext'
 
 const { div, h2, p, button: btn } = tags
 
@@ -29,10 +29,13 @@ function totalUnread(counts: { notifications: number; chat_mentions: number; dms
 }
 
 export function createMobileForumList({ forumStore }: MobileForumListOptions) {
-  let modalEl: HTMLElement | null = null
-  let addUrl = ''
-  let adding = false
-  let addError: string | null = null
+  // Reactive modal state — no more manual DOM rebuilds
+  const modal = reactive({
+    open: false,
+    url: '',
+    adding: false,
+    error: null as string | null,
+  })
 
   function createForumCard(forum: ForumMembership, isActive: boolean, unread: number): HTMLElement {
     const card = btn({
@@ -64,7 +67,7 @@ export function createMobileForumList({ forumStore }: MobileForumListOptions) {
 
   const addBtn = btn({
     class: 'add-forum-btn',
-    onclick: () => showModal(),
+    onclick: () => { modal.open = true },
   },
     html(`<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>`),
     ' Add Forum',
@@ -89,74 +92,72 @@ export function createMobileForumList({ forumStore }: MobileForumListOptions) {
     addBtn,
   ) as HTMLElement
 
-  function showModal() {
-    modalEl?.remove()
-    modalEl = div({ class: 'modal-backdrop' }) as HTMLElement
-
-    const overlay = div({ class: 'modal-backdrop__overlay', onclick: closeModal }) as HTMLElement
-
-    const dialog = div({ class: 'modal' }) as HTMLElement
-    dialog.appendChild(tags.h3({ class: 'modal__title' }, 'Add a Forum') as HTMLElement)
-    dialog.appendChild(p({ class: 'modal__subtitle' }, 'Enter the URL of a Forumline-compatible forum') as HTMLElement)
-
-    const input = createInput({ type: 'url', placeholder: 'https://example-forum.com', value: addUrl, autofocus: true })
-    input.className = 'input modal__input'
-    input.addEventListener('input', () => {
-      addUrl = input.value
-      submitBtn.disabled = adding || !addUrl.trim()
-    })
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleAdd()
-      if (e.key === 'Escape') closeModal()
-    })
-    dialog.appendChild(input)
-
-    if (addError) {
-      dialog.appendChild(p({ class: 'text-sm text-error mt-sm' }, addError) as HTMLElement)
-    }
-
-    const actions = div({ class: 'modal__actions' }) as HTMLElement
-    actions.appendChild(createButton({ text: 'Cancel', variant: 'ghost', onClick: closeModal }))
-    const submitBtn = createButton({
-      text: adding ? 'Adding...' : 'Add Forum',
-      variant: 'primary',
-      disabled: adding || !addUrl.trim(),
-      onClick: handleAdd,
-    })
-    actions.appendChild(submitBtn)
-    dialog.appendChild(actions)
-
-    modalEl.append(overlay, dialog)
-    document.body.appendChild(modalEl)
-  }
-
   async function handleAdd() {
-    if (!addUrl.trim() || adding) return
-    adding = true
-    addError = null
-    showModal()
+    if (!modal.url.trim() || modal.adding) return
+    modal.adding = true
+    modal.error = null
     try {
-      await forumStore.addForum(addUrl.trim())
+      await forumStore.addForum(modal.url.trim())
       closeModal()
     } catch (err) {
-      addError = String(err)
-      adding = false
-      showModal()
+      modal.error = String(err)
+      modal.adding = false
     }
   }
 
   function closeModal() {
-    addUrl = ''
-    addError = null
-    adding = false
-    modalEl?.remove()
-    modalEl = null
+    modal.open = false
+    modal.url = ''
+    modal.error = null
+    modal.adding = false
   }
+
+  // Persistent reactive modal — appended once, visibility driven by modal.open
+  const modalInput = tags.input({
+    type: 'url',
+    class: 'input modal__input',
+    placeholder: 'https://example-forum.com',
+    autofocus: true,
+    disabled: () => modal.adding,
+    oninput: (e: Event) => { modal.url = (e.target as HTMLInputElement).value },
+    onkeydown: (e: KeyboardEvent) => {
+      if (e.key === 'Enter') handleAdd()
+      if (e.key === 'Escape') closeModal()
+    },
+  }) as HTMLInputElement
+
+  const modalEl = div(
+    { class: 'modal-backdrop', style: () => `display:${modal.open ? '' : 'none'}` },
+    div({ class: 'modal-backdrop__overlay', onclick: closeModal }),
+    div(
+      { class: 'modal' },
+      tags.h3({ class: 'modal__title' }, 'Add a Forum'),
+      p({ class: 'modal__subtitle' }, 'Enter the URL of a Forumline-compatible forum'),
+      modalInput,
+      () => modal.error
+        ? p({ class: 'text-sm text-error mt-sm' }, modal.error)
+        : document.createTextNode(''),
+      div(
+        { class: 'modal__actions' },
+        btn({ class: 'btn btn--ghost', onclick: closeModal }, 'Cancel'),
+        btn(
+          {
+            class: 'btn btn--primary',
+            disabled: () => modal.adding || !modal.url.trim(),
+            onclick: handleAdd,
+          },
+          () => modal.adding ? 'Adding...' : 'Add Forum',
+        ),
+      ),
+    ),
+  ) as HTMLElement
+  document.body.appendChild(modalEl)
 
   return {
     el,
     destroy() {
       closeModal()
+      modalEl.remove()
     },
   }
 }

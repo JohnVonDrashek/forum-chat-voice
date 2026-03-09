@@ -29,11 +29,11 @@ import { createWelcomePage } from '../forums/welcome-page.js'
 import { createDmPanel } from '../dms/dm-panel.js'
 import { createSettingsPage } from '../settings/settings-page.js'
 import { createMobileTabBar, type AppView } from './mobile-tab-bar.js'
-import { subscribeDmEvents } from '../dms/dm-sse.js'
+import { unreadCount as dmUnreadState, startUpdates as startDmStoreUpdates } from '../dms/dm-store.js'
 import { initCallManager, destroyCallManager } from '../calls/call-manager.js'
 import { createCallOverlay } from '../calls/call-overlay.js'
 import { warmAudioContext } from '../calls/call-ringtone.js'
-import { tags, html } from '../shared/dom.js'
+import { tags, html, derive } from '../shared/dom.js'
 
 const { div } = tags
 
@@ -71,7 +71,6 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
   let copied = false
   let copiedTimeout: ReturnType<typeof setTimeout> | null = null
   let dmUnreadCount = 0
-  let dmPollInterval: ReturnType<typeof setInterval> | null = null
 
   // Persistent child instances — created lazily, kept alive
   let webviewInstance: ForumWebviewInstance | null = null
@@ -100,40 +99,20 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
   })
   root.appendChild(tabBarInstance.el)
 
-  // ---- DM unread count (SSE + fallback poll) ----
-  function fetchDmCount() {
-    const { forumlineClient } = forumlineStore.get()
-    if (!forumlineClient) return
-    forumlineClient.getConversations().then((convos) => {
-      dmUnreadCount = convos.reduce((sum, c) => sum + c.unreadCount, 0)
-      tabBarInstance?.update(view, dmUnreadCount)
-    }).catch(() => { /* ignore */ })
-  }
-
+  // ---- DM unread count (derived from shared dm-store) ----
   function startDmUpdates() {
-    const { forumlineClient } = forumlineStore.get()
-    if (!forumlineClient) return
+    const { isForumlineConnected } = forumlineStore.get()
+    if (!isForumlineConnected) return
 
-    // Initial fetch
-    fetchDmCount()
+    // Subscribe to the shared dm-store; it handles SSE + polling internally
+    const stopUpdates = startDmStoreUpdates(forumlineStore)
+    cleanups.push(stopUpdates)
 
-    // SSE-driven updates — shared connection, debounced
-    let sseDebounce: ReturnType<typeof setTimeout> | null = null
-    const unsubSSE = subscribeDmEvents(() => {
-      if (sseDebounce) clearTimeout(sseDebounce)
-      sseDebounce = setTimeout(fetchDmCount, 300)
+    // Derive local dmUnreadCount from the store's reactive state and update tab bar
+    derive(() => {
+      dmUnreadCount = dmUnreadState.val
+      tabBarInstance?.update(view, dmUnreadCount)
     })
-    cleanups.push(unsubSSE)
-    cleanups.push(() => { if (sseDebounce) clearTimeout(sseDebounce) })
-
-    // Refresh badge when a conversation is marked as read
-    const onDmRead = () => fetchDmCount()
-    window.addEventListener('forumline:dm-read', onDmRead)
-    cleanups.push(() => window.removeEventListener('forumline:dm-read', onDmRead))
-
-    // Fallback poll every 60s (in case SSE silently drops)
-    dmPollInterval = setInterval(fetchDmCount, 60_000)
-    cleanups.push(() => { if (dmPollInterval) clearInterval(dmPollInterval) })
   }
 
   // ---- Deep links ----
