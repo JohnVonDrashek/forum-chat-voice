@@ -51,4 +51,4 @@ jobs:
         run: |
           scp /tmp/hosted.env hosted-prod:/opt/hosted/.env
           scp production-docker-compose-configs/hosted/docker-compose.yml hosted-prod:/opt/hosted/docker-compose.yml
-          ssh hosted-prod "cd /opt/hosted/repo && git pull origin main && cd /opt/hosted && docker compose up -d --build hosted && docker compose ps"
+          ssh hosted-prod "cd /opt/hosted/repo && git fetch origin main && git reset --hard origin/main && cd /opt/hosted && docker compose up -d --build hosted && docker compose ps"

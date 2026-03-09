@@ -38,4 +38,4 @@ jobs:
       - name: Deploy
         run: |
           scp production-docker-compose-configs/website/docker-compose.yml website-prod:/opt/website/docker-compose.yml
-          ssh website-prod "cd /opt/website/repo && git pull origin main && cd /opt/website && docker compose up -d --build website && docker compose ps"
+          ssh website-prod "cd /opt/website/repo && git fetch origin main && git reset --hard origin/main && cd /opt/website && docker compose up -d --build website && docker compose ps"

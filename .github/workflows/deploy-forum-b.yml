@@ -55,4 +55,4 @@ jobs:
         run: |
           scp /tmp/forum-b.env forum-b-prod:/opt/forum-b/.env
           scp production-docker-compose-configs/forum-b/docker-compose.yml forum-b-prod:/opt/forum-b/docker-compose.yml
-          ssh forum-b-prod "cd /opt/forum-b/repo && git pull origin main && cd /opt/forum-b && docker compose up -d --build forum && docker compose ps"
+          ssh forum-b-prod "cd /opt/forum-b/repo && git fetch origin main && git reset --hard origin/main && cd /opt/forum-b && docker compose up -d --build forum && docker compose ps"

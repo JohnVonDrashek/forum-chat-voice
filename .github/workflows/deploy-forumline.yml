@@ -57,6 +57,6 @@ jobs:
         run: |
           scp /tmp/forumline.env forumline-prod:/opt/forumline/.env
           scp production-docker-compose-configs/forumline/docker-compose.yml forumline-prod:/opt/forumline/docker-compose.yml
-          ssh forumline-prod "cd /opt/forumline/repo && git pull origin main"
+          ssh forumline-prod "cd /opt/forumline/repo && git fetch origin main && git reset --hard origin/main"
           ssh forumline-prod 'cd /opt/forumline && for f in repo/forumline-identity-and-federation-api/migrations/*.sql; do echo "Applying migration: $f" && docker compose exec -T postgres psql -U postgres -d postgres < "$f"; done'
           ssh forumline-prod "cd /opt/forumline && docker compose up -d --build forumline && docker compose ps"
