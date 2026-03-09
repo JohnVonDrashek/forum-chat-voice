@@ -1,0 +1,340 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		05ED978BFF1EF5AE55308751 /* VoIPPushManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A31391BD5F4CE15A4A63746 /* VoIPPushManager.swift */; };
+		2E9D61C64B26F23F637B321C /* WebViewContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD31590D64D1D09935D2262B /* WebViewContainer.swift */; };
+		4C19ACF66897D8CCE8784EC1 /* CallManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C687857E0AB17D140EE3C140 /* CallManager.swift */; };
+		5850811413AF3B89ABFDCB8E /* DeepLinkHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFF8795C9743C0F6E752F2C6 /* DeepLinkHandler.swift */; };
+		5A5C2BCEC188657B83AABCB1 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5765FA6421468806A52802F8 /* AppDelegate.swift */; };
+		997F7A77B506F0B7CEA74414 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1E3D3622CB485057F7A31FB3 /* Assets.xcassets */; };
+		9BF0D7CECF57BCC4DD7E3D62 /* ForumlineApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6C70F2FA44A477C9CEAEA1B /* ForumlineApp.swift */; };
+		9F6F732970BFA148D209280C /* PushManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1FFB233224392C8FBC85187 /* PushManager.swift */; };
+		A1975E63A00ECDF958E58CA7 /* WebViewBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7D64B69644F5F20DEFA9C24 /* WebViewBridge.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1E3D3622CB485057F7A31FB3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4DFE4C634AD39B2594EA1FE6 /* Forumline.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Forumline.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5765FA6421468806A52802F8 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		7A31391BD5F4CE15A4A63746 /* VoIPPushManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoIPPushManager.swift; sourceTree = "<group>"; };
+		A6C70F2FA44A477C9CEAEA1B /* ForumlineApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumlineApp.swift; sourceTree = "<group>"; };
+		B5A20F6746D90B41C11BADD1 /* Forumline.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Forumline.entitlements; sourceTree = "<group>"; };
+		BD31590D64D1D09935D2262B /* WebViewContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewContainer.swift; sourceTree = "<group>"; };
+		C1FFB233224392C8FBC85187 /* PushManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushManager.swift; sourceTree = "<group>"; };
+		C687857E0AB17D140EE3C140 /* CallManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallManager.swift; sourceTree = "<group>"; };
+		E7D64B69644F5F20DEFA9C24 /* WebViewBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewBridge.swift; sourceTree = "<group>"; };
+		FD662048B12D28F26244081C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		FFF8795C9743C0F6E752F2C6 /* DeepLinkHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkHandler.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		7D0AB4F56DD3F0EA70ECB677 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4DFE4C634AD39B2594EA1FE6 /* Forumline.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A54DCF1B34FB0F2C78B1ACF0 = {
+			isa = PBXGroup;
+			children = (
+				D1F6A75698D1B1694516FE27 /* Forumline */,
+				7D0AB4F56DD3F0EA70ECB677 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D1F6A75698D1B1694516FE27 /* Forumline */ = {
+			isa = PBXGroup;
+			children = (
+				5765FA6421468806A52802F8 /* AppDelegate.swift */,
+				1E3D3622CB485057F7A31FB3 /* Assets.xcassets */,
+				C687857E0AB17D140EE3C140 /* CallManager.swift */,
+				FFF8795C9743C0F6E752F2C6 /* DeepLinkHandler.swift */,
+				B5A20F6746D90B41C11BADD1 /* Forumline.entitlements */,
+				A6C70F2FA44A477C9CEAEA1B /* ForumlineApp.swift */,
+				FD662048B12D28F26244081C /* Info.plist */,
+				C1FFB233224392C8FBC85187 /* PushManager.swift */,
+				7A31391BD5F4CE15A4A63746 /* VoIPPushManager.swift */,
+				E7D64B69644F5F20DEFA9C24 /* WebViewBridge.swift */,
+				BD31590D64D1D09935D2262B /* WebViewContainer.swift */,
+			);
+			path = Forumline;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		C5FE38DE9A62ED51F6B07F80 /* Forumline */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FD82844EDFA3BBDB117B3DAD /* Build configuration list for PBXNativeTarget "Forumline" */;
+			buildPhases = (
+				4D22893385460B1603CD8B75 /* Sources */,
+				4D55CF0AA7DC6C8F686A476B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Forumline;
+			packageProductDependencies = (
+			);
+			productName = Forumline;
+			productReference = 4DFE4C634AD39B2594EA1FE6 /* Forumline.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		32F1384B1404C921529055AE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					C5FE38DE9A62ED51F6B07F80 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = FE5C90D701A8FCDB48822078 /* Build configuration list for PBXProject "Forumline" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = A54DCF1B34FB0F2C78B1ACF0;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C5FE38DE9A62ED51F6B07F80 /* Forumline */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4D55CF0AA7DC6C8F686A476B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				997F7A77B506F0B7CEA74414 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4D22893385460B1603CD8B75 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5A5C2BCEC188657B83AABCB1 /* AppDelegate.swift in Sources */,
+				4C19ACF66897D8CCE8784EC1 /* CallManager.swift in Sources */,
+				5850811413AF3B89ABFDCB8E /* DeepLinkHandler.swift in Sources */,
+				9BF0D7CECF57BCC4DD7E3D62 /* ForumlineApp.swift in Sources */,
+				9F6F732970BFA148D209280C /* PushManager.swift in Sources */,
+				05ED978BFF1EF5AE55308751 /* VoIPPushManager.swift in Sources */,
+				A1975E63A00ECDF958E58CA7 /* WebViewBridge.swift in Sources */,
+				2E9D61C64B26F23F637B321C /* WebViewContainer.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		3D59A6ED9EA457D89A27487C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Forumline/Forumline.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Forumline/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.forumline.app;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		76FBF361193DB1959F87A4A3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A33FFB583EF7B39BD45139AC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		FCBAA35B0967497BD80E761D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Forumline/Forumline.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Forumline/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.forumline.app;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		FD82844EDFA3BBDB117B3DAD /* Build configuration list for PBXNativeTarget "Forumline" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FCBAA35B0967497BD80E761D /* Debug */,
+				3D59A6ED9EA457D89A27487C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FE5C90D701A8FCDB48822078 /* Build configuration list for PBXProject "Forumline" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				76FBF361193DB1959F87A4A3 /* Debug */,
+				A33FFB583EF7B39BD45139AC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 32F1384B1404C921529055AE /* Project object */;
+}

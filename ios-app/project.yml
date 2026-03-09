@@ -1,0 +1,26 @@
+name: Forumline
+options:
+  bundleIdPrefix: net.forumline
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "16.4"
+
+targets:
+  Forumline:
+    type: application
+    platform: iOS
+    sources:
+      - Forumline
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.forumline.app
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_FILE: Forumline/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+    entitlements:
+      path: Forumline/Forumline.entitlements
+      properties:
+        aps-environment: development
+        com.apple.developer.pushkit.voip: true
