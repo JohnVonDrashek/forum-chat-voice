@@ -4,10 +4,31 @@
  */
 
 let audioCtx: AudioContext | null = null
+let warmed = false
 
 function getAudioCtx(): AudioContext {
   if (!audioCtx) audioCtx = new AudioContext()
   return audioCtx
+}
+
+/**
+ * Pre-warm the AudioContext on a user gesture so it's ready for
+ * incoming calls (which arrive via SSE without a user gesture).
+ * Call this once from app init — it attaches a one-shot listener.
+ */
+export function warmAudioContext() {
+  if (warmed) return
+  warmed = true
+  const handler = () => {
+    const ctx = getAudioCtx()
+    if (ctx.state === 'suspended') ctx.resume()
+    document.removeEventListener('click', handler)
+    document.removeEventListener('keydown', handler)
+    document.removeEventListener('touchstart', handler)
+  }
+  document.addEventListener('click', handler)
+  document.addEventListener('keydown', handler)
+  document.addEventListener('touchstart', handler)
 }
 
 /**

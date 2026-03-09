@@ -37,6 +37,16 @@ func main() {
 	sseHub.Listen(ctx, "call_signal")
 	sseHub.StartListening(ctx)
 
+	// Clean up stale calls from previous server run (SSE drops on restart
+	// leave calls stuck in ringing/active state, blocking new calls).
+	if tag, err := pool.Exec(ctx,
+		`UPDATE forumline_calls SET status = CASE WHEN status = 'ringing' THEN 'missed' ELSE 'completed' END, ended_at = now()
+		 WHERE status IN ('ringing', 'active')`); err != nil {
+		log.Printf("Warning: failed to clean up stale calls: %v", err)
+	} else if tag.RowsAffected() > 0 {
+		log.Printf("Cleaned up %d stale call(s) from previous run", tag.RowsAffected())
+	}
+
 	// Push notification listener
 	pushListener := forumlineapp.NewPushListener(pool, sseHub)
 	go pushListener.Start(ctx)
