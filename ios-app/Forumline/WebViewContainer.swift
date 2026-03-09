@@ -39,10 +39,16 @@ struct WebViewContainer: UIViewRepresentable {
         webView.scrollView.minimumZoomScale = 1.0
         webView.scrollView.maximumZoomScale = 1.0
 
+        // Prevent WKWebView from adding its own safe area insets to the scroll view.
+        // With viewport-fit=cover and CSS env(safe-area-inset-*), the web content
+        // handles safe areas itself. Without this, insets are applied twice:
+        // once by the scroll view and once by CSS.
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+
         // Store reference for native → web messaging
         WebViewBridge.shared.webView = webView
 
-        // Load the production app
+        // To test locally: change to "http://localhost:3001" (requires ATS exception in Info.plist)
         let url = URL(string: "https://app.forumline.net")!
         webView.load(URLRequest(url: url))
 

@@ -64,12 +64,10 @@ body {
   overflow: hidden;
   height: 100vh;
   height: 100dvh;
-  padding-top: env(safe-area-inset-top);
 }
 
 #root {
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -1001,7 +999,7 @@ body {
 .app-root {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  height: 100%;
 }
 
 .app-main {
@@ -1010,6 +1008,7 @@ body {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  padding-top: env(safe-area-inset-top);
 }
 
 .page-scroll {
