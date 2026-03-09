@@ -93,6 +93,18 @@ func NewRouter(pool *pgxpool.Pool, sseHub *shared.SSEHub) *chi.Mux {
 	// Profile search (authenticated)
 	r.With(shared.AuthMiddleware).Get("/api/profiles/search", h.HandleSearchProfiles)
 
+	// Calls (1:1 voice)
+	r.Route("/api/calls", func(r chi.Router) {
+		r.Get("/stream", h.HandleCallSignalStream)
+		r.Group(func(r chi.Router) {
+			r.Use(shared.AuthMiddleware)
+			r.Post("/", h.HandleInitiateCall)
+			r.Post("/{callId}/respond", h.HandleRespondToCall)
+			r.Post("/{callId}/end", h.HandleEndCall)
+			r.Post("/signal", h.HandleCallSignal)
+		})
+	})
+
 	// Push notifications
 	r.Post("/api/push", h.HandlePush)
 

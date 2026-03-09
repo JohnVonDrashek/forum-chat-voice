@@ -75,4 +75,38 @@ export class CentralServicesClient {
   async searchProfiles(query: string): Promise<ForumlineProfile[]> {
     return this.fetch(`/api/profiles/search?q=${encodeURIComponent(query)}`)
   }
+
+  /** Initiate a 1:1 call in a conversation */
+  async initiateCall(conversationId: string): Promise<{ id: string; conversation_id: string; caller_id: string; callee_id: string; status: string }> {
+    return this.fetch('/api/calls', {
+      method: 'POST',
+      body: JSON.stringify({ conversation_id: conversationId }),
+    })
+  }
+
+  /** Respond to an incoming call (accept or decline) */
+  async respondToCall(callId: string, action: 'accept' | 'decline'): Promise<void> {
+    await this.fetch(`/api/calls/${callId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    })
+  }
+
+  /** End an active or ringing call */
+  async endCall(callId: string): Promise<void> {
+    await this.fetch(`/api/calls/${callId}/end`, { method: 'POST' })
+  }
+
+  /** Send a WebRTC signaling message */
+  async sendCallSignal(callId: string, targetUserId: string, type: string, payload: unknown): Promise<void> {
+    await this.fetch('/api/calls/signal', {
+      method: 'POST',
+      body: JSON.stringify({
+        call_id: callId,
+        target_user_id: targetUserId,
+        type,
+        payload,
+      }),
+    })
+  }
 }

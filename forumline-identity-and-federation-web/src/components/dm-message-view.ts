@@ -3,6 +3,7 @@ import type { ForumlineDirectMessage, ForumlineDmConversation, ForumlineConversa
 import { createAvatar, createButton, createInput, createSpinner } from './ui.js'
 import { formatMessageTime } from '../lib/dateFormatters.js'
 import { subscribeDmEvents } from '../lib/dm-sse.js'
+import { initiateCall, getCallState } from '../lib/call-manager.js'
 
 interface DmMessageViewOptions {
   forumlineStore: ForumlineStore
@@ -56,7 +57,21 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
   headerMembers.className = 'text-xs text-muted truncate'
   headerMembers.style.cssText = 'margin-top:1px;background:none;border:none;padding:0;cursor:pointer;text-align:left;width:100%;color:inherit'
   headerTextWrap.append(headerName, headerMembers)
-  headerEl.append(headerAvatar, headerTextWrap)
+
+  // Call button (1:1 only)
+  const callBtn = document.createElement('button')
+  callBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:0.25rem;color:var(--color-text-secondary);display:none'
+  callBtn.title = 'Start voice call'
+  callBtn.innerHTML = `<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>`
+  callBtn.addEventListener('click', () => {
+    if (!conversation || conversation.isGroup || getCallState() !== 'idle') return
+    const { forumlineUserId } = forumlineStore.get()
+    const other = conversation.members.find((m: ForumlineConversationMember) => m.id !== forumlineUserId)
+    if (!other) return
+    initiateCall(conversationId, other.id, other.displayName || other.username, (other as any).avatarUrl ?? null)
+  })
+
+  headerEl.append(headerAvatar, headerTextWrap, callBtn)
   el.appendChild(headerEl)
 
   // Expandable member list panel
@@ -152,6 +167,9 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
 
     headerName.textContent = displayName
     messageInput.placeholder = `Message ${displayName}...`
+
+    // Show call button for 1:1 conversations
+    callBtn.style.display = (conversation && !conversation.isGroup) ? '' : 'none'
 
     // Show member names for group chats (cap at 4 names + "N more")
     if (conversation?.isGroup && conversation.members.length > 0) {
@@ -318,13 +336,8 @@ export function createDmMessageView({ forumlineStore, conversationId }: DmMessag
 
     try {
       await forumlineClient.sendMessage(conversationId, content)
-      // Remove optimistic message before adding real ones
-      renderedMessages.get(optimistic.id)?.remove()
-      renderedMessages.delete(optimistic.id)
-      // Refetch to get real message
-      const realMessages = await forumlineClient.getMessages(conversationId)
-      messages = realMessages
-      renderMessages()
+      // Keep optimistic visible — SSE-triggered fetchMessages() will replace it
+      // with the real message (optimistic temp-* id won't match, so it gets swapped)
     } catch (err) {
       // Remove optimistic on failure
       messages = messages.filter((m) => m.id !== optimistic.id)

@@ -105,6 +105,10 @@ func (h *SSEHub) broadcast(channel string, payload []byte) {
 	clients := h.clients[channel]
 	h.mu.RUnlock()
 
+	if len(clients) == 0 {
+		return
+	}
+
 	// Parse payload for filtering
 	var data map[string]interface{}
 	if err := json.Unmarshal(payload, &data); err != nil {

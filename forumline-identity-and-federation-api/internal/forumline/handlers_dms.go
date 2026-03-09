@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -548,15 +549,22 @@ func (h *Handlers) HandleCreateConversation(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	for _, memberID := range uniqueMembers {
-		_, err = tx.Exec(ctx,
-			`INSERT INTO forumline_conversation_members (conversation_id, user_id) VALUES ($1, $2)`,
-			convoID, memberID,
-		)
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to add members"})
-			return
-		}
+	// Batch insert all members in a single query
+	valueStrings := make([]string, len(uniqueMembers))
+	args := make([]interface{}, 0, len(uniqueMembers)+1)
+	args = append(args, convoID)
+	for i, memberID := range uniqueMembers {
+		valueStrings[i] = fmt.Sprintf("($1, $%d)", i+2)
+		args = append(args, memberID)
+	}
+	_, err = tx.Exec(ctx,
+		fmt.Sprintf(`INSERT INTO forumline_conversation_members (conversation_id, user_id) VALUES %s`,
+			strings.Join(valueStrings, ",")),
+		args...,
+	)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to add members"})
+		return
 	}
 
 	if err = tx.Commit(ctx); err != nil {
@@ -640,27 +648,30 @@ func (h *Handlers) HandleUpdateConversation(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	for _, memberID := range body.AddMembers {
-		// Verify user exists
-		var userExists bool
-		h.Pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM forumline_profiles WHERE id = $1)`, memberID).Scan(&userExists)
-		if !userExists {
-			continue
-		}
+	// Batch add members: insert only valid profiles in a single query
+	if len(body.AddMembers) > 0 {
 		h.Pool.Exec(ctx,
-			`INSERT INTO forumline_conversation_members (conversation_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-			conversationID, memberID,
+			`INSERT INTO forumline_conversation_members (conversation_id, user_id)
+			 SELECT $1, p.id FROM forumline_profiles p WHERE p.id = ANY($2)
+			 ON CONFLICT DO NOTHING`,
+			conversationID, body.AddMembers,
 		)
 	}
 
-	for _, memberID := range body.RemoveMembers {
-		if memberID == userID {
-			continue // Use leave endpoint instead
+	// Batch remove members (excluding self)
+	if len(body.RemoveMembers) > 0 {
+		filtered := make([]string, 0, len(body.RemoveMembers))
+		for _, id := range body.RemoveMembers {
+			if id != userID {
+				filtered = append(filtered, id)
+			}
 		}
-		h.Pool.Exec(ctx,
-			`DELETE FROM forumline_conversation_members WHERE conversation_id = $1 AND user_id = $2`,
-			conversationID, memberID,
-		)
+		if len(filtered) > 0 {
+			h.Pool.Exec(ctx,
+				`DELETE FROM forumline_conversation_members WHERE conversation_id = $1 AND user_id = ANY($2)`,
+				conversationID, filtered,
+			)
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]bool{"success": true})

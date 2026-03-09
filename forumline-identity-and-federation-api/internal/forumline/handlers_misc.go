@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -762,42 +764,57 @@ func sendPushNotifications(ctx context.Context, pool *pgxpool.Pool, userID, titl
 		"forum_domain": forumDomain,
 	})
 
-	sent := 0
-	var staleEndpoints []string
+	var (
+		sent           int32
+		staleEndpoints []string
+		mu             sync.Mutex
+		wg             sync.WaitGroup
+	)
 
+	// Send push notifications concurrently (max 10 in parallel)
+	sem := make(chan struct{}, 10)
 	for _, s := range subs {
-		subscription := &webpush.Subscription{
-			Endpoint: s.Endpoint,
-			Keys: webpush.Keys{
-				P256dh: s.P256dh,
-				Auth:   s.Auth,
-			},
-		}
+		wg.Add(1)
+		go func(s sub) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 
-		resp, err := webpush.SendNotification(payload, subscription, &webpush.Options{
-			Subscriber:      vapidSubject,
-			VAPIDPublicKey:  vapidPublicKey,
-			VAPIDPrivateKey: vapidPrivateKey,
-		})
+			subscription := &webpush.Subscription{
+				Endpoint: s.Endpoint,
+				Keys: webpush.Keys{
+					P256dh: s.P256dh,
+					Auth:   s.Auth,
+				},
+			}
 
-		if err != nil {
-			continue
-		}
-		resp.Body.Close()
+			resp, err := webpush.SendNotification(payload, subscription, &webpush.Options{
+				Subscriber:      vapidSubject,
+				VAPIDPublicKey:  vapidPublicKey,
+				VAPIDPrivateKey: vapidPrivateKey,
+			})
+			if err != nil {
+				return
+			}
+			resp.Body.Close()
 
-		if resp.StatusCode == 410 || resp.StatusCode == 404 {
-			staleEndpoints = append(staleEndpoints, s.Endpoint)
-		} else if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-			sent++
-		}
+			if resp.StatusCode == 410 || resp.StatusCode == 404 {
+				mu.Lock()
+				staleEndpoints = append(staleEndpoints, s.Endpoint)
+				mu.Unlock()
+			} else if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				atomic.AddInt32(&sent, 1)
+			}
+		}(s)
+	}
+	wg.Wait()
+
+	// Batch cleanup stale endpoints
+	if len(staleEndpoints) > 0 {
+		pool.Exec(ctx, `DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint = ANY($2)`, userID, staleEndpoints)
 	}
 
-	// Clean up stale endpoints
-	for _, endpoint := range staleEndpoints {
-		pool.Exec(ctx, `DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint = $2`, userID, endpoint)
-	}
-
-	return sent
+	return int(sent)
 }
 
 // --- Helpers ---

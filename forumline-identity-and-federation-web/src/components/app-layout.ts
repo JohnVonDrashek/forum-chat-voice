@@ -7,6 +7,8 @@ import { createSettingsPage } from './settings-page.js'
 import { createMobileTabBar, type AppView } from './mobile-tab-bar.js'
 import type { ForumWebviewInstance } from '../lib/index.js'
 import { subscribeDmEvents } from '../lib/dm-sse.js'
+import { initCallManager, destroyCallManager } from '../lib/call-manager.js'
+import { createCallOverlay } from './call-overlay.js'
 
 /** Persist auth state change to Forumline DB */
 async function updateForumAuthState(auth: GoTrueAuthClient, forumDomain: string, authed: boolean) {
@@ -422,6 +424,13 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
     }
   })
   cleanups.push(unsubForum)
+
+  // ---- Call overlay ----
+  initCallManager(forumlineStore)
+  cleanups.push(destroyCallManager)
+  const callOverlay = createCallOverlay()
+  root.appendChild(callOverlay.el)
+  cleanups.push(callOverlay.destroy)
 
   // ---- Init ----
   fetchMemberships()

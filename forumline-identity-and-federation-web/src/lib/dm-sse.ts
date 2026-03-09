@@ -16,6 +16,7 @@ type DmEventListener = (event: DmEvent) => void
 let eventSource: EventSource | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let destroyed = false
+let reconnectAttempts = 0
 const listeners = new Set<DmEventListener>()
 
 function connect() {
@@ -25,6 +26,8 @@ function connect() {
 
   const url = `/api/conversations/stream?access_token=${encodeURIComponent(session.access_token)}`
   eventSource = new EventSource(url)
+
+  eventSource.onopen = () => { reconnectAttempts = 0 }
 
   eventSource.onmessage = (event) => {
     let parsed: DmEvent | null = null
@@ -42,7 +45,11 @@ function connect() {
     eventSource?.close()
     eventSource = null
     if (!destroyed && listeners.size > 0) {
-      reconnectTimer = setTimeout(connect, 5000)
+      // Exponential backoff with jitter: 1s, 2s, 4s, 8s... capped at 30s
+      const base = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000)
+      const jitter = Math.random() * base * 0.3
+      reconnectAttempts++
+      reconnectTimer = setTimeout(connect, base + jitter)
     }
   }
 }
@@ -55,6 +62,7 @@ function disconnect() {
     clearTimeout(reconnectTimer)
     reconnectTimer = null
   }
+  reconnectAttempts = 0
 }
 
 export function subscribeDmEvents(fn: DmEventListener): () => void {
