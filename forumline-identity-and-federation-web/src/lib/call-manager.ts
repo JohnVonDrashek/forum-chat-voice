@@ -232,6 +232,15 @@ export async function initiateCall(conversationId: string, remoteUserId: string,
   const { forumlineClient } = forumlineStore!.get()
   if (!forumlineClient) return
 
+  // Acquire mic NOW while we have the user gesture (click on call button).
+  // This avoids permission issues when call_accepted arrives via SSE later.
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  } catch (err) {
+    console.error('[Call] Microphone access denied:', err)
+    return
+  }
+
   try {
     const result = await forumlineClient.initiateCall(conversationId)
     setState('ringing-outgoing', {
@@ -248,6 +257,11 @@ export async function initiateCall(conversationId: string, remoteUserId: string,
     }, 30000)
   } catch (err: any) {
     console.error('[Call] Failed to initiate call:', err)
+    // Release mic if call initiation failed
+    if (localStream) {
+      localStream.getTracks().forEach(t => t.stop())
+      localStream = null
+    }
   }
 }
 
@@ -318,12 +332,15 @@ export function isMuted(): boolean {
 async function startWebRTC(isInitiator: boolean) {
   if (!callInfo) return
 
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-  } catch (err) {
-    console.error('[Call] Failed to get microphone:', err)
-    endCall()
-    return
+  // Reuse localStream if already acquired (caller pre-acquires on button click)
+  if (!localStream) {
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch (err) {
+      console.error('[Call] Failed to get microphone:', err)
+      endCall()
+      return
+    }
   }
 
   muted = false
@@ -348,8 +365,21 @@ async function startWebRTC(isInitiator: boolean) {
     }
   }
 
+  // Timeout: if WebRTC doesn't connect within 15s, end the call.
+  // Prevents one side staying stuck if the other drops.
+  const connectTimeout = setTimeout(() => {
+    if (pc && pc.connectionState !== 'connected') {
+      console.error('[Call] WebRTC connection timed out')
+      endCall()
+    }
+  }, 15000)
+
   pc.onconnectionstatechange = () => {
+    if (pc?.connectionState === 'connected') {
+      clearTimeout(connectTimeout)
+    }
     if (pc?.connectionState === 'failed' || pc?.connectionState === 'closed') {
+      clearTimeout(connectTimeout)
       endCall()
     }
   }
