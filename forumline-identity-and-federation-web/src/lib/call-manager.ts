@@ -151,8 +151,13 @@ function connectSignalSSE() {
   signalSSE.onmessage = (event) => {
     try {
       const signal = JSON.parse(event.data)
-      handleSignal(signal)
-    } catch {}
+      console.log('[Call] SSE signal received:', signal.type, signal)
+      handleSignal(signal).catch(err => {
+        console.error('[Call] handleSignal error:', err)
+      })
+    } catch (err) {
+      console.error('[Call] SSE parse error:', err)
+    }
   }
 
   signalSSE.onerror = () => {
@@ -189,14 +194,17 @@ async function handleSignal(signal: any) {
   }
 
   if (type === 'call_accepted') {
+    console.log('[Call] call_accepted received, current state:', state)
     if (state !== 'ringing-outgoing') return
     // Callee accepted — start WebRTC (we are the caller, so we send the offer)
     setState('active')
+    console.log('[Call] Starting WebRTC as initiator, localStream exists:', !!localStream)
     await startWebRTC(true)
     return
   }
 
   if (type === 'call_declined' || type === 'call_ended') {
+    console.log('[Call] call ended/declined signal received')
     cleanup()
     return
   }
@@ -302,6 +310,8 @@ export async function declineCall() {
 // --- End call ---
 
 export async function endCall() {
+  console.log('[Call] endCall called, state:', state, 'callInfo:', !!callInfo)
+  console.trace('[Call] endCall stack trace')
   if (!callInfo) return
   const { forumlineClient } = forumlineStore!.get()
   if (!forumlineClient) return
@@ -375,6 +385,7 @@ async function startWebRTC(isInitiator: boolean) {
   }, 15000)
 
   pc.onconnectionstatechange = () => {
+    console.log('[Call] WebRTC connection state:', pc?.connectionState)
     if (pc?.connectionState === 'connected') {
       clearTimeout(connectTimeout)
     }
