@@ -34,6 +34,8 @@ let callTimer: ReturnType<typeof setTimeout> | null = null
 let sseReconnectTimer: ReturnType<typeof setTimeout> | null = null
 let sseReconnectAttempts = 0
 let forumlineStore: ForumlineStore | null = null
+let pendingCandidates: RTCIceCandidateInit[] = []
+let webrtcStarted = false
 
 const listeners = new Set<CallStateListener>()
 let tauriActionCleanup: (() => void) | null = null
@@ -214,6 +216,11 @@ async function handleSignal(signal: any) {
     if (!pc) await startWebRTC(false)
     if (!pc) return
     await pc.setRemoteDescription(new RTCSessionDescription(signal.payload))
+    // Apply any ICE candidates that arrived before the offer
+    for (const candidate of pendingCandidates) {
+      await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {})
+    }
+    pendingCandidates = []
     const answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
     await sendSignal('answer', { sdp: pc.localDescription!.sdp, type: pc.localDescription!.type })
@@ -223,11 +230,21 @@ async function handleSignal(signal: any) {
   if (type === 'answer') {
     if (!pc) return
     await pc.setRemoteDescription(new RTCSessionDescription(signal.payload))
+    // Apply any ICE candidates that arrived before the answer
+    for (const candidate of pendingCandidates) {
+      await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {})
+    }
+    pendingCandidates = []
     return
   }
 
   if (type === 'ice-candidate') {
-    if (!pc) return
+    // Queue candidates if pc doesn't exist yet or remote description isn't set
+    if (!pc || !pc.remoteDescription) {
+      console.log('[Call] Queuing ICE candidate (pc or remote desc not ready)')
+      pendingCandidates.push(signal.payload)
+      return
+    }
     await pc.addIceCandidate(new RTCIceCandidate(signal.payload)).catch(() => {})
     return
   }
@@ -298,8 +315,9 @@ export async function acceptCall() {
   try {
     await forumlineClient.respondToCall(callInfo.callId, 'accept')
     setState('active')
-    // We are the callee — wait for the offer from caller
-    await startWebRTC(false)
+    // We are the callee — DON'T start WebRTC here.
+    // The offer will arrive via SSE and the offer handler will call startWebRTC(false).
+    // This prevents a race where startWebRTC gets called twice.
   } catch (err) {
     console.error('[Call] Failed to accept call:', err)
     cleanup()
@@ -353,6 +371,11 @@ export function isMuted(): boolean {
 
 async function startWebRTC(isInitiator: boolean) {
   if (!callInfo) return
+  if (webrtcStarted) {
+    console.log('[Call] startWebRTC already called, skipping')
+    return
+  }
+  webrtcStarted = true
 
   // Reuse localStream if already acquired (caller pre-acquires on button click)
   if (!localStream) {
@@ -446,6 +469,8 @@ function cleanup() {
   }
 
   muted = false
+  webrtcStarted = false
+  pendingCandidates = []
   setState('idle', null)
 }
 
