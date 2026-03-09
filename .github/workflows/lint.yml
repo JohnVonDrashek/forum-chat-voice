@@ -8,6 +8,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.25'
+          cache-dependency-path: forumline-identity-and-federation-api/go.sum
       - uses: golangci/golangci-lint-action@v7
         with:
           working-directory: forumline-identity-and-federation-api
