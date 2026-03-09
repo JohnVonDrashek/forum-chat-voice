@@ -11,6 +11,7 @@ jobs:
           cache-dependency-path: forumline-identity-and-federation-api/go.sum
       - uses: golangci/golangci-lint-action@v7
         with:
+          version: v1.64
           working-directory: forumline-identity-and-federation-api
   ts-lint:
     runs-on: ubuntu-latest
