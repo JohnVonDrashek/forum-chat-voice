@@ -10,7 +10,7 @@
     "build": "pnpm -r run build",
     "clean": "pnpm -r --if-present run clean",
     "lint": "eslint .",
-    "lint:go": "docker run --rm -v ./forumline-identity-and-federation-api:/app -w /app golangci/golangci-lint:v2.11.2 golangci-lint run ./...",
+    "lint:go": "cd forumline-identity-and-federation-api && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.2 run ./...",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

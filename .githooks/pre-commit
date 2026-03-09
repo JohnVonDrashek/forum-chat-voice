@@ -89,7 +89,7 @@ fi
 # Run Go linter if any Go files are staged in the API
 if git diff --cached --name-only | grep -q '^forumline-identity-and-federation-api/.*\.go$'; then
   echo "Running golangci-lint..."
-  if ! docker run --rm -v ./forumline-identity-and-federation-api:/app -w /app golangci/golangci-lint:v2.11.2 golangci-lint run ./...; then
+  if ! (cd forumline-identity-and-federation-api && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.2 run ./...); then
     echo "ERROR: golangci-lint failed. Fix errors before committing."
     exit 1
   fi
