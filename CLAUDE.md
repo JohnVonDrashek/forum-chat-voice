@@ -62,7 +62,7 @@ All services listen on port 3000. Cloudflare Tunnel ID: b00696cc-c867-42d0-8649-
 
 - **URL**: https://forumline.net
 - **Remote path**: `/opt/website/` (docker-compose.yml, repo)
-- **Dockerfile**: `Dockerfile.website` (nginx serving static files)
+- **Dockerfile**: `docker/Dockerfile.website` (nginx serving static files)
 - **Content**: `website/` directory — static HTML/CSS, neocities aesthetic
 
 ## Forumline Web App
@@ -87,7 +87,7 @@ All services listen on port 3000. Cloudflare Tunnel ID: b00696cc-c867-42d0-8649-
 
 - **URL**: https://forum-b.forumline.net
 - **Remote path**: `/opt/forum-b/` (docker-compose.yml, .env, repo)
-- **Dockerfile**: `Dockerfile.go-forum-b`
+- **Dockerfile**: `docker/Dockerfile.go-forum-b`
 - **Frontend**: `example-forum-instances-and-shared-forum-server/forum-b/` — gothic/neocities theme, vanilla JS + Vite
 - **Vite dev port**: 5175
 - **OAuth client_id**: f5fd7cf2cae68b6fe067c2a18f5f5367
@@ -136,36 +136,15 @@ All services listen on port 3000. Cloudflare Tunnel ID: b00696cc-c867-42d0-8649-
 
 - **URL**: https://hosted.forumline.net (platform API) + *.forumline.net (hosted forums)
 - **Remote path**: `/opt/hosted/` (docker-compose.yml, .env, repo)
-- **Dockerfile**: `Dockerfile.go-hosted` (hosted Go binary, forum-a frontend as default template)
+- **Dockerfile**: `docker/Dockerfile.go-hosted` (hosted Go binary, forum-a frontend as default template)
 - **Auth**: Forumline identity only (no GoTrue), JWTs signed with FORUMLINE_JWT_SECRET
 - **Database**: Postgres with schema-per-tenant isolation, platform_tenants table in public schema
 - **Wildcard routing**: *.forumline.net catch-all routes unmatched subdomains to hosted server
 
-## Monorepo Structure
-
-- `example-forum-instances-and-shared-forum-server/forum-a/` — Example forum web app (Vite + vanilla JS)
-- `example-forum-instances-and-shared-forum-server/forum-b/` — Gothic example forum (Vite + vanilla JS)
-- `example-forum-instances-and-shared-forum-server/forum/` — Shared Go forum handlers and routes
-- `example-forum-instances-and-shared-forum-server/shared/` — Shared Go infrastructure (db, auth, SSE, middleware)
-- `example-forum-instances-and-shared-forum-server/platform/` — Hosted platform Go code (multi-tenant handlers, provisioning, tenant pool)
-- `example-forum-instances-and-shared-forum-server/hosted/` — Hosted server entry point
-- `forumline-identity-and-federation-web/` — Forumline App frontend (Vite + vanilla TS + VanJS)
-- `forumline-identity-and-federation-api/` — Forumline Go API server (`cmd/forumline/`)
-- `native-applications/ios/` — Native iOS app (Swift/SwiftUI, WKWebView wrapper)
-- `native-applications/android/` — Native Android app (Kotlin, WebView wrapper)
-- `native-applications/macos/` — Native macOS app (Swift/SwiftUI, WKWebView wrapper)
-- `native-applications/windows/` — Native Windows app (C#/WPF, WebView2)
-- `native-applications/linux/` — Native Linux app (C/GTK4, WebKitGTK)
-- `published-npm-packages/protocol/` — @johnvondrashek/forumline-protocol (federation types, zero-dependency)
-- `published-npm-packages/server-sdk/` — @johnvondrashek/forumline-server-sdk (ForumlineServer handler factories)
-- `production-docker-compose-configs/` — Docker Compose configs per deploy environment
-- `website/` — Marketing website (static HTML/CSS, neocities aesthetic)
-- `.githooks/` — Shared hook scripts (lockfile check, SOPS check, pre-push)
-
 ## Deployment
 
 - All deploy via GitHub Actions → SSH via cloudflared → git pull + docker compose rebuild
-- Multi-stage Dockerfiles at repo root: `Dockerfile.go-forum`, `Dockerfile.go-forum-b`, `Dockerfile.go-forumline`, `Dockerfile.go-hosted`, `Dockerfile.website`
+- Multi-stage Dockerfiles in `docker/`: `Dockerfile.go-forum`, `Dockerfile.go-forum-b`, `Dockerfile.go-forumline`, `Dockerfile.go-hosted`, `Dockerfile.website`
 - Deploy workflows: `.github/workflows/deploy-{forum,forum-b,forumline,website,hosted}.yml`
 - Total hosting cost: $0/mo (all self-hosted on Proxmox)
 

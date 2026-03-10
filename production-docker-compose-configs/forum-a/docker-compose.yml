@@ -70,7 +70,7 @@ services:
   forum:
     build:
       context: /opt/forum/repo
-      dockerfile: Dockerfile.go-forum
+      dockerfile: docker/Dockerfile.go-forum
     restart: unless-stopped
     depends_on:
       postgres:

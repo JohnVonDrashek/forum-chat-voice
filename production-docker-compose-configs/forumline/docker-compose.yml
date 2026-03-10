@@ -68,7 +68,7 @@ services:
   forumline:
     build:
       context: /opt/forumline/repo
-      dockerfile: Dockerfile.go-forumline
+      dockerfile: docker/Dockerfile.go-forumline
       args:
         GITHUB_PACKAGES_TOKEN: ${GITHUB_PACKAGES_TOKEN}
         VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY}

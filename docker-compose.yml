@@ -2,7 +2,7 @@ services:
   forum:
     build:
       context: .
-      dockerfile: Dockerfile.go-forum
+      dockerfile: docker/Dockerfile.go-forum
     ports:
       - "3000:3000"
     env_file:
@@ -13,7 +13,7 @@ services:
   forumline:
     build:
       context: .
-      dockerfile: Dockerfile.go-forumline
+      dockerfile: docker/Dockerfile.go-forumline
       args:
         GITHUB_PACKAGES_TOKEN: ${GITHUB_PACKAGES_TOKEN}
     ports:

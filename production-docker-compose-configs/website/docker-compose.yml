@@ -2,7 +2,7 @@ services:
   website:
     build:
       context: /opt/website/repo
-      dockerfile: Dockerfile.website
+      dockerfile: docker/Dockerfile.website
     restart: unless-stopped
     ports:
       - "3000:80"
