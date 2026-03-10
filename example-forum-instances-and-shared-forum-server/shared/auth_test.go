@@ -97,7 +97,7 @@ func TestAuthMiddleware_ValidBearer(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/", nil)
 	req.Header.Set("Authorization", "Bearer "+tokenStr)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
@@ -115,7 +115,7 @@ func TestAuthMiddleware_MissingAuth(t *testing.T) {
 		t.Fatal("should not reach handler")
 	}))
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/", nil)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
@@ -139,7 +139,7 @@ func TestAuthMiddleware_CookieAuth(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/", nil)
 	req.AddCookie(&http.Cookie{Name: "sb-access-token", Value: tokenStr})
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
@@ -167,7 +167,7 @@ func TestOptionalAuthMiddleware_WithToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/", nil)
 	req.Header.Set("Authorization", "Bearer "+tokenStr)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
@@ -187,7 +187,7 @@ func TestOptionalAuthMiddleware_WithoutToken(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/", nil)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
