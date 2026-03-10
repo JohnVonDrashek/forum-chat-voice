@@ -85,6 +85,7 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
   const accountContentArea = div({ class: 'mt-lg' }) as HTMLElement
   accountCard.appendChild(accountContentArea)
   content.appendChild(accountCard)
+  content.appendChild(forumsCard)
 
   function renderHubContent() {
     accountContentArea.innerHTML = ''
