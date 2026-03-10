@@ -4,7 +4,7 @@
  * Updates screenshot_url via the Forumline identity API.
  *
  * Usage:
- *   node scripts/update-forum-screenshots.js
+ *   node .github/scripts/update-forum-screenshots.js
  *
  * Environment variables:
  *   FORUMLINE_API_URL      - default: https://app.forumline.net

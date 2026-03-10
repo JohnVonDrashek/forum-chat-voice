@@ -69,7 +69,7 @@ services:
   forum:
     build:
       context: ./repo
-      dockerfile: Dockerfile.go-forum-b
+      dockerfile: docker/Dockerfile.go-forum-b
     restart: unless-stopped
     depends_on:
       db:

@@ -6,7 +6,7 @@ on:
     branches: [main]
     paths:
       - 'example-forum-instances-and-shared-forum-server/**'
-      - 'Dockerfile.go-hosted'
+      - 'docker/Dockerfile.go-hosted'
       - '.github/workflows/deploy-hosted.yml'
       - 'production-docker-compose-configs/hosted/**'
 

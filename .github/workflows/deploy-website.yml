@@ -6,7 +6,7 @@ on:
     branches: [main]
     paths:
       - 'website/**'
-      - 'Dockerfile.website'
+      - 'docker/Dockerfile.website'
       - '.github/workflows/deploy-website.yml'
       - 'production-docker-compose-configs/website/**'
 

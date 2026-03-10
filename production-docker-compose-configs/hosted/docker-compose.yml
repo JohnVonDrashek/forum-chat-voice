@@ -19,7 +19,7 @@ services:
   hosted:
     build:
       context: /opt/hosted/repo
-      dockerfile: Dockerfile.go-hosted
+      dockerfile: docker/Dockerfile.go-hosted
     restart: unless-stopped
     depends_on:
       postgres:

@@ -17,15 +17,15 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        working-directory: scripts
+        working-directory: .github/scripts
         run: npm install
 
       - name: Install Playwright browsers
-        working-directory: scripts
+        working-directory: .github/scripts
         run: npx playwright install chromium --with-deps
 
       - name: Capture screenshots and update API
-        working-directory: scripts
+        working-directory: .github/scripts
         env:
           FORUMLINE_API_URL: ${{ secrets.FORUMLINE_API_URL }}
           FORUMLINE_SERVICE_KEY: ${{ secrets.FORUMLINE_SERVICE_KEY }}
