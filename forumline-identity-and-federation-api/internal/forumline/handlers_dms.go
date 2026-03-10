@@ -1,7 +1,6 @@
 package forumline
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/johnvondrashek/forumline/forumline-identity-and-federation-api/internal/shared"
 )
 
@@ -151,7 +149,7 @@ func (h *Handlers) HandleListConversations(w http.ResponseWriter, r *http.Reques
 // HandleGetConversation returns a single conversation's metadata.
 func (h *Handlers) HandleGetConversation(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
-	conversationID := chi.URLParam(r, "conversationId")
+	conversationID := r.PathValue("conversationId")
 	ctx := r.Context()
 
 	if conversationID == "" {
@@ -236,7 +234,7 @@ func (h *Handlers) HandleGetConversation(w http.ResponseWriter, r *http.Request)
 // HandleGetMessages returns messages in a conversation.
 func (h *Handlers) HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
-	conversationID := chi.URLParam(r, "conversationId")
+	conversationID := r.PathValue("conversationId")
 	ctx := r.Context()
 
 	if conversationID == "" {
@@ -326,7 +324,7 @@ func (h *Handlers) HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 // HandleSendMessage sends a message in a conversation.
 func (h *Handlers) HandleSendMessage(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
-	conversationID := chi.URLParam(r, "conversationId")
+	conversationID := r.PathValue("conversationId")
 	ctx := r.Context()
 
 	if conversationID == "" {
@@ -387,7 +385,7 @@ func (h *Handlers) HandleSendMessage(w http.ResponseWriter, r *http.Request) {
 // HandleMarkRead marks a conversation as read for the authenticated user.
 func (h *Handlers) HandleMarkRead(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
-	conversationID := chi.URLParam(r, "conversationId")
+	conversationID := r.PathValue("conversationId")
 	ctx := r.Context()
 
 	if conversationID == "" {
@@ -618,7 +616,7 @@ func (h *Handlers) HandleCreateConversation(w http.ResponseWriter, r *http.Reque
 // HandleUpdateConversation updates a group conversation (rename, add/remove members).
 func (h *Handlers) HandleUpdateConversation(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
-	conversationID := chi.URLParam(r, "conversationId")
+	conversationID := r.PathValue("conversationId")
 	ctx := r.Context()
 
 	// Verify membership and that it's a group
@@ -701,7 +699,7 @@ func (h *Handlers) HandleUpdateConversation(w http.ResponseWriter, r *http.Reque
 // HandleLeaveConversation removes the authenticated user from a group conversation.
 func (h *Handlers) HandleLeaveConversation(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
-	conversationID := chi.URLParam(r, "conversationId")
+	conversationID := r.PathValue("conversationId")
 	ctx := r.Context()
 
 	// Verify it's a group
@@ -788,7 +786,7 @@ func (h *Handlers) HandleDMStream(w http.ResponseWriter, r *http.Request) {
 // resolveConversationID finds or creates a 1:1 conversation for a legacy userId param.
 func (h *Handlers) resolveConversationID(w http.ResponseWriter, r *http.Request) string {
 	userID := shared.UserIDFromContext(r.Context())
-	otherUserID := chi.URLParam(r, "userId")
+	otherUserID := r.PathValue("userId")
 	ctx := r.Context()
 
 	if otherUserID == "" || otherUserID == userID {
@@ -837,12 +835,11 @@ func (h *Handlers) resolveConversationID(w http.ResponseWriter, r *http.Request)
 	return convoID
 }
 
-// withConversationID injects a conversationId URL param into the chi route context
+// withConversationID injects a conversationId path value into the request
 // while preserving all other context values (auth, etc.).
 func withConversationID(r *http.Request, convoID string) *http.Request {
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("conversationId", convoID)
-	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+	r.SetPathValue("conversationId", convoID)
+	return r
 }
 
 // HandleLegacyGetMessages handles GET /api/dms/{userId} by resolving to a conversation.

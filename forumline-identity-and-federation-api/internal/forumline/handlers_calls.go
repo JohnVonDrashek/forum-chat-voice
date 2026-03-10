@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/johnvondrashek/forumline/forumline-identity-and-federation-api/internal/shared"
 )
 
@@ -159,7 +158,7 @@ func (h *Handlers) HandleInitiateCall(w http.ResponseWriter, r *http.Request) {
 // POST /api/calls/{callId}/respond
 func (h *Handlers) HandleRespondToCall(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
-	callID := chi.URLParam(r, "callId")
+	callID := r.PathValue("callId")
 	ctx := r.Context()
 
 	var body struct {
@@ -222,7 +221,7 @@ func (h *Handlers) HandleRespondToCall(w http.ResponseWriter, r *http.Request) {
 // POST /api/calls/{callId}/end
 func (h *Handlers) HandleEndCall(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
-	callID := chi.URLParam(r, "callId")
+	callID := r.PathValue("callId")
 	ctx := r.Context()
 
 	// Get call and verify participant

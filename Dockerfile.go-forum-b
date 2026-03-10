@@ -1,5 +1,5 @@
 # ---- Go build stage ----
-FROM golang:1.25-alpine AS go-build
+FROM golang:1.26-alpine AS go-build
 
 WORKDIR /app
 COPY example-forum-instances-and-shared-forum-server/go.mod example-forum-instances-and-shared-forum-server/go.sum ./
