@@ -4,8 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon>forumline.ico</ApplicationIcon>
-    <AssemblyName>Forumline</AssemblyName>
+<AssemblyName>Forumline</AssemblyName>
     <RootNamespace>Forumline</RootNamespace>
     <Version>0.1.0</Version>
     <AssemblyVersion>0.1.0.0</AssemblyVersion>
