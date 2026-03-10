@@ -46,13 +46,15 @@ services:
   init-db:
     image: postgres:17-alpine
     depends_on:
-      gotrue:
+      db:
         condition: service_healthy
     volumes:
-      - ./init.sql:/init.sql:ro
+      - ./init.sql:/scripts/01-forumline.sql:ro
+      - ../example-forum-instances-and-shared-forum-server/init-forum-tables.sql:/scripts/02-forum-tables.sql:ro
+      - ../example-forum-instances-and-shared-forum-server/init-forum.sql:/scripts/03-forum-triggers.sql:ro
     environment:
       PGPASSWORD: postgres
-    entrypoint: ["sh", "-c", "psql -h db -U postgres -d postgres -f /init.sql && echo 'DB seeded!'"]
+    entrypoint: ["sh", "-c", "for f in /scripts/*.sql; do psql -h db -U postgres -d postgres -f $$f; done && echo 'DB seeded!'"]
 
 volumes:
   pgdata:
