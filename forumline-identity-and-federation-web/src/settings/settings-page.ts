@@ -198,24 +198,16 @@ export function createSettingsPage({ forumlineSession, forumStore, forumlineStor
   async function fetchOwnedSites() {
     const session = auth.getSession()
     if (!session) return
-    const { forums } = forumStore.get()
-    const results = await Promise.allSettled(
-      forums.map(async (forum) => {
-        const res = await fetch(`https://${forum.domain}/api/platform/owned-sites`, {
-          headers: { 'X-Forumline-ID': session.user.id },
-        })
-        if (!res.ok) throw new Error('not found')
-        return res.json() as Promise<{ domain: string; slug: string }[]>
-      }),
-    )
-    for (const result of results) {
-      if (result.status === 'fulfilled' && result.value.length >= 0) {
-        const newOwned: Record<string, string> = {}
-        for (const s of result.value) newOwned[s.domain] = s.slug
-        vanX.replace(settings.ownedSites, newOwned)
-        return
-      }
-    }
+    try {
+      const res = await fetch('https://hosted.forumline.net/api/platform/owned-sites', {
+        headers: { 'X-Forumline-ID': session.user.id },
+      })
+      if (!res.ok) return
+      const sites = await res.json() as { domain: string; slug: string }[]
+      const newOwned: Record<string, string> = {}
+      for (const s of sites) newOwned[s.domain] = s.slug
+      vanX.replace(settings.ownedSites, newOwned)
+    } catch { /* hosted platform unreachable — not critical */ }
   }
 
   async function fetchAvatar() {
