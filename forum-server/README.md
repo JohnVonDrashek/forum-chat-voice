@@ -1,6 +1,6 @@
 # Forumline Forum Server
 
-A self-hosted forum with real-time chat, voice rooms, and optional [Forumline](https://forumline.net) network integration.
+A self-hosted forum server with real-time chat, voice rooms, and optional [Forumline](https://forumline.net) network integration.
 
 **Features:** threads, posts, categories, real-time chat (SSE), voice rooms (LiveKit), user profiles, notifications, bookmarks, avatar uploads, admin tools.
 
