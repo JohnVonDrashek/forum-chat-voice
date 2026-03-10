@@ -7,17 +7,27 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/johnvondrashek/forumline/forumline-identity-and-federation-api/internal/shared"
 )
 
-func NewRouter(pool *shared.ObservablePool, sseHub *shared.SSEHub) *chi.Mux {
-	r := chi.NewRouter()
+// use applies middleware to a handler, wrapping in right-to-left order.
+func use(h http.HandlerFunc, mws ...func(http.Handler) http.Handler) http.Handler {
+	var handler http.Handler = h
+	for i := len(mws) - 1; i >= 0; i-- {
+		handler = mws[i](handler)
+	}
+	return handler
+}
+
+func NewRouter(pool *shared.ObservablePool, sseHub *shared.SSEHub) *http.ServeMux {
+	mux := http.NewServeMux()
 
 	h := &Handlers{
 		Pool:   pool,
 		SSEHub: sseHub,
 	}
+
+	auth := shared.AuthMiddleware
 
 	// Rate limiters
 	authRL := shared.RateLimitMiddleware(shared.NewRateLimiter(10, time.Minute))
@@ -26,93 +36,74 @@ func NewRouter(pool *shared.ObservablePool, sseHub *shared.SSEHub) *chi.Mux {
 	dmRL := shared.RateLimitMiddleware(shared.NewRateLimiter(30, time.Minute))
 
 	// Auth routes (delegate to GoTrue + custom logic)
-	r.With(authRL).Post("/api/auth/login", h.HandleLogin)
-	r.With(signupRL).Post("/api/auth/signup", h.HandleSignup)
-	r.Post("/api/auth/logout", h.HandleLogout)
-	r.Get("/api/auth/session", h.HandleSession)
+	mux.Handle("POST /api/auth/login", use(h.HandleLogin, authRL))
+	mux.Handle("POST /api/auth/signup", use(h.HandleSignup, signupRL))
+	mux.HandleFunc("POST /api/auth/logout", h.HandleLogout)
+	mux.HandleFunc("GET /api/auth/session", h.HandleSession)
 
 	// OAuth routes (Forumline federation)
-	r.Get("/api/oauth/authorize", h.HandleOAuthAuthorize)
-	r.Post("/api/oauth/authorize", h.HandleOAuthAuthorize)
-	r.With(tokenRL).Post("/api/oauth/token", h.HandleOAuthToken)
+	mux.HandleFunc("GET /api/oauth/authorize", h.HandleOAuthAuthorize)
+	mux.HandleFunc("POST /api/oauth/authorize", h.HandleOAuthAuthorize)
+	mux.Handle("POST /api/oauth/token", use(h.HandleOAuthToken, tokenRL))
 
 	// Memberships (authenticated)
-	r.Group(func(r chi.Router) {
-		r.Use(shared.AuthMiddleware)
-		r.Get("/api/memberships", h.HandleGetMemberships)
-		r.Post("/api/memberships", h.HandleUpdateMembershipAuth)
-		r.Put("/api/memberships", h.HandleToggleMembershipMute)
-		r.Post("/api/memberships/join", h.HandleJoinForum)
-		r.Delete("/api/memberships", h.HandleLeaveForum)
-	})
+	mux.Handle("GET /api/memberships", use(h.HandleGetMemberships, auth))
+	mux.Handle("POST /api/memberships", use(h.HandleUpdateMembershipAuth, auth))
+	mux.Handle("PUT /api/memberships", use(h.HandleToggleMembershipMute, auth))
+	mux.Handle("POST /api/memberships/join", use(h.HandleJoinForum, auth))
+	mux.Handle("DELETE /api/memberships", use(h.HandleLeaveForum, auth))
 
 	// Conversations / DMs
 	// NOTE: stream is NOT behind AuthMiddleware (EventSource can't set headers;
-	// auth is handled via query param inside the handler). All other routes use
-	// AuthMiddleware. They must be registered in the same r.Route block so that
-	// chi's trie correctly handles both the literal "stream" and the wildcard
-	// "{conversationId}" under the same /api/conversations prefix.
-	r.Route("/api/conversations", func(r chi.Router) {
-		r.Get("/stream", h.HandleDMStream)
-		r.Group(func(r chi.Router) {
-			r.Use(shared.AuthMiddleware)
-			r.Get("/", h.HandleListConversations)
-			r.Post("/", h.HandleCreateConversation)
-			r.Post("/dm", h.HandleGetOrCreateDM)
-			r.Get("/{conversationId}", h.HandleGetConversation)
-			r.Patch("/{conversationId}", h.HandleUpdateConversation)
-			r.Get("/{conversationId}/messages", h.HandleGetMessages)
-			r.With(dmRL).Post("/{conversationId}/messages", h.HandleSendMessage)
-			r.Post("/{conversationId}/read", h.HandleMarkRead)
-			r.Delete("/{conversationId}/members/me", h.HandleLeaveConversation)
-		})
-	})
+	// auth is handled via query param inside the handler).
+	mux.HandleFunc("GET /api/conversations/stream", h.HandleDMStream)
+	mux.Handle("GET /api/conversations", use(h.HandleListConversations, auth))
+	mux.Handle("POST /api/conversations", use(h.HandleCreateConversation, auth))
+	mux.Handle("POST /api/conversations/dm", use(h.HandleGetOrCreateDM, auth))
+	mux.Handle("GET /api/conversations/{conversationId}", use(h.HandleGetConversation, auth))
+	mux.Handle("PATCH /api/conversations/{conversationId}", use(h.HandleUpdateConversation, auth))
+	mux.Handle("GET /api/conversations/{conversationId}/messages", use(h.HandleGetMessages, auth))
+	mux.Handle("POST /api/conversations/{conversationId}/messages", use(h.HandleSendMessage, auth, dmRL))
+	mux.Handle("POST /api/conversations/{conversationId}/read", use(h.HandleMarkRead, auth))
+	mux.Handle("DELETE /api/conversations/{conversationId}/members/me", use(h.HandleLeaveConversation, auth))
 
 	// Legacy /api/dms/* routes — backwards compat for cached frontends / Tauri app.
 	// These resolve a userId to a conversation ID and forward to the new handlers.
-	r.Group(func(r chi.Router) {
-		r.Use(shared.AuthMiddleware)
-		r.Get("/api/dms", h.HandleListConversations)
-		r.Get("/api/dms/{userId}", h.HandleLegacyGetMessages)
-		r.With(dmRL).Post("/api/dms/{userId}", h.HandleLegacySendMessage)
-		r.Post("/api/dms/{userId}/read", h.HandleLegacyMarkRead)
-	})
-	r.Get("/api/dms/{userId}/stream", h.HandleDMStream)
+	mux.Handle("GET /api/dms", use(h.HandleListConversations, auth))
+	mux.Handle("GET /api/dms/{userId}", use(h.HandleLegacyGetMessages, auth))
+	mux.Handle("POST /api/dms/{userId}", use(h.HandleLegacySendMessage, auth, dmRL))
+	mux.Handle("POST /api/dms/{userId}/read", use(h.HandleLegacyMarkRead, auth))
+	mux.HandleFunc("GET /api/dms/{userId}/stream", h.HandleDMStream)
 
 	// Forums (public GET, authenticated POST)
-	r.Get("/api/forums", h.HandleListForums)
-	r.With(shared.AuthMiddleware).Post("/api/forums", h.HandleRegisterForum)
+	mux.HandleFunc("GET /api/forums", h.HandleListForums)
+	mux.Handle("POST /api/forums", use(h.HandleRegisterForum, auth))
 
 	// Screenshot update (service key auth)
-	r.Put("/api/forums/screenshot", h.HandleUpdateScreenshot)
+	mux.HandleFunc("PUT /api/forums/screenshot", h.HandleUpdateScreenshot)
 
 	// Identity (authenticated)
-	r.With(shared.AuthMiddleware).Get("/api/identity", h.HandleGetIdentity)
+	mux.Handle("GET /api/identity", use(h.HandleGetIdentity, auth))
 
 	// Profile search (authenticated)
-	r.With(shared.AuthMiddleware).Get("/api/profiles/search", h.HandleSearchProfiles)
+	mux.Handle("GET /api/profiles/search", use(h.HandleSearchProfiles, auth))
 
 	// Calls (1:1 voice)
-	r.Route("/api/calls", func(r chi.Router) {
-		r.Get("/stream", h.HandleCallSignalStream)
-		r.Group(func(r chi.Router) {
-			r.Use(shared.AuthMiddleware)
-			r.Post("/", h.HandleInitiateCall)
-			r.Post("/{callId}/respond", h.HandleRespondToCall)
-			r.Post("/{callId}/end", h.HandleEndCall)
-			r.Post("/signal", h.HandleCallSignal)
-		})
-	})
+	mux.HandleFunc("GET /api/calls/stream", h.HandleCallSignalStream)
+	mux.Handle("POST /api/calls", use(h.HandleInitiateCall, auth))
+	mux.Handle("POST /api/calls/{callId}/respond", use(h.HandleRespondToCall, auth))
+	mux.Handle("POST /api/calls/{callId}/end", use(h.HandleEndCall, auth))
+	mux.Handle("POST /api/calls/signal", use(h.HandleCallSignal, auth))
 
 	// Push notifications
-	r.Post("/api/push", h.HandlePush)
+	mux.HandleFunc("POST /api/push", h.HandlePush)
 
 	// GoTrue reverse proxy — allows frontend to call /auth/v1/* same-origin
 	gotrueURL := os.Getenv("GOTRUE_URL")
 	if gotrueURL != "" {
 		target, _ := url.Parse(gotrueURL)
 		proxy := httputil.NewSingleHostReverseProxy(target) // #nosec G704 -- URL from trusted GOTRUE_URL env var
-		r.HandleFunc("/auth/v1/*", func(w http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc("/auth/v1/", func(w http.ResponseWriter, r *http.Request) {
 			// Strip /auth/v1 prefix — GoTrue expects /signup, /token, etc. at root
 			r.URL.Path = r.URL.Path[len("/auth/v1"):]
 			r.Host = target.Host
@@ -120,5 +111,5 @@ func NewRouter(pool *shared.ObservablePool, sseHub *shared.SSEHub) *chi.Mux {
 		})
 	}
 
-	return r
+	return mux
 }
