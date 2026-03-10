@@ -5,7 +5,7 @@ errors=0
 
 for file in $(git diff --cached --name-only --diff-filter=ACM); do
   basename=$(basename "$file")
-  if [[ "$basename" == .env || "$basename" == .env.* ]] && [[ "$basename" != *.env.enc ]]; then
+  if [[ "$basename" == .env || "$basename" == .env.* ]] && [[ "$basename" != *.env.enc ]] && [[ "$basename" != .env.example ]]; then
     echo "ERROR: Refusing to commit unencrypted env file: $file"
     echo "       Use SOPS to encrypt it as a .env.enc file instead."
     errors=1

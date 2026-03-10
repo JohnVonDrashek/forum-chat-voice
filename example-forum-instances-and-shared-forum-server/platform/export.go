@@ -6,39 +6,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/forumline/forum-server/forum"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// ExportData is the portable format for a forum's data.
-// It can be imported by a self-hosted forumline instance.
-type ExportData struct {
-	ForumlineVersion string    `json:"forumline_version"`
-	ExportedAt       time.Time `json:"exported_at"`
-	Forum            ForumMeta `json:"forum"`
-
-	Categories              []json.RawMessage `json:"categories"`
-	Profiles                []json.RawMessage `json:"profiles"`
-	Threads                 []json.RawMessage `json:"threads"`
-	Posts                   []json.RawMessage `json:"posts"`
-	ChatChannels            []json.RawMessage `json:"chat_channels"`
-	ChatMessages            []json.RawMessage `json:"chat_messages"`
-	VoiceRooms              []json.RawMessage `json:"voice_rooms"`
-	Bookmarks               []json.RawMessage `json:"bookmarks"`
-	Notifications           []json.RawMessage `json:"notifications"`
-	ChannelFollows          []json.RawMessage `json:"channel_follows"`
-	NotificationPreferences []json.RawMessage `json:"notification_preferences"`
-}
-
-type ForumMeta struct {
-	Slug        string `json:"slug"`
-	Name        string `json:"name"`
-	Domain      string `json:"domain"`
-	Description string `json:"description"`
-}
-
 // Export dumps all data from a tenant's schema into the portable ExportData format.
-func Export(ctx context.Context, pool *pgxpool.Pool, tenant *Tenant) (*ExportData, error) {
+func Export(ctx context.Context, pool *pgxpool.Pool, tenant *Tenant) (*forum.ExportData, error) {
 	// Acquire a connection and set search_path to the tenant's schema
 	conn, err := pool.Acquire(ctx)
 	if err != nil {
@@ -52,10 +26,10 @@ func Export(ctx context.Context, pool *pgxpool.Pool, tenant *Tenant) (*ExportDat
 		return nil, fmt.Errorf("set search_path: %w", err)
 	}
 
-	data := &ExportData{
+	data := &forum.ExportData{
 		ForumlineVersion: "1",
 		ExportedAt:       time.Now().UTC(),
-		Forum: ForumMeta{
+		Forum: forum.ForumMeta{
 			Slug:        tenant.Slug,
 			Name:        tenant.Name,
 			Domain:      tenant.Domain,

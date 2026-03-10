@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/forumline/forumline/example-forum-instances-and-shared-forum-server/platform"
 	shared "github.com/forumline/forumline/shared-go"
 )
 
@@ -35,7 +34,7 @@ func (h *Handlers) HandleImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var data platform.ExportData
+	var data ExportData
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid export file"})
 		return
@@ -46,7 +45,7 @@ func (h *Handlers) HandleImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := platform.Import(r.Context(), h.Pool, &data); err != nil {
+	if err := Import(r.Context(), h.Pool, &data); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "import failed: " + err.Error()})
 		return
 	}

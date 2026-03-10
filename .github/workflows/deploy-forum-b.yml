@@ -6,10 +6,8 @@ on:
     branches: [main]
     paths:
       - 'example-forum-instances-and-shared-forum-server/**'
-      - 'example-forum-instances-and-shared-forum-server/forum-b/src/**'
-      - 'example-forum-instances-and-shared-forum-server/forum-b/index.html'
-      - 'example-forum-instances-and-shared-forum-server/forum-b/vite.config.js'
-      - 'example-forum-instances-and-shared-forum-server/forum-b/package.json'
+      - 'forum-server/**'
+      - 'shared-go/**'
       - 'docker/Dockerfile.go-forum-b'
       - '.github/workflows/deploy-forum-b.yml'
       - 'production-docker-compose-configs/forum-b/**'

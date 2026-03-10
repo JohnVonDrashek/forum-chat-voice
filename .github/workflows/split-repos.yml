@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'shared-go/**'
-      - 'example-forum-instances-and-shared-forum-server/**'
+      - 'forum-server/**'
 
   workflow_dispatch:
 
@@ -76,7 +76,7 @@ jobs:
       - name: Split and rewrite
         run: |
           # Split the subtree
-          SPLIT_SHA=$(splitsh-lite --prefix=example-forum-instances-and-shared-forum-server)
+          SPLIT_SHA=$(splitsh-lite --prefix=forum-server)
 
           # Create a working branch from the split
           git checkout -b split-result "$SPLIT_SHA"
@@ -89,7 +89,8 @@ jobs:
           fi
           SHARED_VERSION=${SHARED_TAG#shared-go/}
 
-          # Rewrite go.mod: real version, no replace directive
+          # Rewrite go.mod: use the real module path and published shared-go version
+          sed -i 's|module github.com/forumline/forum-server|module github.com/forumline/forum-server|' go.mod
           sed -i "s|github.com/forumline/forumline/shared-go v0.0.0-00010101000000-000000000000|github.com/forumline/forumline/shared-go $SHARED_VERSION|" go.mod
           sed -i '/^replace github.com\/forumline\/forumline\/shared-go/d' go.mod
           # Remove trailing blank lines left by sed

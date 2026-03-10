@@ -13,8 +13,8 @@ pre-commit:
       glob: "{forumline-identity-and-federation-web,published-npm-packages}/**/*.{ts,tsx,js,mjs}"
       run: pnpm lint
 
-    eslint-forum-a:
-      root: "example-forum-instances-and-shared-forum-server/forum-a/"
+    eslint-forum:
+      root: "forum-server/"
       glob: "src/**/*.js"
       run: pnpm lint
 
@@ -24,6 +24,8 @@ pre-commit:
         cd shared-go &&
         go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.2 run ./... &&
         cd ../forumline-identity-and-federation-api &&
+        go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.2 run ./... &&
+        cd ../forum-server &&
         go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.2 run ./... &&
         cd ../example-forum-instances-and-shared-forum-server &&
         go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.2 run ./...
@@ -39,7 +41,12 @@ pre-commit:
       run: go test ./...
 
     go-test-forum:
-      glob: "{example-forum-instances-and-shared-forum-server,shared-go}/**/*.go"
+      glob: "{forum-server,shared-go}/**/*.go"
+      root: "forum-server/"
+      run: go test ./...
+
+    go-test-forum-variants:
+      glob: "{example-forum-instances-and-shared-forum-server,shared-go,forum-server}/**/*.go"
       root: "example-forum-instances-and-shared-forum-server/"
       run: go test ./...
 

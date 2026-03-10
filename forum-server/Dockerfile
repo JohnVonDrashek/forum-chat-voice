@@ -2,12 +2,11 @@
 FROM golang:1.26-alpine AS go-build
 
 WORKDIR /app
-COPY forum-server/go.mod forum-server/go.sum ./
-COPY shared-go/ /shared-go/
+COPY go.mod go.sum ./
 RUN go mod download
 
-COPY forum-server/forum/ forum/
-COPY forum-server/main.go .
+COPY forum/ forum/
+COPY main.go .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/forum .
 
 # ---- Frontend build stage ----
@@ -17,12 +16,12 @@ RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
 
 WORKDIR /app
 
-COPY forum-server/package.json forum-server/pnpm-lock.yaml* ./
+COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile || pnpm install
 
-COPY forum-server/index.html forum-server/vite.config.js forum-server/eslint.config.mjs ./
-COPY forum-server/src/ src/
-COPY forum-server/public/ public/
+COPY index.html vite.config.js eslint.config.mjs ./
+COPY src/ src/
+COPY public/ public/
 RUN pnpm run build
 
 # ---- Production stage ----

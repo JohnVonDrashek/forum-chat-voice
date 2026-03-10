@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths:
       - 'example-forum-instances-and-shared-forum-server/**'
+      - 'forum-server/**'
+      - 'shared-go/**'
       - 'docker/Dockerfile.go-hosted'
       - '.github/workflows/deploy-hosted.yml'
       - 'production-docker-compose-configs/hosted/**'

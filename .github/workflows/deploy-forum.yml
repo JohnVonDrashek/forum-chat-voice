@@ -5,12 +5,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'example-forum-instances-and-shared-forum-server/**'
-      - 'example-forum-instances-and-shared-forum-server/forum-a/src/**'
-      - 'example-forum-instances-and-shared-forum-server/forum-a/index.html'
-      - 'example-forum-instances-and-shared-forum-server/forum-a/vite.config.js'
-      - 'example-forum-instances-and-shared-forum-server/forum-a/package.json'
-      - 'docker/Dockerfile.go-forum'
+      - 'forum-server/**'
+      - 'shared-go/**'
       - '.github/workflows/deploy-forum.yml'
       - 'production-docker-compose-configs/forum-a/**'
 

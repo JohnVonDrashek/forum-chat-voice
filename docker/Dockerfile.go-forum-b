@@ -3,11 +3,12 @@ FROM golang:1.26-alpine AS go-build
 
 WORKDIR /app
 COPY example-forum-instances-and-shared-forum-server/go.mod example-forum-instances-and-shared-forum-server/go.sum ./
+COPY shared-go/ /shared-go/
+COPY forum-server/forum/ /forum-server/forum/
+COPY forum-server/go.mod /forum-server/go.mod
 RUN go mod download
 
-COPY example-forum-instances-and-shared-forum-server/shared/ shared/
 COPY example-forum-instances-and-shared-forum-server/platform/ platform/
-COPY example-forum-instances-and-shared-forum-server/forum/ forum/
 COPY example-forum-instances-and-shared-forum-server/forum-b/main.go forum-b/main.go
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/forum ./forum-b/
 
@@ -18,7 +19,6 @@ RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
 
 WORKDIR /app
 
-# Copy example-forum-instances-and-shared-forum-server/forum-b (standalone, no workspace deps needed)
 COPY example-forum-instances-and-shared-forum-server/forum-b/package.json example-forum-instances-and-shared-forum-server/forum-b/pnpm-lock.yaml* ./
 
 # Install dependencies

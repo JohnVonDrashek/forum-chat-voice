@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/forumline/forumline/example-forum-instances-and-shared-forum-server/forum"
+	"github.com/forumline/forum-server/forum"
 	shared "github.com/forumline/forumline/shared-go"
 )
 
