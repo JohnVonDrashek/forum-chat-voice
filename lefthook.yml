@@ -41,6 +41,10 @@ pre-commit:
       run: pnpm test
 
 pre-push:
+  parallel: true
   commands:
     github-actions-status:
       run: bash .githooks/pre-push
+    validate-ci:
+      run: bash .githooks/validate-ci.sh
+      glob: "{.github/workflows/*.yml,docker/Dockerfile.*,published-npm-packages/**}"

@@ -12,7 +12,7 @@ on:
       - 'forumline-identity-and-federation-web/tsconfig.json'
       - 'forumline-identity-and-federation-web/package.json'
       - 'published-npm-packages/**'
-      - 'package-lock.json'
+      - 'pnpm-lock.yaml'
       - 'docker/Dockerfile.go-forumline'
       - 'production-docker-compose-configs/forumline/**'
 
