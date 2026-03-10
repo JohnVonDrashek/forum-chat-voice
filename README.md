@@ -17,7 +17,7 @@ Traditional forums lack real-time interaction. Chat apps lack structure. Forumli
 - **Realtime** — SSE via Postgres LISTEN/NOTIFY
 - **Voice** — LiveKit
 - **Storage** — Cloudflare R2 (avatars/images)
-- **Native** — Tauri v2 (desktop, iOS, Android)
+- **Native** — iOS (Swift/WKWebView), Android (Kotlin/WebView), macOS, Windows, Linux
 - **Deploy** — Self-hosted Proxmox LXCs, Docker Compose, Cloudflare Tunnel, GitHub Actions
 
 ## Monorepo Layout
@@ -30,7 +30,7 @@ Traditional forums lack real-time interaction. Chat apps lack structure. Forumli
 | `example-forum-instances-and-shared-forum-server/shared/` | Shared Go infrastructure (db, auth, SSE, middleware) |
 | `forumline-identity-and-federation-web/` | Forumline app — identity & federation registry (Vite + vanilla TS) |
 | `forumline-identity-and-federation-api/` | Forumline Go API server (`cmd/forumline/`) |
-| `desktop-and-mobile-tauri-apps/` | Tauri native app (desktop, iOS, Android) |
+| `native-applications/` | Native apps (iOS, Android, macOS, Windows, Linux) |
 | `published-npm-packages/protocol/` | Federation types (zero-dependency) |
 | `published-npm-packages/server-sdk/` | Protocol endpoint handler factories |
 

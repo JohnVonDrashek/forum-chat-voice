@@ -67,7 +67,7 @@ func NewRouter(pool *shared.ObservablePool, sseHub *shared.SSEHub) *http.ServeMu
 	mux.Handle("POST /api/conversations/{conversationId}/read", use(h.HandleMarkRead, auth))
 	mux.Handle("DELETE /api/conversations/{conversationId}/members/me", use(h.HandleLeaveConversation, auth))
 
-	// Legacy /api/dms/* routes — backwards compat for cached frontends / Tauri app.
+	// Legacy /api/dms/* routes — backwards compat for cached frontends.
 	// These resolve a userId to a conversation ID and forward to the new handlers.
 	mux.Handle("GET /api/dms", use(h.HandleListConversations, auth))
 	mux.Handle("GET /api/dms/{userId}", use(h.HandleLegacyGetMessages, auth))

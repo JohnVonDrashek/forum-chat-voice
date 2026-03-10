@@ -15,13 +15,11 @@
  * - Time out WebRTC connections that fail to establish within 15 seconds
  * - Provide mute/unmute toggle for the local microphone
  * - Fall back to a synthetic silent audio stream when no microphone is available
- * - Show native Tauri notifications with accept/decline actions for incoming calls on desktop
  * - Expose a VanX reactive object so UI consumers can bind directly to call state
  * - Clean up all WebRTC, media, and SSE resources when a call ends
  */
 import { forumlineAuth } from '../app.js'
 import type { ForumlineStore } from '../shared/forumline-store.js'
-import { isTauri, getTauriNotification } from '../shared/tauri.js'
 import { reactive, noreactive } from 'vanjs-ext'
 
 const ICE_SERVERS = [
@@ -84,88 +82,9 @@ let webrtcStarted = false
 let signalQueue: Promise<void> = Promise.resolve()
 let iceRestartAttempted = false
 
-let tauriActionCleanup: (() => void) | null = null
-
-const CALL_NOTIFICATION_ID = 99001
-const CALL_ACTION_TYPE_ID = 'incoming_call'
-const CALL_CHANNEL_ID = 'calls'
-
 export function initCallManager(store: ForumlineStore) {
   forumlineStore = store
   connectSignalSSE()
-  void setupTauriCallActions()
-}
-
-/** Register Tauri notification action types and channel for incoming calls. */
-async function setupTauriCallActions() {
-  if (!isTauri()) return
-  try {
-    const { registerActionTypes, onAction, createChannel, Importance } = await getTauriNotification()
-
-    // Android: create a high-importance channel for call notifications
-    await createChannel({
-      id: CALL_CHANNEL_ID,
-      name: 'Incoming Calls',
-      description: 'Notifications for incoming voice calls',
-      importance: Importance.High,
-      vibration: true,
-      sound: 'default',
-    }).catch(() => {}) // No-op on iOS/desktop
-
-    await registerActionTypes([{
-      id: CALL_ACTION_TYPE_ID,
-      actions: [
-        { id: 'accept', title: 'Accept', foreground: true },
-        { id: 'decline', title: 'Decline', destructive: true },
-      ],
-    }])
-
-    const listener = await onAction((event: { notification?: { id?: string }; actionId?: string }) => {
-      // Only handle actions from our call notification
-      if (event.notification?.id !== CALL_NOTIFICATION_ID) return
-      const actionId = event.actionId ?? ''
-      if (actionId === 'accept') void acceptCall()
-      else if (actionId === 'decline') void declineCall()
-    })
-
-    tauriActionCleanup = () => void listener.unregister()
-  } catch (err) {
-    console.error('[Call] Failed to setup Tauri call actions:', err)
-  }
-}
-
-/** Show a native Tauri notification for an incoming call. */
-async function showNativeCallNotification(callerName: string) {
-  if (!isTauri()) return
-  try {
-    const { sendNotification, isPermissionGranted, requestPermission } = await getTauriNotification()
-    let permitted = await isPermissionGranted()
-    if (!permitted) {
-      const result = await requestPermission()
-      permitted = result === 'granted'
-    }
-    if (!permitted) return
-
-    sendNotification({
-      id: CALL_NOTIFICATION_ID,
-      channelId: CALL_CHANNEL_ID,
-      title: `Incoming call from ${callerName}`,
-      body: 'Tap to answer',
-      actionTypeId: CALL_ACTION_TYPE_ID,
-      sound: 'default',
-    })
-  } catch (err) {
-    console.error('[Call] Failed to show native notification:', err)
-  }
-}
-
-/** Dismiss the native call notification. */
-async function dismissNativeCallNotification() {
-  if (!isTauri()) return
-  try {
-    const { removeActive } = await getTauriNotification()
-    await removeActive([CALL_NOTIFICATION_ID])
-  } catch {}
 }
 
 function setState(newState: CallState, info: CallInfo | null = callState.callInfo) {
@@ -222,9 +141,6 @@ async function handleSignal(signal: Record<string, unknown>) {
       remoteDisplayName: signal.caller_display_name || signal.caller_username || 'Unknown',
       remoteAvatarUrl: signal.caller_avatar_url || null,
     })
-    // Show native notification (Tauri) for incoming call
-    void showNativeCallNotification(signal.caller_display_name || signal.caller_username || 'Unknown')
-
     // Auto-dismiss after 30s
     callTimer = setTimeout(() => {
       if (callState.state === 'ringing-incoming') cleanup()
@@ -329,7 +245,6 @@ export async function acceptCall() {
   if (!forumlineClient) return
 
   if (callTimer) { clearTimeout(callTimer); callTimer = null }
-  void dismissNativeCallNotification()
 
   // Acquire mic NOW while we have the user gesture (Accept button click).
   // Must happen before any await, or Safari drops the gesture context.
@@ -491,7 +406,6 @@ async function sendSignal(type: string, payload: unknown) {
 
 function cleanup() {
   if (callTimer) { clearTimeout(callTimer); callTimer = null }
-  void dismissNativeCallNotification()
 
   if (pc) {
     pc.close()
@@ -524,5 +438,4 @@ export function destroyCallManager() {
     signalSSE.close()
     signalSSE = null
   }
-  if (tauriActionCleanup) { tauriActionCleanup(); tauriActionCleanup = null }
 }

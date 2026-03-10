@@ -3,9 +3,6 @@
   "private": true,
   "packageManager": "pnpm@10.6.5",
   "scripts": {
-    "tauri": "tauri",
-    "tauri:dev": "TAURI_DIR=desktop-and-mobile-tauri-apps tauri dev",
-    "tauri:build": "TAURI_DIR=desktop-and-mobile-tauri-apps tauri build",
     "dev:app": "pnpm --filter forumline-central-services dev",
     "build": "pnpm -r run build",
     "clean": "pnpm -r --if-present run clean",

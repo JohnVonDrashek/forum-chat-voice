@@ -20,9 +20,4 @@ export default defineConfig({
       '/auth': 'http://localhost:4001',
     },
   },
-  build: {
-    rollupOptions: {
-      external: (id) => id.startsWith('@tauri-apps/'),
-    },
-  },
 })

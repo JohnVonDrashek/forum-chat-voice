@@ -26,6 +26,7 @@ export default tseslint.config(
           allowDefaultProject: [
             'forumline-identity-and-federation-web/vite.config.ts',
             'vitest.workspace.ts',
+            'published-npm-packages/protocol/src/validation.test.ts',
           ],
         },
         tsconfigRootDir: import.meta.dirname,

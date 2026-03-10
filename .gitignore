@@ -40,9 +40,6 @@ published-npm-packages/*/src/**/*.js.map
 .vercel
 .env*.local
 
-# Tauri auto-generated platform files
-desktop-and-mobile-tauri-apps/gen/
-
 # Test screenshots
 *.png
 

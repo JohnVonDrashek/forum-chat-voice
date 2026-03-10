@@ -22,8 +22,6 @@ import type { GoTrueAuthClient, ForumlineSession } from '../auth/gotrue-auth.js'
 import type { ForumNotification } from '@johnvondrashek/forumline-protocol'
 import { createForumWebview, type ForumWebviewInstance } from '../forums/forum-webview.js'
 import { type ForumStore } from '../forums/forum-store.js'
-import { isTauri, getTauriNotification } from '../shared/tauri.js'
-import { setupDeepLinkListener, type DeepLinkTarget } from '../shared/deep-link.js'
 import { type ForumlineStore } from '../shared/forumline-store.js'
 import { createWelcomePage } from '../forums/welcome-page.js'
 import { createDmPanel } from '../dms/dm-panel.js'
@@ -66,7 +64,6 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
   let view: AppView = 'forums'
   let authedForums: Set<string> | null = null
   let mutedForums = new Set<string>()
-  let deepLinkPath: string | null = null
   let forumPath = '/'
   let copied = false
   let copiedTimeout: ReturnType<typeof setTimeout> | null = null
@@ -115,14 +112,6 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
     })
   }
 
-  // ---- Deep links ----
-  const cleanupDeepLink = setupDeepLinkListener((target: DeepLinkTarget) => {
-    forumStore.switchForum(target.domain)
-    deepLinkPath = target.path
-    switchView()
-  })
-  cleanups.push(cleanupDeepLink)
-
   // ---- Memberships fetch + server sync ----
   async function fetchMemberships() {
     try {
@@ -165,16 +154,7 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
     if (document.visibilityState === 'visible') return
     const { title, body } = notification
 
-    if (isTauri()) {
-      getTauriNotification().then(async ({ sendNotification, isPermissionGranted, requestPermission }) => {
-        let permitted = await isPermissionGranted()
-        if (!permitted) {
-          const result = await requestPermission()
-          permitted = result === 'granted'
-        }
-        if (permitted) sendNotification({ title, body })
-      }).catch(console.error)
-    } else if ('Notification' in window) {
+    if ('Notification' in window) {
       if (Notification.permission === 'default') {
         void Notification.requestPermission().then(() => {
           if (Notification.permission === 'granted') new Notification(title, { body })
@@ -313,7 +293,7 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
       webviewInstance = createForumWebview({
         forum: activeForum,
         authUrl: null,
-        initialPath: deepLinkPath,
+        initialPath: null,
         onAuthed: (domain) => {
           authedForums?.add(domain)
           void updateForumAuthState(auth, domain, true)
@@ -340,7 +320,6 @@ export function createAppLayout({ forumlineSession, forumStore, forumlineStore, 
         }
       }
 
-      deepLinkPath = null
       forumPath = '/'
     }
   }

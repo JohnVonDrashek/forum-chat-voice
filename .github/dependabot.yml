@@ -24,14 +24,6 @@ updates:
       forumline-dependencies:
         patterns: ["*"]
 
-  - package-ecosystem: cargo
-    directory: /desktop-and-mobile-tauri-apps/src-tauri
-    schedule:
-      interval: weekly
-    groups:
-      cargo-dependencies:
-        patterns: ["*"]
-
   - package-ecosystem: github-actions
     directory: /
     schedule:
