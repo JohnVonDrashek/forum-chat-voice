@@ -105,8 +105,4 @@ jobs:
 
       - name: Push to read-only repo
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.FORUM_SERVER_DEPLOY_KEY }}" > ~/.ssh/forum_server_deploy
-          chmod 600 ~/.ssh/forum_server_deploy
-          GIT_SSH_COMMAND="ssh -i ~/.ssh/forum_server_deploy -o StrictHostKeyChecking=no" \
-            git push git@github.com:forumline/forum-server.git HEAD:main --force
+          git push "https://x-access-token:${{ secrets.SPLIT_REPO_TOKEN }}@github.com/forumline/forum-server.git" HEAD:main --force
