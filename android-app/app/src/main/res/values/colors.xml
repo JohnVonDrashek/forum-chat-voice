@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches iOS --color-bg: #0f172a -->
+    <color name="bg_dark">#FF0F172A</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
