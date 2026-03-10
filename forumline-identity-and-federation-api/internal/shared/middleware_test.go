@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,7 +15,7 @@ func TestCORSMiddleware_AllowedOrigin(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/test", nil)
 	req.Header.Set("Origin", "https://app.forumline.net")
 	rr := httptest.NewRecorder()
 
@@ -35,7 +36,7 @@ func TestCORSMiddleware_DisallowedOrigin(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/test", nil)
 	req.Header.Set("Origin", "https://evil.com")
 	rr := httptest.NewRecorder()
 
@@ -53,7 +54,7 @@ func TestCORSMiddleware_DefaultOrigin(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/test", nil)
 	req.Header.Set("Origin", "https://demo.forumline.net")
 	rr := httptest.NewRecorder()
 
@@ -71,7 +72,7 @@ func TestCORSMiddleware_OptionsRequest(t *testing.T) {
 		t.Fatal("handler should not be called for OPTIONS")
 	}))
 
-	req := httptest.NewRequest("OPTIONS", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"OPTIONS", "/test", nil)
 	req.Header.Set("Origin", "https://app.forumline.net")
 	rr := httptest.NewRecorder()
 
@@ -87,7 +88,7 @@ func TestSecurityHeaders(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/test", nil)
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
@@ -193,7 +194,7 @@ func TestRateLimitMiddleware_Blocks(t *testing.T) {
 	}))
 
 	// First request succeeds
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/test", nil)
 	req.RemoteAddr = "1.2.3.4:1234"
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
@@ -221,7 +222,7 @@ func TestRateLimitMiddleware_XForwardedFor(t *testing.T) {
 	}))
 
 	// Forumline API middleware always trusts X-Forwarded-For
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/test", nil)
 	req.RemoteAddr = "10.0.0.1:1234"
 	req.Header.Set("X-Forwarded-For", "203.0.113.1, 10.0.0.1")
 	rr := httptest.NewRecorder()

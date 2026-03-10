@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,7 +15,7 @@ func TestCORSMiddleware_ExactMatch(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/test", nil)
 	req.Header.Set("Origin", "https://demo.forumline.net")
 	rr := httptest.NewRecorder()
 
@@ -45,7 +46,7 @@ func TestCORSMiddleware_WildcardSubdomain(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.origin, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/test", nil)
+			req := httptest.NewRequestWithContext(context.Background(),"GET", "/test", nil)
 			req.Header.Set("Origin", tt.origin)
 			rr := httptest.NewRecorder()
 
@@ -69,7 +70,7 @@ func TestCORSMiddleware_DisallowedOrigin(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/test", nil)
 	req.Header.Set("Origin", "https://evil.com")
 	rr := httptest.NewRecorder()
 
@@ -91,7 +92,7 @@ func TestCORSMiddleware_Preflight(t *testing.T) {
 		t.Fatal("handler should not be called for OPTIONS")
 	}))
 
-	req := httptest.NewRequest("OPTIONS", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"OPTIONS", "/test", nil)
 	req.Header.Set("Origin", "https://app.forumline.net")
 	rr := httptest.NewRecorder()
 
@@ -110,7 +111,7 @@ func TestSecurityHeaders(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/test", nil)
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
@@ -211,7 +212,7 @@ func TestRateLimitMiddleware_TrustProxy(t *testing.T) {
 	}))
 
 	// First request allowed
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(),"GET", "/test", nil)
 	req.RemoteAddr = "10.0.0.1:1234"
 	req.Header.Set("X-Forwarded-For", "203.0.113.50")
 	rr := httptest.NewRecorder()
@@ -242,7 +243,7 @@ func TestRateLimitMiddleware_NoTrustProxy(t *testing.T) {
 	}))
 
 	// With TRUST_PROXY=false, X-Forwarded-For should be ignored
-	req1 := httptest.NewRequest("GET", "/test", nil)
+	req1 := httptest.NewRequestWithContext(context.Background(),"GET", "/test", nil)
 	req1.RemoteAddr = "10.0.0.1:1234"
 	req1.Header.Set("X-Forwarded-For", "203.0.113.50")
 	rr := httptest.NewRecorder()
@@ -252,7 +253,7 @@ func TestRateLimitMiddleware_NoTrustProxy(t *testing.T) {
 	}
 
 	// Second request with same RemoteAddr but different X-Forwarded-For
-	req2 := httptest.NewRequest("GET", "/test", nil)
+	req2 := httptest.NewRequestWithContext(context.Background(),"GET", "/test", nil)
 	req2.RemoteAddr = "10.0.0.1:1234"
 	req2.Header.Set("X-Forwarded-For", "203.0.113.99")
 	rr = httptest.NewRecorder()
