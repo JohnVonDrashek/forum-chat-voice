@@ -27,10 +27,12 @@ struct WebViewContainer: UIViewRepresentable {
         webView.isOpaque = false
         webView.backgroundColor = UIColor(red: 15/255, green: 23/255, blue: 42/255, alpha: 1) // --color-bg: #0f172a
 
-        // Enable Safari Web Inspector for debugging
+        // Enable Safari Web Inspector only in debug builds
+        #if DEBUG
         if #available(iOS 16.4, *) {
             webView.isInspectable = true
         }
+        #endif
 
         // Allow back/forward swipe gestures
         webView.allowsBackForwardNavigationGestures = true
@@ -123,6 +125,44 @@ struct WebViewContainer: UIViewRepresentable {
 
 /// Handles messages from web → native
 class WebViewCoordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+    private static let allowedHosts: Set<String> = [
+        "app.forumline.net",
+        "demo.forumline.net",
+        "forumline.net",
+    ]
+
+    func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationAction: WKNavigationAction,
+        decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+    ) {
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.cancel)
+            return
+        }
+
+        // Allow about:blank and blob: URLs (used internally by WebKit)
+        if url.scheme == "about" || url.scheme == "blob" {
+            decisionHandler(.allow)
+            return
+        }
+
+        // Allow navigation only to forumline.net domains
+        if let host = url.host, Self.allowedHosts.contains(host) || host.hasSuffix(".forumline.net") {
+            decisionHandler(.allow)
+            return
+        }
+
+        // Open external links in Safari instead
+        if let host = url.host {
+            print("[Forumline] Blocked navigation to disallowed host: \(host)")
+        }
+        if url.scheme == "https" || url.scheme == "http" {
+            UIApplication.shared.open(url)
+        }
+        decisionHandler(.cancel)
+    }
+
     @objc func handleRefresh(_ sender: UIRefreshControl) {
         guard let webView = WebViewBridge.shared.webView else {
             sender.endRefreshing()
@@ -139,6 +179,14 @@ class WebViewCoordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate
         _ userContentController: WKUserContentController,
         didReceive message: WKScriptMessage
     ) {
+        // Validate the message originates from an allowed domain
+        if let url = message.frameInfo.request.url,
+           let host = url.host,
+           !Self.allowedHosts.contains(host) && !host.hasSuffix(".forumline.net") {
+            print("[Forumline] Rejected bridge message from disallowed origin: \(host)")
+            return
+        }
+
         guard let body = message.body as? String,
               let data = body.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -161,7 +209,7 @@ class WebViewCoordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate
         switch state {
         case "ringing-incoming":
             let callId = json["callId"] as? String ?? ""
-            let callerName = json["callerName"] as? String ?? "Unknown"
+            let callerName = String((json["callerName"] as? String ?? "Unknown").prefix(100))
             CallManager.shared.reportIncomingCall(
                 callId: callId,
                 callerName: callerName

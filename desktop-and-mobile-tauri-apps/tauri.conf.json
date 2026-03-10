@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' https://app.forumline.net https://demo.forumline.net https://*.livekit.cloud wss://*.livekit.cloud; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; font-src 'self' data:; frame-src 'self' https://demo.forumline.net https://app.forumline.net"
+      "csp": "default-src 'self' https://app.forumline.net https://demo.forumline.net https://*.livekit.cloud wss://*.livekit.cloud; script-src 'self' https://app.forumline.net https://demo.forumline.net; style-src 'self' 'unsafe-inline' https://app.forumline.net; img-src 'self' data: blob: https:; connect-src 'self' https://app.forumline.net https://demo.forumline.net https://*.livekit.cloud wss://*.livekit.cloud https://pub-9fedbeec44784c27aa252b7360d67971.r2.dev; font-src 'self' data:; frame-src 'self' https://demo.forumline.net https://app.forumline.net"
     }
   },
   "bundle": {

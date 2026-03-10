@@ -446,22 +446,12 @@ func (h *Handlers) handleSessionGet(w http.ResponseWriter, r *http.Request) {
 			payload = claims
 		}
 	} else {
-		// Decode without verification (fallback)
-		token, _, err := jwt.NewParser().ParseUnverified(identityToken, jwt.MapClaims{})
-		if err != nil {
-			h.clearForumlineCookies(w)
-			writeJSON(w, http.StatusOK, nil)
-			return
-		}
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			// Check expiry
-			if exp, ok := claims["exp"].(float64); ok && int64(exp) < time.Now().Unix() {
-				h.clearForumlineCookies(w)
-				writeJSON(w, http.StatusOK, nil)
-				return
-			}
-			payload = claims
-		}
+		// No JWT secret configured — reject all tokens.
+		// Unverified JWT parsing is unsafe; require FORUMLINE_JWT_SECRET to be set.
+		log.Printf("[Forumline:Session] FORUMLINE_JWT_SECRET not configured, rejecting identity token")
+		h.clearForumlineCookies(w)
+		writeJSON(w, http.StatusOK, nil)
+		return
 	}
 
 	if payload == nil || payload["identity"] == nil {

@@ -74,7 +74,8 @@ func (h *SSEHub) listenAll(ctx context.Context) {
 	defer conn.Close(ctx)
 
 	for _, channel := range h.channels {
-		_, err = conn.Exec(ctx, fmt.Sprintf("LISTEN %s", channel))
+		quoted := pgx.Identifier{channel}.Sanitize()
+		_, err = conn.Exec(ctx, fmt.Sprintf("LISTEN %s", quoted))
 		if err != nil {
 			log.Printf("SSEHub: LISTEN %s failed: %v", channel, err)
 			return
