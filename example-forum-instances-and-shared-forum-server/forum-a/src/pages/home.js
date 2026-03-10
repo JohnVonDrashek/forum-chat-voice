@@ -16,6 +16,7 @@ import { avatarHTML } from '../components/avatar.js'
 import { formatRelativeTime } from '../lib/date.js'
 
 export function renderHome(container) {
+  // eslint-disable-next-line no-unsanitized/property -- static template with skeleton loader
   container.innerHTML = `
     <div class="mb-8 bg-gradient-to-r from-indigo-900/50 to-purple-900/50 rounded-2xl p-8 border border-indigo-800/30">
       <h1 class="text-2xl font-bold mb-2">Welcome to ${getConfig().name}</h1>
@@ -45,6 +46,7 @@ export function renderHome(container) {
       return
     }
 
+    // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
     list.innerHTML = `<div class="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden divide-y divide-slate-700/50">
       ${threads.map(t => `
         <a href="/t/${t.id}" class="flex items-start gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4 transition-colors hover:bg-slate-700/30">

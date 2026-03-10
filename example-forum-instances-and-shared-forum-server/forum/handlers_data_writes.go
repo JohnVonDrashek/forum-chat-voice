@@ -2,6 +2,7 @@ package forum
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -108,7 +109,6 @@ func (h *Handlers) HandleUpdateThread(w http.ResponseWriter, r *http.Request) {
 	if body.IsLocked != nil {
 		setClauses = append(setClauses, setClause("is_locked", argIdx))
 		args = append(args, *body.IsLocked)
-		argIdx++
 	}
 
 	query := "UPDATE threads SET "
@@ -163,9 +163,11 @@ func (h *Handlers) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update thread's last_post_at and post_count
-	h.Pool.Exec(r.Context(),
+	if _, err := h.Pool.Exec(r.Context(),
 		`UPDATE threads SET last_post_at = $2, post_count = post_count + 1, updated_at = $2 WHERE id = $1`,
-		body.ThreadID, now)
+		body.ThreadID, now); err != nil {
+		log.Printf("update thread stats error: %v", err)
+	}
 
 	writeJSON(w, http.StatusCreated, map[string]string{"id": id})
 }
@@ -374,7 +376,6 @@ func (h *Handlers) HandleUpsertProfile(w http.ResponseWriter, r *http.Request) {
 		if body.AvatarURL != nil {
 			setClauses = append(setClauses, setClause("avatar_url", argIdx))
 			args = append(args, *body.AvatarURL)
-			argIdx++
 		}
 
 		query := "UPDATE profiles SET "
@@ -467,7 +468,9 @@ func setClause(col string, argIdx int) string {
 
 func itoa(n int) string {
 	if n < 10 {
+		// #nosec G115 -- n is always 0-9
 		return string(rune('0' + n))
 	}
+	// #nosec G115 -- n%10 is always 0-9
 	return itoa(n/10) + string(rune('0'+n%10))
 }

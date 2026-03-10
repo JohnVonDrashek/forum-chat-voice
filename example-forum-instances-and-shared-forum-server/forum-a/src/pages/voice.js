@@ -42,6 +42,7 @@ export function renderVoice(container, { roomId } = {}) {
 }
 
 function renderRoomList(container, rooms, voice, user) {
+  // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
   container.innerHTML = `
     <h1 class="text-2xl font-bold mb-6">Voice Rooms</h1>
 
@@ -58,6 +59,7 @@ function renderFocusedRoom(container, room, voice, user) {
   const isConnectedToThisRoom = voice.isConnected && voice.connectedRoomSlug === room.slug
   const info = voice.roomParticipantCounts[room.slug]
 
+  // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
   container.innerHTML = `
     <div class="mb-4">
       <a href="/voice" class="text-sm text-slate-400 hover:text-white transition-colors">&larr; All Voice Rooms</a>

@@ -71,7 +71,7 @@ func (h *SSEHub) listenAll(ctx context.Context) {
 		log.Printf("SSEHub: failed to connect for LISTEN: %v", err)
 		return
 	}
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 
 	for _, channel := range h.channels {
 		quoted := pgx.Identifier{channel}.Sanitize()
@@ -166,7 +166,9 @@ func ServeSSE(w http.ResponseWriter, r *http.Request, client *SSEClient) {
 		case <-client.Done:
 			return
 		case data := <-client.Send:
-			fmt.Fprintf(w, "data: %s\n\n", data)
+			if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
+				return
+			}
 			flusher.Flush()
 		}
 	}

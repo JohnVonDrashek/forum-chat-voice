@@ -88,8 +88,17 @@ fi
 # --- Lint checks ---
 # Run Go linter if any Go files are staged in the API
 if git diff --cached --name-only | grep -q '^forumline-identity-and-federation-api/.*\.go$'; then
-  echo "Running golangci-lint..."
+  echo "Running golangci-lint (forumline API)..."
   if ! (cd forumline-identity-and-federation-api && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.2 run ./...); then
+    echo "ERROR: golangci-lint failed. Fix errors before committing."
+    exit 1
+  fi
+fi
+
+# Run Go linter if any Go files are staged in the forum server
+if git diff --cached --name-only | grep -q '^example-forum-instances-and-shared-forum-server/.*\.go$'; then
+  echo "Running golangci-lint (forum server)..."
+  if ! (cd example-forum-instances-and-shared-forum-server && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.2 run ./...); then
     echo "ERROR: golangci-lint failed. Fix errors before committing."
     exit 1
   fi
@@ -97,9 +106,18 @@ fi
 
 # Run TypeScript linter if any TS/JS files are staged in workspace packages
 if git diff --cached --name-only | grep -qE '^(forumline-identity-and-federation-web|published-npm-packages)/.*\.(ts|tsx|js|mjs)$'; then
-  echo "Running eslint..."
+  echo "Running eslint (workspace)..."
   if ! pnpm lint --max-warnings 0; then
     echo "ERROR: eslint found errors or warnings. Fix them before committing."
+    exit 1
+  fi
+fi
+
+# Run eslint on forum-a vanilla JS files
+if git diff --cached --name-only | grep -qE '^example-forum-instances-and-shared-forum-server/forum-a/src/.*\.js$'; then
+  echo "Running eslint (forum-a)..."
+  if ! (cd example-forum-instances-and-shared-forum-server/forum-a && pnpm lint); then
+    echo "ERROR: eslint found errors in forum-a. Fix them before committing."
     exit 1
   fi
 fi

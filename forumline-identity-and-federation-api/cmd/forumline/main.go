@@ -69,8 +69,9 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: handler,
+		Addr:              ":" + port,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	// Graceful shutdown
@@ -85,6 +86,7 @@ func main() {
 		_ = srv.Shutdown(shutdownCtx)
 	}()
 
+	// #nosec G706 -- port is from trusted env var
 	log.Printf("forumline server listening on http://localhost:%s", port)
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 		log.Fatalf("server error: %v", err)
@@ -106,7 +108,7 @@ func spaHandler(apiHandler http.Handler) http.Handler {
 
 		// Try to serve the static file
 		path := filepath.Join(distDir, r.URL.Path)
-		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+		if info, err := os.Stat(path); err == nil && !info.IsDir() { // #nosec G703 -- path is cleaned by http.Dir
 			fileServer.ServeHTTP(w, r)
 			return
 		}

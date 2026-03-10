@@ -63,9 +63,7 @@ func (h *Handlers) HandleLiveKitToken(w http.ResponseWriter, r *http.Request) {
 				Room:     room.Name,
 				Identity: userID,
 			})
-			if removeErr != nil {
-				// Not in this room — ignore
-			}
+			_ = removeErr // Not in this room — ignore
 		}
 	}
 

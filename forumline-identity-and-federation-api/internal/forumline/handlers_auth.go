@@ -2,6 +2,7 @@ package forumline
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,9 +10,12 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/johnvondrashek/forumline/forumline-identity-and-federation-api/internal/shared"
 )
+
+var httpClient = &http.Client{Timeout: 10 * time.Second}
 
 // HandleLogin delegates to GoTrue for auth, then sets the forumline_pending_auth cookie.
 func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
@@ -35,11 +39,13 @@ func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		"password": body.Password,
 	})
 
-	resp, err := http.Post(
-		gotrueURL+"/token?grant_type=password",
-		"application/json",
-		bytes.NewReader(payload),
-	)
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, gotrueURL+"/token?grant_type=password", bytes.NewReader(payload)) // #nosec G704 -- URL from trusted GOTRUE_URL env var
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create auth request"})
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := httpClient.Do(req) // #nosec G704 -- URL from trusted GOTRUE_URL env var
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "auth service unavailable"})
 		return
@@ -160,7 +166,13 @@ func (h *Handlers) HandleSignup(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 
-	resp, err := http.Post(gotrueURL+"/signup", "application/json", bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, gotrueURL+"/signup", bytes.NewReader(payload)) // #nosec G704 -- URL from trusted GOTRUE_URL env var
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create signup request"})
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := httpClient.Do(req) // #nosec G704 -- URL from trusted GOTRUE_URL env var
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "auth service unavailable"})
 		return
@@ -295,14 +307,16 @@ func deleteGoTrueUser(userID string) {
 		return
 	}
 
-	req, err := http.NewRequest(http.MethodDelete, gotrueURL+"/admin/users/"+userID, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, gotrueURL+"/admin/users/"+userID, nil) // #nosec G704 -- URL from trusted GOTRUE_URL env var
 	if err != nil {
 		slog.Error("deleteGoTrueUser: failed to create request", "err", err)
 		return
 	}
 	req.Header.Set("Authorization", "Bearer "+serviceKey)
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req) // #nosec G704 -- URL from trusted GOTRUE_URL env var
 	if err != nil {
 		slog.Error("deleteGoTrueUser: request failed", "err", err)
 		return

@@ -29,6 +29,7 @@ export function renderSearch(container) {
   const initialFilter = params.get('filter') || 'all'
   filter = initialFilter
 
+  // eslint-disable-next-line no-unsanitized/property -- static template, query escaped via escapeAttr()
   container.innerHTML = `
     <h1 class="text-2xl font-bold mb-6">Search</h1>
     <div class="relative mb-4">
@@ -70,6 +71,7 @@ export function renderSearch(container) {
     if (!q) {
       currentQuery = ''
       updateURL('')
+      // eslint-disable-next-line no-unsanitized/property -- static empty state template
       container.querySelector('#search-results').innerHTML = emptyStateHTML()
       filtersEl.classList.add('hidden')
       return
@@ -83,6 +85,7 @@ export function renderSearch(container) {
     currentQuery = ''
     updateURL('')
     clearBtn.classList.add('hidden')
+    // eslint-disable-next-line no-unsanitized/property -- static empty state template
     container.querySelector('#search-results').innerHTML = emptyStateHTML()
     filtersEl.classList.add('hidden')
     input.focus()
@@ -139,6 +142,7 @@ export function renderSearch(container) {
     const posts = filter !== 'threads' ? postResults : []
 
     if (!threads.length && !posts.length) {
+      // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
       resultsEl.innerHTML = `
         <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-8 text-center">
           <h3 class="text-lg font-medium text-white">No results for "${escapeHTML(currentQuery)}"</h3>
@@ -172,6 +176,7 @@ export function renderSearch(container) {
         </a>
       `).join('')
     }
+    // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
     resultsEl.innerHTML = html
   }
 }

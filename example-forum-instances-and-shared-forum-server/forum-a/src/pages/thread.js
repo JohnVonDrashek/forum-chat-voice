@@ -47,6 +47,7 @@ export function renderThread(container, { threadId }) {
       const start = (currentPage - 1) * POSTS_PER_PAGE
       const pagePosts = (posts || []).slice(start, start + POSTS_PER_PAGE)
 
+      // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
       container.innerHTML = `
         <div class="mb-4">
           <div class="flex items-center gap-2 text-sm text-slate-400 mb-3">

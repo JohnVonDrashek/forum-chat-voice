@@ -35,6 +35,7 @@ export function renderProfile(container, { username }) {
     function render() {
       const showMessage = user && profile.id !== user.id
 
+      // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
       container.innerHTML = `
         <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 mb-6">
           <div class="flex items-start gap-4">

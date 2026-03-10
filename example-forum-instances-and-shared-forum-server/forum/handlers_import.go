@@ -26,7 +26,10 @@ func (h *Handlers) HandleImport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var isAdmin bool
-	h.Pool.QueryRow(r.Context(), "SELECT is_admin FROM profiles WHERE id = $1", userID).Scan(&isAdmin)
+	if err := h.Pool.QueryRow(r.Context(), "SELECT is_admin FROM profiles WHERE id = $1", userID).Scan(&isAdmin); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+		return
+	}
 	if !isAdmin {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "admin access required"})
 		return

@@ -85,7 +85,9 @@ func (h *Handlers) HandleVoiceSignalStream(w http.ResponseWriter, r *http.Reques
 	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 
-	fmt.Fprint(w, ":connected\n\n")
+	if _, err := fmt.Fprint(w, ":connected\n\n"); err != nil {
+		return
+	}
 	flusher.Flush()
 
 	heartbeat := time.NewTicker(30 * time.Second)
@@ -97,10 +99,14 @@ func (h *Handlers) HandleVoiceSignalStream(w http.ResponseWriter, r *http.Reques
 		case <-ctx.Done():
 			return
 		case <-heartbeat.C:
-			fmt.Fprint(w, ":heartbeat\n\n")
+			if _, err := fmt.Fprint(w, ":heartbeat\n\n"); err != nil {
+				return
+			}
 			flusher.Flush()
 		case data := <-client.Send:
-			fmt.Fprintf(w, "data: %s\n\n", data)
+			if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
+				return
+			}
 			flusher.Flush()
 		}
 	}

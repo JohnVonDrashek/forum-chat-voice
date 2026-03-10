@@ -1,6 +1,7 @@
 package forum
 
 import (
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -850,9 +851,15 @@ func (h *Handlers) HandleAdminStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var totalUsers, totalThreads, totalPosts int
-	h.Pool.QueryRow(r.Context(), `SELECT COUNT(*) FROM profiles`).Scan(&totalUsers)
-	h.Pool.QueryRow(r.Context(), `SELECT COUNT(*) FROM threads`).Scan(&totalThreads)
-	h.Pool.QueryRow(r.Context(), `SELECT COUNT(*) FROM posts`).Scan(&totalPosts)
+	if err := h.Pool.QueryRow(r.Context(), `SELECT COUNT(*) FROM profiles`).Scan(&totalUsers); err != nil {
+		log.Printf("count profiles error: %v", err)
+	}
+	if err := h.Pool.QueryRow(r.Context(), `SELECT COUNT(*) FROM threads`).Scan(&totalThreads); err != nil {
+		log.Printf("count threads error: %v", err)
+	}
+	if err := h.Pool.QueryRow(r.Context(), `SELECT COUNT(*) FROM posts`).Scan(&totalPosts); err != nil {
+		log.Printf("count posts error: %v", err)
+	}
 
 	writeJSON(w, http.StatusOK, map[string]int{
 		"totalUsers":   totalUsers,

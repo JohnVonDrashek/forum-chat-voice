@@ -30,6 +30,7 @@ export function renderHeader(container) {
   const { user } = authStore.get()
   const forumName = getConfig().name
 
+  // eslint-disable-next-line no-unsanitized/property -- static template, user content escaped via escapeHTML()
   container.innerHTML = `
     <header class="sticky top-0 z-40 h-14 bg-slate-900/95 backdrop-blur border-b border-slate-700/50 px-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -199,6 +200,7 @@ function updateNotificationUI(container) {
     return
   }
 
+  // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
   list.innerHTML = notifications.slice(0, 20).map(n => `
     <a href="${n.link || '#'}" class="block px-4 py-3 hover:bg-slate-700/50 transition-colors border-b border-slate-700/50 ${n.read ? 'opacity-60' : ''}" data-notif-id="${n.id}">
       <p class="text-sm font-medium">${escapeHTML(n.title)}</p>

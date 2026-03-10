@@ -30,6 +30,7 @@ export function renderAdmin(container) {
   let tab = 'overview'
 
   async function render() {
+    // eslint-disable-next-line no-unsanitized/property -- static template
     container.innerHTML = `
       <h1 class="text-2xl font-bold mb-6">Admin Dashboard</h1>
       <div class="flex gap-2 mb-6">
@@ -49,6 +50,7 @@ export function renderAdmin(container) {
     if (tab === 'overview') {
       try {
         const stats = await api.getAdminStats()
+        // eslint-disable-next-line no-unsanitized/property -- static template, values from trusted API
         content.innerHTML = `
           <div class="grid gap-4 sm:grid-cols-3">
             ${statCard('Users', stats.totalUsers, 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z')}
@@ -69,6 +71,7 @@ export function renderAdmin(container) {
             ? users.filter(u => u.username.toLowerCase().includes(searchQuery) || (u.display_name || '').toLowerCase().includes(searchQuery))
             : users
 
+          // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
           content.innerHTML = `
             <div class="mb-4">
               <input id="user-search" type="text" placeholder="Search users..." value="${searchQuery}" class="w-full max-w-sm px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />

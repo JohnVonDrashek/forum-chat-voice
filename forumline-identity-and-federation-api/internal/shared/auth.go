@@ -101,7 +101,13 @@ func fetchJWKS() error {
 		return fmt.Errorf("GOTRUE_URL is not set")
 	}
 
-	resp, err := http.Get(gotrueURL + "/.well-known/jwks.json")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, gotrueURL+"/.well-known/jwks.json", nil) // #nosec G704 -- URL from trusted GOTRUE_URL env var
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req) // #nosec G704
 	if err != nil {
 		return err
 	}

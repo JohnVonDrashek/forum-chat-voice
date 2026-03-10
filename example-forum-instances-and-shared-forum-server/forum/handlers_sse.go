@@ -49,7 +49,9 @@ func (h *Handlers) HandleChatStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 
-	fmt.Fprint(w, ":connected\n\n")
+	if _, err := fmt.Fprint(w, ":connected\n\n"); err != nil {
+		return
+	}
 	flusher.Flush()
 
 	heartbeat := time.NewTicker(30 * time.Second)
@@ -61,7 +63,9 @@ func (h *Handlers) HandleChatStream(w http.ResponseWriter, r *http.Request) {
 		case <-ctx.Done():
 			return
 		case <-heartbeat.C:
-			fmt.Fprint(w, ":heartbeat\n\n")
+			if _, err := fmt.Fprint(w, ":heartbeat\n\n"); err != nil {
+				return
+			}
 			flusher.Flush()
 		case data := <-client.Send:
 			// Enrich the pg_notify payload with author profile
@@ -81,7 +85,9 @@ func (h *Handlers) HandleChatStream(w http.ResponseWriter, r *http.Request) {
 			}
 
 			enriched, _ := json.Marshal(raw)
-			fmt.Fprintf(w, "data: %s\n\n", enriched)
+			if _, err := fmt.Fprintf(w, "data: %s\n\n", enriched); err != nil {
+				return
+			}
 			flusher.Flush()
 		}
 	}
@@ -117,7 +123,9 @@ func (h *Handlers) HandlePostStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 
-	fmt.Fprint(w, ":connected\n\n")
+	if _, err := fmt.Fprint(w, ":connected\n\n"); err != nil {
+		return
+	}
 	flusher.Flush()
 
 	heartbeat := time.NewTicker(30 * time.Second)
@@ -129,7 +137,9 @@ func (h *Handlers) HandlePostStream(w http.ResponseWriter, r *http.Request) {
 		case <-ctx.Done():
 			return
 		case <-heartbeat.C:
-			fmt.Fprint(w, ":heartbeat\n\n")
+			if _, err := fmt.Fprint(w, ":heartbeat\n\n"); err != nil {
+				return
+			}
 			flusher.Flush()
 		case data := <-client.Send:
 			var raw map[string]interface{}
@@ -148,7 +158,9 @@ func (h *Handlers) HandlePostStream(w http.ResponseWriter, r *http.Request) {
 			}
 
 			enriched, _ := json.Marshal(raw)
-			fmt.Fprintf(w, "data: %s\n\n", enriched)
+			if _, err := fmt.Fprintf(w, "data: %s\n\n", enriched); err != nil {
+				return
+			}
 			flusher.Flush()
 		}
 	}
@@ -182,7 +194,9 @@ func (h *Handlers) HandleVoicePresenceStream(w http.ResponseWriter, r *http.Requ
 	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 
-	fmt.Fprint(w, ":connected\n\n")
+	if _, err := fmt.Fprint(w, ":connected\n\n"); err != nil {
+		return
+	}
 	flusher.Flush()
 
 	heartbeat := time.NewTicker(30 * time.Second)
@@ -194,7 +208,9 @@ func (h *Handlers) HandleVoicePresenceStream(w http.ResponseWriter, r *http.Requ
 		case <-ctx.Done():
 			return
 		case <-heartbeat.C:
-			fmt.Fprint(w, ":heartbeat\n\n")
+			if _, err := fmt.Fprint(w, ":heartbeat\n\n"); err != nil {
+				return
+			}
 			flusher.Flush()
 		case data := <-client.Send:
 			// Enrich with profile data for non-DELETE events
@@ -214,7 +230,9 @@ func (h *Handlers) HandleVoicePresenceStream(w http.ResponseWriter, r *http.Requ
 			}
 
 			enriched, _ := json.Marshal(raw)
-			fmt.Fprintf(w, "data: %s\n\n", enriched)
+			if _, err := fmt.Fprintf(w, "data: %s\n\n", enriched); err != nil {
+				return
+			}
 			flusher.Flush()
 		}
 	}

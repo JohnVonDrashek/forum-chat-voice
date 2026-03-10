@@ -36,6 +36,7 @@ export function renderSidebarContent(container) {
   const { user } = authStore.get()
   const voice = voiceStore.get()
 
+  // eslint-disable-next-line no-unsanitized/property -- static template, user content escaped via escapeHTML()
   container.innerHTML = `
     <nav class="flex flex-col gap-1 p-3">
       <a href="/" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${path === '/' ? 'bg-slate-700/50 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}">

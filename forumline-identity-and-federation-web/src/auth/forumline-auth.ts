@@ -81,7 +81,12 @@ export function createForumlineAuth({ auth }: ForumlineAuthOptions) {
           h3({ class: 'auth-form__title' }, 'Check your email'),
           (() => {
             const sub = p({ class: 'auth-form__subtitle' })
-            sub.innerHTML = `We've sent a password reset link to <span class="font-medium text-white">${email.val}</span>`
+            sub.textContent = ''
+            sub.append('We\'ve sent a password reset link to ')
+            const emailSpan = document.createElement('span')
+            emailSpan.className = 'font-medium text-white'
+            emailSpan.textContent = email.val
+            sub.append(emailSpan)
             return sub
           })(),
           tryAgain,

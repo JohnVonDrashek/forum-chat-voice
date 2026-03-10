@@ -74,19 +74,21 @@ func (h *Handlers) handleLinkRedirect(w http.ResponseWriter, r *http.Request, li
 	}
 
 	// Get user ID from GoTrue
-	req, _ := http.NewRequest(http.MethodGet, h.Config.GoTrueURL+"/user", nil)
+	req, _ := http.NewRequestWithContext(r.Context(), http.MethodGet, h.Config.GoTrueURL+"/user", nil)
 	req.Header.Set("Authorization", "Bearer "+linkToken)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		http.Redirect(w, r, h.Config.SiteURL+"/settings?error=invalid_session", http.StatusFound)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var user struct {
 		ID string `json:"id"`
 	}
-	json.NewDecoder(resp.Body).Decode(&user)
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		log.Printf("failed to decode GoTrue user response: %v", err)
+	}
 	if user.ID == "" {
 		http.Redirect(w, r, h.Config.SiteURL+"/settings?error=invalid_session", http.StatusFound)
 		return
@@ -144,7 +146,7 @@ func (h *Handlers) handleServerSideAuth(w http.ResponseWriter, r *http.Request, 
 		http.Redirect(w, r, h.Config.SiteURL+"/login?error=auth_failed", http.StatusFound)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	location := resp.Header.Get("Location")
 	if location == "" {
@@ -369,8 +371,10 @@ func (h *Handlers) HandleForumlineToken(w http.ResponseWriter, r *http.Request) 
 	if localUserID != "" {
 		// Verify user still has forumline_id
 		var forumlineID *string
-		h.Pool.QueryRow(r.Context(),
-			"SELECT forumline_id FROM profiles WHERE id = $1", localUserID).Scan(&forumlineID)
+		if err := h.Pool.QueryRow(r.Context(),
+			"SELECT forumline_id FROM profiles WHERE id = $1", localUserID).Scan(&forumlineID); err != nil {
+			log.Printf("query forumline_id error: %v", err)
+		}
 
 		if forumlineID == nil || *forumlineID == "" {
 			writeJSON(w, http.StatusOK, map[string]interface{}{"forumline_access_token": nil})
@@ -475,11 +479,16 @@ func (h *Handlers) exchangeCodeForTokens(code, redirectURI string) (*forumlineId
 		"redirect_uri":  redirectURI,
 	})
 
-	resp, err := http.Post(h.Config.ForumlineURL+"/api/oauth/token", "application/json", strings.NewReader(string(payload)))
+	tokenReq, err := http.NewRequestWithContext(context.Background(), http.MethodPost, h.Config.ForumlineURL+"/api/oauth/token", strings.NewReader(string(payload)))
+	if err != nil {
+		return nil, "", "", fmt.Errorf("create token request: %w", err)
+	}
+	tokenReq.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(tokenReq)
 	if err != nil {
 		return nil, "", "", fmt.Errorf("token request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		return nil, "", "", fmt.Errorf("token exchange failed with status %d", resp.StatusCode)
@@ -511,9 +520,11 @@ func (h *Handlers) createOrLinkUser(r *http.Request, identity *forumlineIdentity
 		"SELECT id FROM profiles WHERE forumline_id = $1", identity.ForumlineID).Scan(&existingID)
 	if err == nil && existingID != "" {
 		// Update display info
-		h.Pool.Exec(ctx,
+		if _, err := h.Pool.Exec(ctx,
 			"UPDATE profiles SET display_name = $1 WHERE id = $2",
-			identity.DisplayName, existingID)
+			identity.DisplayName, existingID); err != nil {
+			log.Printf("update display_name error: %v", err)
+		}
 		return existingID, nil
 	}
 
@@ -545,7 +556,7 @@ func (h *Handlers) createOrLinkUser(r *http.Request, identity *forumlineIdentity
 						h.ensureProfileWithForumlineID(ctx, profileID, identity)
 						return profileID, nil
 					}
-					return "", fmt.Errorf("EMAIL_COLLISION: A local account with this email already exists. Sign in locally and connect Forumline from Settings.")
+					return "", fmt.Errorf("EMAIL_COLLISION: a local account with this email already exists, sign in locally and connect Forumline from Settings")
 				}
 			}
 		}
@@ -600,11 +611,13 @@ func (h *Handlers) createOrLinkUser(r *http.Request, identity *forumlineIdentity
 
 // ensureProfileWithForumlineID creates or updates a profile with the forumline_id set.
 func (h *Handlers) ensureProfileWithForumlineID(ctx context.Context, userID string, identity *forumlineIdentity) {
-	h.Pool.Exec(ctx,
+	if _, err := h.Pool.Exec(ctx,
 		`INSERT INTO profiles (id, username, display_name, forumline_id)
 		 VALUES ($1, $2, $3, $4)
 		 ON CONFLICT (id) DO UPDATE SET forumline_id = $4, display_name = $3`,
-		userID, identity.Username, identity.DisplayName, identity.ForumlineID)
+		userID, identity.Username, identity.DisplayName, identity.ForumlineID); err != nil {
+		log.Printf("ensureProfileWithForumlineID error: %v", err)
+	}
 }
 
 // setForumlineCookies sets the standard set of Forumline httpOnly cookies.
@@ -673,9 +686,11 @@ func (h *Handlers) createOrLinkUserHosted(r *http.Request, identity *forumlineId
 		"SELECT id FROM profiles WHERE forumline_id = $1", identity.ForumlineID).Scan(&existingID)
 	if err == nil && existingID != "" {
 		// Update display info
-		h.Pool.Exec(ctx,
+		if _, err := h.Pool.Exec(ctx,
 			"UPDATE profiles SET display_name = $1, avatar_url = $2, updated_at = now() WHERE id = $3",
-			identity.DisplayName, identity.AvatarURL, existingID)
+			identity.DisplayName, identity.AvatarURL, existingID); err != nil {
+			log.Printf("update hosted profile error: %v", err)
+		}
 		return existingID, nil
 	}
 

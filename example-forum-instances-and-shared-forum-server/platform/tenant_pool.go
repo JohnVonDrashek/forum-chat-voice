@@ -45,7 +45,7 @@ func (tp *TenantPool) SetTenant(ctx context.Context, schemaName string) (context
 	ctx = context.WithValue(ctx, tenantConnKey{}, conn)
 	return ctx, func() {
 		// Reset search_path before returning connection to pool
-		conn.Exec(context.Background(), "SET search_path TO public")
+		_, _ = conn.Exec(context.Background(), "SET search_path TO public")
 		conn.Release()
 	}, nil
 }

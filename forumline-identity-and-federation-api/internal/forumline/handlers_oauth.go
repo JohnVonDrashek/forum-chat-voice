@@ -83,6 +83,7 @@ func (h *Handlers) HandleOAuthAuthorize(w http.ResponseWriter, r *http.Request) 
 		}
 		if pendingToken == "" && r.Method == http.MethodPost {
 			// Try form-encoded first, then JSON
+			r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 			_ = r.ParseForm()
 			pendingToken = r.FormValue("access_token")
 			if pendingToken == "" {

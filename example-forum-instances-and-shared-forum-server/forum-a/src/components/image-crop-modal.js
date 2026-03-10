@@ -21,6 +21,7 @@ export function showCropModal(imageSrc) {
 
     const overlay = document.createElement('div')
     overlay.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/70'
+    // eslint-disable-next-line no-unsanitized/property -- static template, imageSrc is a blob URL from URL.createObjectURL()
     overlay.innerHTML = `
       <div class="bg-slate-800 rounded-xl p-6 w-[340px] shadow-2xl" id="crop-dialog">
         <h3 class="text-lg font-semibold mb-4">Crop Avatar</h3>

@@ -27,6 +27,7 @@ func (h *Handlers) HandleAvatarUpload(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
 
 	// 5 MB max
+	r.Body = http.MaxBytesReader(w, r.Body, 5<<20)
 	if err := r.ParseMultipartForm(5 << 20); err != nil {
 		http.Error(w, "File too large (max 5MB)", http.StatusBadRequest)
 		return
@@ -37,7 +38,7 @@ func (h *Handlers) HandleAvatarUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing file field", http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Determine content type
 	contentType := header.Header.Get("Content-Type")

@@ -3,7 +3,7 @@ package platform
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
+	"crypto/md5" // #nosec G501 -- md5 used for content hash (ETags), not security
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -118,7 +118,9 @@ func (sh *SiteHandlers) HandleOwnedSites(w http.ResponseWriter, r *http.Request)
 		sites = []ownedSite{}
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(sites)
+	if err := json.NewEncoder(w).Encode(sites); err != nil {
+		log.Printf("json encode error: %v", err)
+	}
 }
 
 // extractSlugAndPath parses /api/platform/sites/{slug}/files/{path...} or similar.
@@ -179,7 +181,7 @@ func (sh *SiteHandlers) loadManifest(ctx context.Context, client *minio.Client, 
 	if err != nil {
 		return nil, fmt.Errorf("get manifest object: %w", err)
 	}
-	defer obj.Close()
+	defer func() { _ = obj.Close() }()
 	data, err := io.ReadAll(obj)
 	if err != nil {
 		// Object doesn't exist yet — return empty manifest (not an error)
@@ -298,7 +300,7 @@ func (sh *SiteHandlers) HandleGetFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"file not found"}`, http.StatusNotFound)
 		return
 	}
-	defer obj.Close()
+	defer func() { _ = obj.Close() }()
 
 	info, err := obj.Stat()
 	if err != nil {
@@ -309,7 +311,7 @@ func (sh *SiteHandlers) HandleGetFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", info.ContentType)
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", info.Size))
 	if _, err := io.Copy(w, obj); err != nil {
-		log.Printf("error streaming file %s/%s: %v", slug, filePath, err)
+		log.Printf("error streaming file %s/%s: %v", slug, filePath, err) // #nosec G706 -- slug is validated before use
 	}
 }
 
@@ -379,7 +381,7 @@ func (sh *SiteHandlers) HandlePutFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Compute ETag
-	hash := md5.Sum(data)
+	hash := md5.Sum(data) // #nosec G401 -- md5 used for content hash (ETags), not security
 	etag := hex.EncodeToString(hash[:])
 
 	// Upload to R2
@@ -387,7 +389,7 @@ func (sh *SiteHandlers) HandlePutFile(w http.ResponseWriter, r *http.Request) {
 		ContentType: contentType,
 	})
 	if err != nil {
-		log.Printf("R2 upload error for %s/%s: %v", slug, filePath, err)
+		log.Printf("R2 upload error for %s/%s: %v", slug, filePath, err) // #nosec G706 -- slug is validated before use
 		http.Error(w, `{"error":"upload failed"}`, http.StatusInternalServerError)
 		return
 	}
@@ -401,11 +403,11 @@ func (sh *SiteHandlers) HandlePutFile(w http.ResponseWriter, r *http.Request) {
 	}
 	// Update DB first (easier to recover if manifest save fails)
 	if err := sh.updateSiteState(r.Context(), slug, manifest); err != nil {
-		log.Printf("failed to update site state for %s: %v", slug, err)
+		log.Printf("failed to update site state for %s: %v", slug, err) // #nosec G706 -- slug is validated before use
 	}
 
 	if err := sh.saveManifest(r.Context(), client, slug, manifest); err != nil {
-		log.Printf("failed to save manifest for %s: %v", slug, err)
+		log.Printf("failed to save manifest for %s: %v", slug, err) // #nosec G706 -- slug is validated before use
 	}
 
 	// Invalidate cache
@@ -453,19 +455,19 @@ func (sh *SiteHandlers) HandleDeleteFile(w http.ResponseWriter, r *http.Request)
 
 	// Delete from R2
 	if err := client.RemoveObject(r.Context(), sh.R2Bucket, r2Key(slug, filePath), minio.RemoveObjectOptions{}); err != nil {
-		log.Printf("R2 delete error for %s/%s: %v", slug, filePath, err)
+		log.Printf("R2 delete error for %s/%s: %v", slug, filePath, err) // #nosec G706 -- slug is validated before use
 	}
 
 	// Update manifest
 	manifest, _ := sh.loadManifest(r.Context(), client, slug)
 	delete(manifest.Files, filePath)
 	if err := sh.saveManifest(r.Context(), client, slug, manifest); err != nil {
-		log.Printf("failed to save manifest for %s: %v", slug, err)
+		log.Printf("failed to save manifest for %s: %v", slug, err) // #nosec G706 -- slug is validated before use
 	}
 
 	// Update DB state
 	if err := sh.updateSiteState(r.Context(), slug, manifest); err != nil {
-		log.Printf("failed to update site state for %s: %v", slug, err)
+		log.Printf("failed to update site state for %s: %v", slug, err) // #nosec G706 -- slug is validated before use
 	}
 
 	// Invalidate cache
@@ -497,6 +499,7 @@ func (sh *SiteHandlers) HandleMultipartUpload(w http.ResponseWriter, r *http.Req
 	}
 
 	// 10MB in-memory buffer for multipart (individual files capped at 5MB)
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		writeJSON(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "request too large"})
 		return
@@ -550,7 +553,7 @@ func (sh *SiteHandlers) HandleMultipartUpload(w http.ResponseWriter, r *http.Req
 			}
 
 			data, err := io.ReadAll(file)
-			file.Close()
+			_ = file.Close()
 			if err != nil {
 				errors = append(errors, fmt.Sprintf("%s: failed to read", filePath))
 				continue
@@ -570,7 +573,7 @@ func (sh *SiteHandlers) HandleMultipartUpload(w http.ResponseWriter, r *http.Req
 				continue
 			}
 
-			hash := md5.Sum(data)
+			hash := md5.Sum(data) // #nosec G401 -- md5 used for content hash (ETags), not security
 			manifest.Files[filePath] = siteFileEntry{
 				Size:        int64(len(data)),
 				ContentType: contentType,
@@ -587,10 +590,10 @@ func (sh *SiteHandlers) HandleMultipartUpload(w http.ResponseWriter, r *http.Req
 	}
 
 	if err := sh.saveManifest(r.Context(), client, slug, manifest); err != nil {
-		log.Printf("failed to save manifest for %s: %v", slug, err)
+		log.Printf("failed to save manifest for %s: %v", slug, err) // #nosec G706 -- slug is validated before use
 	}
 	if err := sh.updateSiteState(r.Context(), slug, manifest); err != nil {
-		log.Printf("failed to update site state for %s: %v", slug, err)
+		log.Printf("failed to update site state for %s: %v", slug, err) // #nosec G706 -- slug is validated before use
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -629,7 +632,7 @@ func (sh *SiteHandlers) HandleReset(w http.ResponseWriter, r *http.Request) {
 	// Delete all files from R2
 	for filePath := range manifest.Files {
 		if err := client.RemoveObject(r.Context(), sh.R2Bucket, r2Key(slug, filePath), minio.RemoveObjectOptions{}); err != nil {
-			log.Printf("R2 delete error during reset for %s/%s: %v", slug, filePath, err)
+			log.Printf("R2 delete error during reset for %s/%s: %v", slug, filePath, err) // #nosec G706 -- slug is validated before use
 		}
 		if sh.SiteCache != nil {
 			sh.SiteCache.Invalidate(slug, filePath)
@@ -637,12 +640,14 @@ func (sh *SiteHandlers) HandleReset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete manifest
-	client.RemoveObject(r.Context(), sh.R2Bucket, r2MetaKey(slug), minio.RemoveObjectOptions{})
+	if err := client.RemoveObject(r.Context(), sh.R2Bucket, r2MetaKey(slug), minio.RemoveObjectOptions{}); err != nil {
+		log.Printf("R2 delete manifest error for %s: %v", slug, err) // #nosec G706 -- slug is validated before use
+	}
 
 	// Update DB
 	emptyManifest := &siteManifest{Files: make(map[string]siteFileEntry)}
 	if err := sh.updateSiteState(r.Context(), slug, emptyManifest); err != nil {
-		log.Printf("failed to update site state for %s: %v", slug, err)
+		log.Printf("failed to update site state for %s: %v", slug, err) // #nosec G706 -- slug is validated before use
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "reset complete"})

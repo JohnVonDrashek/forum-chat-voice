@@ -35,6 +35,7 @@ export function renderNewThread(container, { categorySlug }) {
 
     let imageFile = null
 
+    // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
     container.innerHTML = `
       <div class="flex items-center gap-2 text-sm text-slate-400 mb-4">
         <a href="/" class="hover:text-indigo-400">Home</a>
@@ -81,6 +82,7 @@ export function renderNewThread(container, { categorySlug }) {
       if (!blob) return
 
       imageFile = blob
+      // eslint-disable-next-line no-unsanitized/property -- src is a blob URL from URL.createObjectURL()
       preview.innerHTML = `<img src="${URL.createObjectURL(blob)}" class="h-32 rounded-lg object-cover" />`
       preview.classList.remove('hidden')
     })

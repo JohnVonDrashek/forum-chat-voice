@@ -2,13 +2,15 @@ package forum
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var (
@@ -73,7 +75,7 @@ func (h *Handlers) HandleSignup(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "auth service unavailable"})
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var usersResp struct {
 		Users []struct {
@@ -121,7 +123,7 @@ func (h *Handlers) HandleSignup(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "auth service unavailable"})
 		return
 	}
-	defer signupResp.Body.Close()
+	defer func() { _ = signupResp.Body.Close() }()
 
 	signupBody, _ := io.ReadAll(signupResp.Body)
 
@@ -130,7 +132,9 @@ func (h *Handlers) HandleSignup(w http.ResponseWriter, r *http.Request) {
 			ErrorDescription string `json:"error_description"`
 			Msg              string `json:"msg"`
 		}
-		json.Unmarshal(signupBody, &gotrueErr)
+		if err := json.Unmarshal(signupBody, &gotrueErr); err != nil {
+			log.Printf("failed to unmarshal GoTrue error: %v", err)
+		}
 		errMsg := "Signup failed"
 		if gotrueErr.ErrorDescription != "" {
 			errMsg = gotrueErr.ErrorDescription
@@ -188,16 +192,25 @@ func deleteGoTrueUser(gotrueURL, serviceKey, userID string) {
 	if gotrueURL == "" || serviceKey == "" {
 		return
 	}
-	req, _ := http.NewRequest(http.MethodDelete, gotrueURL+"/admin/users/"+userID, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodDelete, gotrueURL+"/admin/users/"+userID, nil)
 	req.Header.Set("Authorization", "Bearer "+serviceKey)
 	req.Header.Set("Content-Type", "application/json")
-	http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Printf("deleteGoTrueUser request failed: %v", err)
+	} else {
+		defer func() { _ = resp.Body.Close() }()
+	}
 }
 
 // gotrueAdminCreateUser creates a user via GoTrue admin API.
 func gotrueAdminCreateUser(gotrueURL, serviceKey string, payload map[string]interface{}) (userID string, err error) {
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest(http.MethodPost, gotrueURL+"/admin/users", bytes.NewReader(body))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, gotrueURL+"/admin/users", bytes.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+serviceKey)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -205,7 +218,7 @@ func gotrueAdminCreateUser(gotrueURL, serviceKey string, payload map[string]inte
 	if err != nil {
 		return "", fmt.Errorf("admin create user request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -227,7 +240,9 @@ func gotrueAdminGenerateLink(gotrueURL, serviceKey, email string) (hashedToken s
 		"type":  "magiclink",
 		"email": email,
 	})
-	req, _ := http.NewRequest(http.MethodPost, gotrueURL+"/admin/generate_link", bytes.NewReader(payload))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, gotrueURL+"/admin/generate_link", bytes.NewReader(payload))
 	req.Header.Set("Authorization", "Bearer "+serviceKey)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -235,7 +250,7 @@ func gotrueAdminGenerateLink(gotrueURL, serviceKey, email string) (hashedToken s
 	if err != nil {
 		return "", fmt.Errorf("generate link request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -257,14 +272,16 @@ func gotrueVerifyOTP(gotrueURL, serviceKey, tokenHash string) (accessToken, refr
 		"token_hash": tokenHash,
 		"type":       "magiclink",
 	})
-	req, _ := http.NewRequest(http.MethodPost, gotrueURL+"/verify", bytes.NewReader(payload))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, gotrueURL+"/verify", bytes.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("apikey", serviceKey)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", "", fmt.Errorf("verify OTP request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -286,14 +303,16 @@ func gotrueVerifyOTP(gotrueURL, serviceKey, tokenHash string) (accessToken, refr
 
 // gotrueAdminGetUser retrieves a user by ID via GoTrue admin API.
 func gotrueAdminGetUser(gotrueURL, serviceKey, userID string) (email string, err error) {
-	req, _ := http.NewRequest(http.MethodGet, gotrueURL+"/admin/users/"+userID, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, gotrueURL+"/admin/users/"+userID, nil)
 	req.Header.Set("Authorization", "Bearer "+serviceKey)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("get user request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		Email string `json:"email"`
@@ -313,7 +332,9 @@ type gotrueListedUser struct {
 
 // gotrueAdminListUsers retrieves all users from GoTrue admin API.
 func gotrueAdminListUsers(gotrueURL, serviceKey string) ([]gotrueListedUser, error) {
-	adminReq, _ := http.NewRequest(http.MethodGet, gotrueURL+"/admin/users", nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	adminReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, gotrueURL+"/admin/users", nil)
 	adminReq.Header.Set("Authorization", "Bearer "+serviceKey)
 	adminReq.Header.Set("Content-Type", "application/json")
 
@@ -321,7 +342,7 @@ func gotrueAdminListUsers(gotrueURL, serviceKey string) ([]gotrueListedUser, err
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		Users []gotrueListedUser `json:"users"`
@@ -334,19 +355,23 @@ func gotrueAdminListUsers(gotrueURL, serviceKey string) ([]gotrueListedUser, err
 
 // gotrueGetUserByToken retrieves a user's email by their access token.
 func gotrueGetUserByToken(gotrueURL, token string) (email string, err error) {
-	req, _ := http.NewRequest(http.MethodGet, gotrueURL+"/user", nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, gotrueURL+"/user", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		Email string `json:"email"`
 	}
-	json.NewDecoder(resp.Body).Decode(&result)
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		log.Printf("failed to decode GoTrue user response: %v", err)
+	}
 	return result.Email, nil
 }
 
@@ -355,11 +380,18 @@ func gotrueAdminSignOut(gotrueURL, serviceKey, token string) {
 	if gotrueURL == "" || serviceKey == "" || token == "" {
 		return
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	reqBody, _ := json.Marshal(map[string]string{})
-	adminReq, _ := http.NewRequest(http.MethodPost, gotrueURL+"/logout", bytes.NewReader(reqBody))
+	adminReq, _ := http.NewRequestWithContext(ctx, http.MethodPost, gotrueURL+"/logout", bytes.NewReader(reqBody))
 	adminReq.Header.Set("Authorization", "Bearer "+token)
 	adminReq.Header.Set("Content-Type", "application/json")
-	http.DefaultClient.Do(adminReq)
+	resp, err := http.DefaultClient.Do(adminReq)
+	if err != nil {
+		log.Printf("gotrueAdminSignOut request failed: %v", err)
+	} else {
+		defer func() { _ = resp.Body.Close() }()
+	}
 }
 
 // afterAuth generates a Supabase session for a user and returns a redirect URL with tokens.
@@ -381,13 +413,4 @@ func (h *Handlers) afterAuth(userID string) string {
 
 	return fmt.Sprintf("%s/#access_token=%s&refresh_token=%s&type=bearer",
 		h.Config.SiteURL, accessToken, refreshToken)
-}
-
-// getGoTrueServiceRoleKey returns the GoTrue service role key.
-func (h *Handlers) getGoTrueServiceRoleKey() string {
-	key := h.Config.GoTrueServiceRoleKey
-	if key == "" {
-		key = os.Getenv("GOTRUE_SERVICE_ROLE_KEY")
-	}
-	return key
 }

@@ -111,7 +111,7 @@ func NewRouter(pool *shared.ObservablePool, sseHub *shared.SSEHub) *chi.Mux {
 	gotrueURL := os.Getenv("GOTRUE_URL")
 	if gotrueURL != "" {
 		target, _ := url.Parse(gotrueURL)
-		proxy := httputil.NewSingleHostReverseProxy(target)
+		proxy := httputil.NewSingleHostReverseProxy(target) // #nosec G704 -- URL from trusted GOTRUE_URL env var
 		r.HandleFunc("/auth/v1/*", func(w http.ResponseWriter, r *http.Request) {
 			// Strip /auth/v1 prefix — GoTrue expects /signup, /token, etc. at root
 			r.URL.Path = r.URL.Path[len("/auth/v1"):]

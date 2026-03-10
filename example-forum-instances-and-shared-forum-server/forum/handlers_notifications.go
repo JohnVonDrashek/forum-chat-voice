@@ -180,7 +180,9 @@ func (h *Handlers) HandleNotificationStream(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 
-	fmt.Fprint(w, ":connected\n\n")
+	if _, err := fmt.Fprint(w, ":connected\n\n"); err != nil {
+		return
+	}
 	flusher.Flush()
 
 	heartbeat := time.NewTicker(30 * time.Second)
@@ -192,7 +194,9 @@ func (h *Handlers) HandleNotificationStream(w http.ResponseWriter, r *http.Reque
 		case <-ctx.Done():
 			return
 		case <-heartbeat.C:
-			fmt.Fprint(w, ":heartbeat\n\n")
+			if _, err := fmt.Fprint(w, ":heartbeat\n\n"); err != nil {
+				return
+			}
 			flusher.Flush()
 		case data := <-client.Send:
 			// The pg_notify payload is raw JSON with notification fields.
@@ -213,9 +217,13 @@ func (h *Handlers) HandleNotificationStream(w http.ResponseWriter, r *http.Reque
 					event["link"] = "/"
 				}
 				eventJSON, _ := json.Marshal(event)
-				fmt.Fprintf(w, "data: %s\n\n", eventJSON)
+				if _, err := fmt.Fprintf(w, "data: %s\n\n", eventJSON); err != nil {
+					return
+				}
 			} else {
-				fmt.Fprintf(w, "data: %s\n\n", data)
+				if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
+					return
+				}
 			}
 			flusher.Flush()
 		}

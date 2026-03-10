@@ -142,6 +142,7 @@ func (h *Handlers) HandleInitiateCall(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Send push notification to callee (use background context since HTTP handler returns immediately)
+	// #nosec G118 -- goroutine intentionally outlives the request for cleanup
 	go func() {
 		bgCtx := context.Background()
 		title := fmt.Sprintf("Incoming call from %s", displayName)

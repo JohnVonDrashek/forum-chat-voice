@@ -850,7 +850,11 @@ type forumManifest struct {
 
 func fetchForumManifest(domain string) (*forumManifest, error) {
 	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get(fmt.Sprintf("https://%s/.well-known/forumline-manifest.json", domain))
+	manifestReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, fmt.Sprintf("https://%s/.well-known/forumline-manifest.json", domain), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create manifest request: %w", err)
+	}
+	resp, err := client.Do(manifestReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch manifest: %w", err)
 	}

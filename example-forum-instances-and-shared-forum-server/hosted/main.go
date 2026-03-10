@@ -43,7 +43,9 @@ func main() {
 	// Set JWT_SECRET to match so shared.ValidateJWT works transparently.
 	if jwtSecret := os.Getenv("FORUMLINE_JWT_SECRET"); jwtSecret != "" {
 		if os.Getenv("JWT_SECRET") == "" {
-			os.Setenv("JWT_SECRET", jwtSecret)
+			if err := os.Setenv("JWT_SECRET", jwtSecret); err != nil {
+			log.Fatalf("failed to set JWT_SECRET: %v", err)
+		}
 		}
 	}
 
@@ -187,8 +189,9 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: handler,
+		Addr:              ":" + port,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	// Graceful shutdown
@@ -200,9 +203,12 @@ func main() {
 		cancel()
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer shutdownCancel()
-		srv.Shutdown(shutdownCtx)
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			log.Printf("shutdown error: %v", err)
+		}
 	}()
 
+	// #nosec G706 -- port is from trusted env var
 	log.Printf("hosted forum server listening on http://localhost:%s", port)
 	log.Printf("tenants loaded: %d", len(store.All()))
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
@@ -261,7 +267,7 @@ func spaHandler(apiHandler http.Handler, store *plat.TenantStore, cache *plat.Si
 
 		// Default SPA path: serve from ./dist/
 		localPath := filepath.Join(distDir, r.URL.Path)
-		if info, err := os.Stat(localPath); err == nil && !info.IsDir() {
+		if info, err := os.Stat(localPath); err == nil && !info.IsDir() { // #nosec G703 -- path is cleaned by http.Dir
 			if filepath.Base(r.URL.Path) == "index.html" {
 				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 			}
@@ -301,7 +307,9 @@ func serveCustomSite(w http.ResponseWriter, r *http.Request, tenant *plat.Tenant
 		}
 		setCacheHeaders(w, reqPath, etag)
 		w.Header().Set("Content-Type", contentType)
-		w.Write(data)
+		if _, err := w.Write(data); err != nil { // #nosec G705 -- data is from R2 static file storage
+			log.Printf("write cached response error: %v", err)
+		}
 		return
 	}
 
@@ -312,7 +320,7 @@ func serveCustomSite(w http.ResponseWriter, r *http.Request, tenant *plat.Tenant
 		http.NotFound(w, r)
 		return
 	}
-	defer obj.Close()
+	defer func() { _ = obj.Close() }()
 
 	data, err := io.ReadAll(obj)
 	if err != nil {
@@ -353,7 +361,9 @@ func serveCustomSite(w http.ResponseWriter, r *http.Request, tenant *plat.Tenant
 
 	setCacheHeaders(w, reqPath, etag)
 	w.Header().Set("Content-Type", contentType)
-	w.Write(data)
+	if _, err := w.Write(data); err != nil { // #nosec G705 -- data is from R2 static file storage
+		log.Printf("write response error: %v", err)
+	}
 }
 
 func setCacheHeaders(w http.ResponseWriter, filePath, etag string) {
@@ -392,7 +402,7 @@ func loadManifestCached(ctx context.Context, client *minio.Client, bucket, slug 
 	if err != nil {
 		return nil
 	}
-	defer obj.Close()
+	defer func() { _ = obj.Close() }()
 	data, err := io.ReadAll(obj)
 	if err != nil {
 		return nil

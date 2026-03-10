@@ -38,6 +38,7 @@ export function createButton(opts: {
   if (opts.onClick) props.onclick = opts.onClick
   const btn = button(props) as HTMLButtonElement
   if (opts.text) btn.textContent = opts.text
+  // eslint-disable-next-line no-unsanitized/property -- callers only pass hardcoded SVG icon strings
   if (opts.html) btn.innerHTML = opts.html
   return btn
 }
@@ -131,7 +132,8 @@ export function showToast(message: string, variant: 'error' | 'success' | 'info'
   svg.setAttribute('stroke-width', '2')
   svg.setAttribute('stroke-linecap', 'round')
   svg.setAttribute('stroke-linejoin', 'round')
-  svg.innerHTML = icons[variant]  // safe: hardcoded icons
+  // eslint-disable-next-line no-unsanitized/property -- hardcoded icon SVG path strings from local object
+  svg.innerHTML = icons[variant]
 
   const text = span({ class: 'toast__text' }) as HTMLElement
   text.textContent = message  // safe: textContent escapes HTML

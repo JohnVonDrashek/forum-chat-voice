@@ -42,6 +42,7 @@ export function renderChat(container, { channelId }) {
   }
 
   function render() {
+    // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
     container.innerHTML = `
       <div class="chat-page-wrapper flex flex-col">
         <div class="h-12 border-b border-slate-700/50 px-4 flex items-center gap-2 flex-shrink-0">
@@ -177,6 +178,7 @@ export function renderChat(container, { channelId }) {
     const area = container.querySelector('#messages-area')
     if (!area) return
     const wasAtBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 50
+    // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
     area.innerHTML = renderMessages()
     if (wasAtBottom) area.scrollTop = area.scrollHeight
   }

@@ -28,6 +28,7 @@ export function renderBookmarks(container) {
   let bookmarks = []
 
   function render() {
+    // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
     container.innerHTML = `
       <h1 class="text-2xl font-bold mb-2">Bookmarks</h1>
       <p class="text-sm text-slate-400 mb-6">${bookmarks.length} saved thread${bookmarks.length !== 1 ? 's' : ''}</p>

@@ -32,6 +32,7 @@ export function renderCategory(container, { categorySlug }) {
     const { user } = authStore.get()
     const isFollowing = follows.some(f => f.category_id === category.id)
 
+    // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
     container.innerHTML = `
       <div class="mb-6">
         <div class="flex items-center justify-between flex-wrap gap-3">

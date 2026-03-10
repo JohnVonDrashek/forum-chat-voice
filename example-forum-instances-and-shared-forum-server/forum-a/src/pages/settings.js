@@ -20,6 +20,7 @@ export function renderSettings(container) {
   }
 
   function render() {
+    // eslint-disable-next-line no-unsanitized/property -- static template
     container.innerHTML = `
       <h1 class="text-2xl font-bold mb-6">Settings</h1>
 
@@ -44,6 +45,7 @@ export function renderSettings(container) {
   }
 
   function renderProfileTab(el) {
+    // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()/escapeAttr()
     el.innerHTML = `
       <div class="space-y-4 max-w-lg">
         <div>
@@ -116,6 +118,7 @@ export function renderSettings(container) {
   }
 
   function renderAccountTab(el) {
+    // eslint-disable-next-line no-unsanitized/property -- static template
     el.innerHTML = `
       <div class="space-y-6 max-w-lg">
         <div>
@@ -190,6 +193,7 @@ export function renderSettings(container) {
         { key: 'direct_messages', label: 'Direct messages' },
       ]
 
+      // eslint-disable-next-line no-unsanitized/property -- static template with trusted labels
       el.innerHTML = `
         <div class="space-y-4 max-w-lg">
           ${categories.map(cat => {
@@ -226,6 +230,7 @@ export function renderSettings(container) {
     const theme = localStorage.getItem('theme') || 'dark'
     const fontSize = localStorage.getItem('fontSize') || 'medium'
 
+    // eslint-disable-next-line no-unsanitized/property -- static template
     el.innerHTML = `
       <div class="space-y-6 max-w-lg">
         <div>

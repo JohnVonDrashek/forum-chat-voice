@@ -98,7 +98,9 @@ func (ph *PlatformHandlers) HandleProvision(w http.ResponseWriter, r *http.Reque
 			log.Printf("warning: failed to store OAuth credentials for %s: %v", body.Slug, err)
 		} else {
 			// Refresh tenant store so the credentials are available immediately
-			ph.Store.Refresh(r.Context())
+			if err := ph.Store.Refresh(r.Context()); err != nil {
+				log.Printf("tenant store refresh failed: %v", err)
+			}
 		}
 	}
 
@@ -166,7 +168,9 @@ func (ph *PlatformHandlers) HandleExport(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", "attachment; filename=\""+slug+"-export.json\"")
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		log.Printf("json encode error: %v", err)
+	}
 }
 
 type oauthCredentials struct {
@@ -193,6 +197,7 @@ func registerForumWithForumline(ctx context.Context, domain, name, authHeader st
 	}
 	bodyJSON, _ := json.Marshal(body)
 
+	// #nosec G704 -- URL from trusted FORUMLINE_URL config
 	req, err := http.NewRequestWithContext(ctx, "POST", forumlineURL+"/api/forums", bytes.NewReader(bodyJSON))
 	if err != nil {
 		return nil, err
@@ -202,11 +207,11 @@ func registerForumWithForumline(ctx context.Context, domain, name, authHeader st
 		req.Header.Set("Authorization", authHeader)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req) // #nosec G704 -- URL from trusted FORUMLINE_URL config
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
@@ -232,5 +237,7 @@ func registerForumWithForumline(ctx context.Context, domain, name, authHeader st
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Printf("json encode error: %v", err)
+	}
 }

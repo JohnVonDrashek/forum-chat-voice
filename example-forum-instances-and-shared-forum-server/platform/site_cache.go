@@ -47,7 +47,7 @@ func (c *SiteCache) Get(slug, path string) (data []byte, contentType string, eta
 	if !exists {
 		return nil, "", "", false
 	}
-	item := elem.Value.(*cacheItem)
+	item, _ := elem.Value.(*cacheItem) //nolint:errcheck // cache only stores *cacheItem
 	if time.Since(item.added) > c.ttl {
 		c.removeLocked(key)
 		return nil, "", "", false
@@ -77,7 +77,8 @@ func (c *SiteCache) Put(slug, path string, data []byte, contentType, etag string
 	// Evict LRU entries until we have space
 	for c.curSize+size > c.maxSize && c.order.Len() > 0 {
 		front := c.order.Front()
-		c.removeLocked(front.Value.(*cacheItem).key)
+		frontItem, _ := front.Value.(*cacheItem) //nolint:errcheck // cache only stores *cacheItem
+		c.removeLocked(frontItem.key)
 	}
 
 	item := &cacheItem{
@@ -103,7 +104,7 @@ func (c *SiteCache) removeLocked(key string) {
 	if !exists {
 		return
 	}
-	item := elem.Value.(*cacheItem)
+	item, _ := elem.Value.(*cacheItem) //nolint:errcheck // cache only stores *cacheItem
 	c.curSize -= int64(len(item.data))
 	c.order.Remove(elem)
 	delete(c.items, key)

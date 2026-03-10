@@ -19,6 +19,7 @@ export const tags = van.tags
 /** Create a DOM element from a raw HTML string (e.g., SVG icons). */
 export function html(s: string): Element {
   const t = document.createElement('template')
+  // eslint-disable-next-line no-unsanitized/property -- only used with hardcoded HTML strings, never user input
   t.innerHTML = s.trim()
   return t.content.firstElementChild!.cloneNode(true) as Element
 }

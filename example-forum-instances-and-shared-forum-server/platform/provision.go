@@ -65,7 +65,7 @@ func Provision(ctx context.Context, pool *pgxpool.Pool, store *TenantStore, req 
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Create schema
 	sanitized := pgx.Identifier{schemaName}.Sanitize()
