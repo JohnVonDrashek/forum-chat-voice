@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.5"
+  required_version = ">= 1.7, < 2.0"
 
   backend "s3" {
     bucket                      = "forumline-terraform-state"
@@ -16,6 +16,28 @@ terraform {
     cloudflare = {
       source  = "cloudflare/cloudflare"
       version = "~> 4.0"
+    }
+  }
+
+  # Client-side state encryption (OpenTofu 1.7+).
+  # Encrypts state before it leaves your machine / CI runner.
+  encryption {
+    key_provider "pbkdf2" "main" {
+      passphrase = var.state_encryption_passphrase
+    }
+
+    method "aes_gcm" "main" {
+      keys = key_provider.pbkdf2.main
+    }
+
+    state {
+      method   = method.aes_gcm.main
+      enforced = true
+    }
+
+    plan {
+      method   = method.aes_gcm.main
+      enforced = true
     }
   }
 }

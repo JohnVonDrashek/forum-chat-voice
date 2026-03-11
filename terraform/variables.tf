@@ -19,3 +19,9 @@ variable "developer_email" {
   description = "Email address of the developer allowed SSH access"
   type        = string
 }
+
+variable "state_encryption_passphrase" {
+  description = "Passphrase for encrypting state and plan files (OpenTofu 1.7+)"
+  type        = string
+  sensitive   = true
+}

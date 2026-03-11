@@ -66,6 +66,20 @@ resource "cloudflare_zero_trust_access_policy" "ssh_service_auth" {
 }
 
 # ---------------------------------------------------------------------------
+# Short-lived SSH certificates
+# Cloudflare signs ephemeral certs after browser-based Access login.
+# The CA public key is installed on each LXC in /etc/ssh/ca.pub.
+# Note: service tokens (GitHub Actions) cannot obtain short-lived certs —
+# CI/CD continues using traditional SSH keys for sshd auth.
+# ---------------------------------------------------------------------------
+
+resource "cloudflare_zero_trust_access_short_lived_certificate" "ssh" {
+  for_each       = local.ssh_hostnames
+  account_id     = var.cloudflare_account_id
+  application_id = cloudflare_zero_trust_access_application.ssh[each.key].id
+}
+
+# ---------------------------------------------------------------------------
 # Policy: Allow — Developer email (browser-based login)
 # ---------------------------------------------------------------------------
 

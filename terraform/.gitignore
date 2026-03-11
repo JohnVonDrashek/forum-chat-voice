@@ -6,7 +6,8 @@
 # Variable files with secrets
 *.auto.tfvars
 terraform.tfvars
-prod.tfvars
+# prod.tfvars is committed — it only contains non-secret values
+# (account_id, developer_email). Secrets use TF_VAR_ env vars.
 
 # Crash logs
 crash.log

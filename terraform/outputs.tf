@@ -14,3 +14,8 @@ output "github_actions_service_token_secret" {
   value       = cloudflare_zero_trust_access_service_token.github_actions.client_secret
   sensitive   = true
 }
+
+output "ssh_ca_public_keys" {
+  description = "CA public keys for short-lived SSH certificates — install in /etc/ssh/ca.pub on each LXC"
+  value       = { for k, v in cloudflare_zero_trust_access_short_lived_certificate.ssh : k => v.public_key }
+}
