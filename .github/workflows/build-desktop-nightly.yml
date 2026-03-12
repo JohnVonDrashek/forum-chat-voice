@@ -87,7 +87,7 @@ jobs:
             echo "::error::DMG was not created"
             exit 1
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: desktop-dmg
           path: Forumline-nightly.dmg
@@ -126,7 +126,7 @@ jobs:
             echo "::error::iOS .app not found"
             exit 1
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ios-simulator
           path: Forumline-nightly-ios-simulator.zip
@@ -147,7 +147,7 @@ jobs:
       - name: Package exe
         run: Compress-Archive -Path apps/windows\publish\* -DestinationPath Forumline-nightly-windows.zip
         shell: pwsh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-exe
           path: Forumline-nightly-windows.zip
@@ -165,7 +165,7 @@ jobs:
           verb: call
           args: build-linux --source . export --path Forumline-nightly-linux.tar.gz
           version: "0.20.1"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-binary
           path: Forumline-nightly-linux.tar.gz
@@ -182,7 +182,7 @@ jobs:
           verb: call
           args: build-android --source . export --path Forumline-nightly.apk
           version: "0.20.1"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: android-apk
           path: Forumline-nightly.apk
