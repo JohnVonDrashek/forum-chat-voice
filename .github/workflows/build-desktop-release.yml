@@ -180,7 +180,7 @@ jobs:
 
   release:
     needs: build-macos
-    if: inputs.create_release == 'true'
+    if: inputs.create_release
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -213,7 +213,7 @@ jobs:
 
   update-homebrew:
     needs: [build-macos, release]
-    if: inputs.create_release == 'true'
+    if: inputs.create_release
     runs-on: ubuntu-latest
     steps:
       - name: Update Homebrew cask
