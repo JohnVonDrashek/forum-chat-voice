@@ -13,11 +13,21 @@ on:
         default: 'true'
         type: boolean
 
+# Required secrets for code signing & notarization:
+#   APPLE_CERTIFICATE_BASE64    - Base64-encoded .p12 Developer ID Application certificate
+#                                 (export from Keychain Access, then: base64 -i cert.p12 | pbcopy)
+#   APPLE_CERTIFICATE_PASSWORD  - Password used when exporting the .p12
+#   APPLE_TEAM_ID               - Apple Developer Team ID (10-char alphanumeric)
+#   APPLE_ID                    - Apple ID email for notarization
+#   APPLE_ID_PASSWORD           - App-specific password (generate at appleid.apple.com)
+#   HOMEBREW_TAP_TOKEN          - GitHub PAT with repo scope for forumline/homebrew-tap
+
 jobs:
   build-macos:
     runs-on: macos-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      sha256: ${{ steps.sha.outputs.sha256 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -41,38 +51,114 @@ jobs:
         run: xcodegen generate
         working-directory: apps/macos
 
+      - name: Import code signing certificate
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH="$RUNNER_TEMP/certificate.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 16)" # gitleaks:allow
+
+          # Decode certificate
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
+
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import certificate
+          security import "$CERTIFICATE_PATH" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
+          # Allow codesign to access the keychain
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Add to search list
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
       - name: Build macOS app
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           xcodebuild build \
             -project Forumline.xcodeproj \
             -scheme Forumline \
             -configuration Release \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             -derivedDataPath build
         working-directory: apps/macos
+
+      - name: Notarize app
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          APP_PATH="apps/macos/build/Build/Products/Release/Forumline.app"
+
+          # Create a zip for notarization
+          ditto -c -k --keepParent "$APP_PATH" "$RUNNER_TEMP/Forumline-notarize.zip"
+
+          # Submit for notarization
+          xcrun notarytool submit "$RUNNER_TEMP/Forumline-notarize.zip" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          # Staple the notarization ticket
+          xcrun stapler staple "$APP_PATH"
 
       - name: Create DMG
         run: |
           APP_PATH="apps/macos/build/Build/Products/Release/Forumline.app"
-          npx create-dmg "$APP_PATH" --overwrite --dmg-title "Forumline" --no-code-sign || true
+          npx create-dmg "$APP_PATH" --overwrite --dmg-title "Forumline" || true
 
           DMG_FILE=$(ls -1 Forumline*.dmg 2>/dev/null | head -1)
           if [ -n "$DMG_FILE" ]; then
             FINAL_NAME="Forumline-${{ steps.version.outputs.version }}.dmg"
             mv "$DMG_FILE" "$FINAL_NAME"
+
+            # Notarize the DMG too
+            xcrun notarytool submit "$FINAL_NAME" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_ID_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" \
+              --wait
+            xcrun stapler staple "$FINAL_NAME"
+
             echo "Created: $FINAL_NAME"
           else
             echo "::error::DMG was not created"
             exit 1
           fi
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Compute DMG sha256
+        id: sha
+        run: |
+          SHA=$(shasum -a 256 "Forumline-${{ steps.version.outputs.version }}.dmg" | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
 
       - name: Upload DMG
         uses: actions/upload-artifact@v4
         with:
           name: release-macos-dmg
           path: Forumline-${{ steps.version.outputs.version }}.dmg
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
 
   release:
     needs: build-macos
@@ -96,7 +182,55 @@ jobs:
             ## Forumline Desktop v${{ needs.build-macos.outputs.version }}
 
             ### Install
-            Download `Forumline-${{ needs.build-macos.outputs.version }}.dmg`, open it, and drag Forumline to Applications.
+
+            **Homebrew (recommended):**
+            ```bash
+            brew install forumline/tap/forumline
+            ```
+
+            **Manual:** Download `Forumline-${{ needs.build-macos.outputs.version }}.dmg`, open it, and drag Forumline to Applications.
           files: artifacts/release-macos-dmg/*
           draft: false
           prerelease: false
+
+  update-homebrew:
+    needs: [build-macos, release]
+    if: inputs.create_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Homebrew cask
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ needs.build-macos.outputs.version }}
+          SHA256: ${{ needs.build-macos.outputs.sha256 }}
+        run: |
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/forumline/homebrew-tap.git"
+          cd homebrew-tap
+
+          # Write cask formula with Ruby #{version} interpolation preserved
+          printf '%s\n' \
+            'cask "forumline" do' \
+            "  version \"${VERSION}\"" \
+            "  sha256 \"${SHA256}\"" \
+            '' \
+            '  url "https://github.com/forumline/forumline/releases/download/desktop-v#{version}/Forumline-#{version}.dmg"' \
+            '  name "Forumline"' \
+            '  desc "Forumline desktop app"' \
+            '  homepage "https://forumline.net"' \
+            '' \
+            '  depends_on macos: ">= :ventura"' \
+            '' \
+            '  app "Forumline.app"' \
+            '' \
+            '  zap trash: [' \
+            '    "~/Library/Caches/net.forumline.app.macos",' \
+            '    "~/Library/Preferences/net.forumline.app.macos.plist",' \
+            '    "~/Library/WebKit/net.forumline.app.macos",' \
+            '  ]' \
+            'end' > Casks/forumline.rb
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/forumline.rb
+          git commit -m "Update forumline to ${VERSION}"
+          git push
