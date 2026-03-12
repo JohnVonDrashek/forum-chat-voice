@@ -1,20 +1,13 @@
-package forumline
+package templates
 
 import (
 	"encoding/json"
 	"fmt"
 	"html"
-	"net/http"
 	"net/url"
 )
 
-func writeJSON(w http.ResponseWriter, status int, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
-}
-
-func renderLoginPage(clientID, redirectURI, state, forumName string) string {
+func RenderLoginPage(clientID, redirectURI, state, forumName string) string {
 	authorizeURL := fmt.Sprintf("/api/oauth/authorize?client_id=%s&redirect_uri=%s&state=%s",
 		url.QueryEscape(clientID),
 		url.QueryEscape(redirectURI),

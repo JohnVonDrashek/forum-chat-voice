@@ -11,7 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	forumlineapp "github.com/forumline/forumline/services/forumline-api/internal/forumline"
+	"github.com/forumline/forumline/services/forumline-api/realtime"
+	"github.com/forumline/forumline/services/forumline-api/service"
+	"github.com/forumline/forumline/services/forumline-api/store"
 	shared "github.com/forumline/forumline/shared-go"
 )
 
@@ -38,6 +40,9 @@ func main() {
 	sseHub.Listen(ctx, "call_signal")
 	sseHub.StartListening(ctx)
 
+	// Store + services
+	s := store.New(pool)
+
 	// Clean up stale calls from previous server run (SSE drops on restart
 	// leave calls stuck in ringing/active state, blocking new calls).
 	if tag, err := pool.Exec(ctx,
@@ -49,11 +54,12 @@ func main() {
 	}
 
 	// Push notification listener
-	pushListener := forumlineapp.NewPushListener(rawPool, sseHub)
+	pushSvc := service.NewPushService(s)
+	pushListener := realtime.NewPushListener(rawPool, s, pushSvc)
 	go pushListener.Start(ctx)
 
 	// Router
-	router := forumlineapp.NewRouter(pool, sseHub)
+	router := newRouter(s, sseHub)
 
 	// Wrap with global middleware
 	var handler http.Handler = router
@@ -123,4 +129,3 @@ func spaHandler(apiHandler http.Handler) http.Handler {
 		http.ServeFile(w, r, filepath.Join(distDir, "index.html"))
 	})
 }
-

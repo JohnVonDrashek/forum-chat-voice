@@ -1,4 +1,4 @@
-package forumline
+package realtime
 
 import (
 	"context"
@@ -8,18 +8,21 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	shared "github.com/forumline/forumline/shared-go"
+
+	"github.com/forumline/forumline/services/forumline-api/service"
+	"github.com/forumline/forumline/services/forumline-api/store"
 )
 
 // PushListener listens for LISTEN/NOTIFY on the push_dm channel
 // and sends web push notifications for new DMs.
 type PushListener struct {
-	Pool   *pgxpool.Pool
-	SSEHub *shared.SSEHub
+	Pool        *pgxpool.Pool
+	Store       *store.Store
+	PushService *service.PushService
 }
 
-func NewPushListener(pool *pgxpool.Pool, sseHub *shared.SSEHub) *PushListener {
-	return &PushListener{Pool: pool, SSEHub: sseHub}
+func NewPushListener(pool *pgxpool.Pool, s *store.Store, ps *service.PushService) *PushListener {
+	return &PushListener{Pool: pool, Store: s, PushService: ps}
 }
 
 func (pl *PushListener) Start(ctx context.Context) {
@@ -60,7 +63,7 @@ func (pl *PushListener) listenOnce(ctx context.Context) {
 		notification, err := conn.Conn().WaitForNotification(ctx)
 		if err != nil {
 			if ctx.Err() != nil {
-				return // context cancelled, clean shutdown
+				return
 			}
 			log.Printf("PushListener: WaitForNotification error: %v", err)
 			return
@@ -77,27 +80,18 @@ func (pl *PushListener) listenOnce(ctx context.Context) {
 			continue
 		}
 
-		// Fetch sender username for notification title
-		var senderUsername string
-		_ = pl.Pool.QueryRow(ctx,
-			`SELECT username FROM forumline_profiles WHERE id = $1`, payload.SenderID,
-		).Scan(&senderUsername)
-		if senderUsername == "" {
-			senderUsername = "someone"
-		}
-
+		senderUsername := pl.Store.GetSenderUsername(ctx, payload.SenderID)
 		title := fmt.Sprintf("Message from %s", senderUsername)
 		body := payload.Content
 		if len(body) > 100 {
 			body = body[:100]
 		}
 
-		// Send push to all members except the sender
 		for _, memberID := range payload.MemberIDs {
 			if memberID == payload.SenderID {
 				continue
 			}
-			sent := sendPushNotifications(ctx, pl.Pool, memberID, title, body, "", "")
+			sent := pl.PushService.SendToUser(ctx, memberID, title, body, "", "")
 			if sent > 0 {
 				log.Printf("PushListener: sent %d push notifications for DM to %s", sent, memberID)
 			}
