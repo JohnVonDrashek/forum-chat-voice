@@ -27,9 +27,9 @@ interface ForumlineAuthOptions {
 
 export function createForumlineAuth({ auth }: ForumlineAuthOptions) {
   const mode = state<AuthMode>('signin')
-  const email = state('')
-  const password = state('')
-  const username = state('')
+  const email = { val: '' }
+  const password = { val: '' }
+  const username = { val: '' }
   const error = state<string | null>(null)
   const loading = state(false)
   const resetSent = state(false)
