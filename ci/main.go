@@ -354,9 +354,11 @@ func (m *Forumline) sshContainer(
 		// sops + age
 		WithExec([]string{"bash", "-c", `curl -fsSL "https://dl.filippo.io/age/v1.2.0?for=linux/amd64" -o /tmp/age.tar.gz && tar -xzf /tmp/age.tar.gz -C /tmp && mv /tmp/age/age /usr/local/bin/`}).
 		WithExec([]string{"bash", "-c", `curl -fsSL "https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64" -o /usr/local/bin/sops && chmod +x /usr/local/bin/sops`}).
-		// SSH key (mounted as secret file, 0400 permissions by default)
+		// SSH key — write from env var to match original workflow behavior
+		// (WithMountedSecret FUSE mount causes "error in libcrypto" with OpenSSH)
 		WithExec([]string{"mkdir", "-p", "/root/.ssh"}).
-		WithMountedSecret("/root/.ssh/id_deploy", sshKey).
+		WithSecretVariable("_SSH_KEY", sshKey).
+		WithExec([]string{"bash", "-c", `printf '%s\n' "$_SSH_KEY" > /root/.ssh/id_deploy && chmod 600 /root/.ssh/id_deploy`}).
 		// Cloudflare Access credentials
 		WithSecretVariable("CF_ACCESS_CLIENT_ID", cfAccessClientId).
 		WithSecretVariable("CF_ACCESS_CLIENT_SECRET", cfAccessClientSecret).
