@@ -1,7 +1,8 @@
 /*
- * New group conversation creator (Van.js + VanX)
+ * New group conversation creator — iChat theme (Van.js + VanX)
  *
- * This file lets users create a new group DM conversation with multiple Forumline users.
+ * Lets users create a new group DM with multiple Forumline users,
+ * styled with brushed metal inputs, Aqua chips, and glossy buttons.
  *
  * It must:
  * - Provide a text input for naming the group
@@ -13,17 +14,14 @@
  * - Show validation messages that auto-dismiss after 3 seconds
  * - Create the group conversation on the server and navigate to it on success
  * - Show a loading state on the create button while the request is in progress
- *
- * Uses reactive + list for the selected member chips and search
- * results — only added/removed chips and results cause DOM mutations.
  */
 import type { ForumlineStore } from '../shared/forumline-store.js'
 import type { ForumlineProfile } from '@forumline/protocol'
 import { reactive, list, replace, noreactive } from 'vanjs-ext'
 import { tags, state } from '../shared/dom.js'
-import { createAvatar, createButton, createInput, createSpinner } from '../shared/ui.js'
+import { createAvatar, createSpinner } from '../shared/ui.js'
 
-const { div, span, button: btn } = tags
+const { div, span, button: btn, input } = tags
 
 interface DmNewGroupOptions {
   forumlineStore: ForumlineStore
@@ -42,26 +40,27 @@ export function createDmNewGroup({ forumlineStore, onCreated }: DmNewGroupOption
   let searchTimer: ReturnType<typeof setTimeout> | null = null
   let validationTimer: ReturnType<typeof setTimeout> | null = null
 
-  const el = div({ class: 'flex flex-col', style: 'height:100%' }) as HTMLElement
+  const el = div({ class: 'ichat-new-group' }) as HTMLElement
 
-  // Group name
-  const nameInput = createInput({ type: 'text', placeholder: 'Group name...' })
+  // Group name input
+  const nameInput = input({
+    class: 'ichat-search-input',
+    type: 'text',
+    placeholder: 'Group name...',
+  }) as HTMLInputElement
   nameInput.addEventListener('input', () => { groupName.val = nameInput.value })
-  el.appendChild(div({ class: 'p-lg', style: 'padding-bottom:0' }, nameInput) as HTMLElement)
+  el.appendChild(div({ class: 'ichat-search-wrap' }, nameInput) as HTMLElement)
 
-  // Chips — list rebuilds only added/removed chips
+  // Selected member chips
   const chipsWrap = div(
-    { class: 'flex flex-wrap gap-xs p-lg', style: 'padding-top:0.5rem;padding-bottom:0' },
-    list(div({ class: 'contents' }), selectedMembers, (v, deleter, _k) => {
+    { class: 'ichat-chips-wrap' },
+    list(div({ class: 'ichat-chips' }), selectedMembers, (v, deleter, _k) => {
       const member = v.val as ForumlineProfile
-      const chip = div({
-        class: 'flex items-center gap-xs',
-        style: 'background:var(--color-surface-hover);border-radius:999px;padding:4px 10px 4px 4px;font-size:13px;color:var(--color-text-secondary)',
-      }) as HTMLElement
+      const chip = div({ class: 'ichat-chip' }) as HTMLElement
       chip.appendChild(createAvatar({ avatarUrl: member.avatar_url, seed: member.username, size: 20 }))
       chip.appendChild(span({}, member.display_name || member.username) as HTMLElement)
       chip.appendChild(btn({
-        style: 'background:none;border:none;color:var(--color-text-muted);cursor:pointer;padding:0 0 0 4px;font-size:16px;line-height:1',
+        class: 'ichat-chip-remove',
         onclick: deleter,
       }, '\u00d7') as HTMLElement)
       return chip
@@ -70,7 +69,11 @@ export function createDmNewGroup({ forumlineStore, onCreated }: DmNewGroupOption
   el.appendChild(chipsWrap)
 
   // Search input
-  const searchInput = createInput({ type: 'text', placeholder: 'Search users to add...' })
+  const searchInput = input({
+    class: 'ichat-search-input',
+    type: 'text',
+    placeholder: 'Search users to add...',
+  }) as HTMLInputElement
   searchInput.addEventListener('input', () => {
     searchQuery.val = searchInput.value
     if (searchTimer) clearTimeout(searchTimer)
@@ -81,21 +84,18 @@ export function createDmNewGroup({ forumlineStore, onCreated }: DmNewGroupOption
     }
     searchTimer = setTimeout(doSearch, 300)
   })
-  el.appendChild(div({ class: 'p-lg', style: 'padding-top:0.5rem' }, searchInput) as HTMLElement)
+  el.appendChild(div({ class: 'ichat-search-wrap', style: 'padding-top:0' }, searchInput) as HTMLElement)
 
-  // Results — list efficiently renders search results
-  const resultsEl = div({ class: 'flex-1 overflow-y-auto' },
+  // Results
+  const resultsEl = div({ class: 'ichat-search-results' },
     () => {
       if (searching.val) {
-        const wrap = div({ class: 'flex items-center justify-center', style: 'padding-top:2rem' }) as HTMLElement
-        wrap.appendChild(createSpinner(true))
-        return wrap
+        return div({ class: 'ichat-loading' }, createSpinner(true))
       }
       if (hasSearched.val && Object.keys(searchResults).length === 0) {
-        return div({ class: 'text-center text-sm text-muted', style: 'padding:0.75rem 1rem' }, 'No Forumline users found')
+        return div({ class: 'ichat-empty-text', style: 'padding:1rem;text-align:center' }, 'No Forumline users found')
       }
       const { forumlineUserId } = forumlineStore.get()
-      // Filter out current user and already-selected members
       const selectedIds = new Set(Object.keys(selectedMembers))
       const filtered: Record<string, ForumlineProfile> = {}
       for (const [id, profile] of Object.entries(searchResults)) {
@@ -105,20 +105,21 @@ export function createDmNewGroup({ forumlineStore, onCreated }: DmNewGroupOption
       }
 
       if (Object.keys(filtered).length === 0 && hasSearched.val) {
-        return div({ class: 'text-center text-sm text-muted', style: 'padding:0.75rem 1rem' }, 'No Forumline users found')
+        return div({ class: 'ichat-empty-text', style: 'padding:1rem;text-align:center' }, 'No Forumline users found')
       }
 
-      const container = div() as HTMLElement
+      const container = div({ class: 'ichat-buddy-list' }) as HTMLElement
       for (const [id, profile] of Object.entries(filtered)) {
         const profileBtn = btn({
-          class: 'conversation-item',
+          class: 'ichat-buddy',
           onclick: () => { selectedMembers[id] = noreactive(profile) },
         }) as HTMLElement
-        profileBtn.appendChild(createAvatar({ avatarUrl: profile.avatar_url, seed: profile.username, size: 40 }))
+        profileBtn.appendChild(span({ class: 'ichat-presence-orb ichat-presence--available' }) as HTMLElement)
+        profileBtn.appendChild(createAvatar({ avatarUrl: profile.avatar_url, seed: profile.username, size: 36 }))
         profileBtn.appendChild(
-          div({ class: 'min-w-0' },
-            div({ class: 'font-medium text-white' }, profile.display_name || profile.username),
-            div({ class: 'text-sm text-muted' }, `@${profile.username}`),
+          div({ class: 'ichat-buddy-info' },
+            div({ class: 'ichat-buddy-name' }, profile.display_name || profile.username),
+            div({ class: 'ichat-buddy-status' }, `@${profile.username}`),
           ) as HTMLElement,
         )
         container.appendChild(profileBtn)
@@ -128,22 +129,16 @@ export function createDmNewGroup({ forumlineStore, onCreated }: DmNewGroupOption
   ) as HTMLElement
   el.appendChild(resultsEl)
 
-  // Validation — reactive visibility and text
+  // Validation message
   const validationMsg = div(
-    { class: 'text-sm text-error', style: () => `padding:0 1rem;display:${validationText.val ? 'block' : 'none'}` },
+    { class: 'ichat-validation', style: () => `display:${validationText.val ? 'block' : 'none'}` },
     () => validationText.val,
   ) as HTMLElement
   el.appendChild(validationMsg)
 
   // Create button
-  const createBtn = createButton({
-    text: 'Create Group',
-    variant: 'primary',
-    className: 'w-full',
-    onClick: () => void handleCreate(),
-  })
-  const bottomBar = div({ class: 'p-lg', style: 'border-top:1px solid var(--color-border)' }, createBtn) as HTMLElement
-  el.appendChild(bottomBar)
+  const createBtn = btn({ class: 'ichat-create-btn', onclick: () => void handleCreate() }, 'Create Group') as HTMLButtonElement
+  el.appendChild(div({ class: 'ichat-bottom-bar' }, createBtn) as HTMLElement)
 
   async function doSearch() {
     const { forumlineClient } = forumlineStore.get()

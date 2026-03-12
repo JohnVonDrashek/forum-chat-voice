@@ -742,46 +742,789 @@ body {
 }
 
 /* ============================================================================
-   DM Bubbles
+   iChat Theme — Window & Chrome
    ============================================================================ */
 
-.dm-bubble {
-  border-radius: 1rem;
-  padding: 0.5rem 1rem;
+.ichat-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #e8eef5;
 }
 
-.dm-bubble--mine {
-  background: linear-gradient(180deg, #d4a882 0%, var(--color-primary) 40%, var(--color-primary-dark) 100%);
-  color: #1a1614;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 1px 3px rgba(0, 0, 0, 0.2);
+.ichat-titlebar {
+  height: 22px;
+  background: linear-gradient(to bottom, #e8e8e8 0%, #d0d0d0 45%, #c8c8c8 55%, #d4d4d4 100%);
+  border-bottom: 1px solid #888;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  flex-shrink: 0;
 }
 
-.dm-bubble--theirs {
-  background: linear-gradient(180deg, #3d372e 0%, var(--color-bg-tertiary) 100%);
-  color: var(--color-text-secondary);
+.ichat-traffic-lights {
+  display: flex;
+  gap: 6px;
+}
+
+.ichat-tl {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.ichat-tl--close {
+  background: radial-gradient(circle at 35% 35%, #ff7f6e, #e6392d);
+}
+
+.ichat-tl--minimize {
+  background: radial-gradient(circle at 35% 35%, #ffd96e, #e6a31e);
+}
+
+.ichat-tl--zoom {
+  background: radial-gradient(circle at 35% 35%, #85e66e, #31b617);
+}
+
+.ichat-titlebar-text {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  color: #333;
+  font-weight: bold;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* ============================================================================
+   iChat Theme — Brushed Metal Toolbar
+   ============================================================================ */
+
+.ichat-toolbar {
+  height: 38px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(180, 180, 180, 0.05) 0px,
+      rgba(200, 200, 200, 0.08) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    linear-gradient(to bottom, #c8c8c8 0%, #b0b0b0 100%);
+  border-bottom: 1px solid #777;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ichat-toolbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ichat-toolbar-btn {
+  background: linear-gradient(to bottom, #f0f0f0 0%, #d8d8d8 50%, #c8c8c8 100%);
+  border: 1px solid #888;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: #333;
+  cursor: pointer;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.3) inset,
+    0 1px 2px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: inherit;
+}
+
+.ichat-toolbar-btn:hover {
+  background: linear-gradient(to bottom, #ffffff 0%, #e4e4e4 50%, #d4d4d4 100%);
+}
+
+.ichat-toolbar-btn:active {
+  background: linear-gradient(to bottom, #b8b8b8 0%, #c4c4c4 100%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) inset;
+}
+
+.ichat-toolbar-search {
+  width: 140px;
+  height: 22px;
+  border-radius: 11px;
+  border: 1px solid #888;
+  background: white;
+  padding: 0 10px 0 24px;
+  font-size: 11px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) inset;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Ccircle cx='10' cy='10' r='7'/%3E%3Cline x1='15' y1='15' x2='21' y2='21'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 7px center;
+  font-family: inherit;
+}
+
+.ichat-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ============================================================================
+   iChat Theme — Split Pane (Desktop: sidebar + detail side-by-side)
+   ============================================================================ */
+
+.ichat-split {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ichat-split-sidebar {
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+  border-right: 1px solid #999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: linear-gradient(to bottom, #e8eef5 0%, #d5dde8 100%);
+}
+
+.ichat-split-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  background: white;
+}
+
+.ichat-detail-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(to bottom, #f4f4f6 0%, #e8eaee 100%);
+}
+
+.ichat-mobile-only {
+  display: none;
+}
+
+/* Mobile: single-pane navigation */
+@media (max-width: 767px) {
+  .ichat-split-sidebar {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    border-right: none;
+  }
+
+  .ichat-split-detail {
+    width: 100%;
+  }
+
+  .ichat-split-sidebar--hidden {
+    display: none;
+  }
+
+  .ichat-split-detail--hidden {
+    display: none;
+  }
+
+  .ichat-mobile-only {
+    display: flex;
+  }
+}
+
+/* ============================================================================
+   iChat Theme — Buddy List / Conversation List
+   ============================================================================ */
+
+.ichat-sidebar {
+  flex: 1;
+  overflow-y: auto;
+  background: linear-gradient(to bottom, #e8eef5 0%, #d5dde8 100%);
+}
+
+.ichat-buddy-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ichat-buddy {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  gap: 8px;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+  font-size: 13px;
+  color: #222;
+  transition: background-color 0.1s;
+}
+
+.ichat-buddy--alt {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.ichat-buddy:hover {
+  background: linear-gradient(to bottom, #3f80e8, #2860c8);
+  color: white;
+}
+
+.ichat-buddy:hover .ichat-buddy-name,
+.ichat-buddy:hover .ichat-buddy-status,
+.ichat-buddy:hover .ichat-buddy-time {
+  color: white;
+}
+
+.ichat-buddy:hover .ichat-buddy-status {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.ichat-presence-orb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.15),
+    inset 0 2px 3px rgba(255, 255, 255, 0.5);
+}
+
+.ichat-presence--available {
+  background: radial-gradient(circle at 35% 30%, #8df78d, #22b822);
+}
+
+.ichat-presence--away {
+  background: radial-gradient(circle at 35% 30%, #fde68a, #d4a017);
+}
+
+.ichat-presence--offline {
+  background: radial-gradient(circle at 35% 30%, #ccc, #999);
+}
+
+.ichat-buddy-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ichat-buddy-avatar--group {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c5d5e8, #8fa8c8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.ichat-buddy .avatar {
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.ichat-buddy-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ichat-buddy-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ichat-buddy-name {
+  font-size: 12px;
+  font-weight: bold;
+  color: #222;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ichat-buddy-name--unread {
+  color: #000;
+}
+
+.ichat-buddy-status {
+  font-size: 11px;
+  color: #777;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.ichat-buddy-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ichat-buddy-time {
+  font-size: 10px;
+  color: #8899aa;
+}
+
+.ichat-group-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to bottom, #c8b0e8, #9a78c4);
+  color: white;
+  font-size: 9px;
+  font-weight: bold;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  min-width: 16px;
+}
+
+.ichat-unread-badge {
+  background: radial-gradient(circle at 40% 30%, #ff6b6b, #cc2233);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================================================
+   iChat Theme — Chat Area / Message View
+   ============================================================================ */
+
+.ichat-chat-area {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: white;
+}
+
+.ichat-chat-header {
+  height: 48px;
+  background: linear-gradient(to bottom, #f4f4f4, #e2e2e2);
+  border-bottom: 1px solid #bbb;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.ichat-chat-header .avatar {
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.ichat-chat-header-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.ichat-chat-header-name {
+  font-weight: bold;
+  font-size: 14px;
+  color: #222;
+  margin: 0;
+}
+
+.ichat-chat-header-members {
+  font-size: 11px;
+  color: #888;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ichat-chat-header-members:hover {
+  color: #555;
+}
+
+.ichat-call-btn {
+  background: linear-gradient(to bottom, #6dd66d 0%, #3ab43a 50%, #2ea02e 100%);
+  color: white;
+  border: 1px solid #228822;
+  border-radius: 5px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.3) inset,
     0 1px 3px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
 }
 
-.dm-row {
+.ichat-call-btn:hover {
+  background: linear-gradient(to bottom, #7de67d 0%, #4ac44a 50%, #3eb03e 100%);
+}
+
+.ichat-call-btn:active {
+  background: linear-gradient(to bottom, #2ea02e 0%, #3ab43a 100%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) inset;
+}
+
+.ichat-member-panel {
+  background: linear-gradient(to bottom, #f0f0f0, #e8e8e8);
+  border-bottom: 1px solid #ccc;
+  padding: 8px 14px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.ichat-member-panel-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ichat-member-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.ichat-member-row .avatar {
+  border-radius: 50%;
+}
+
+.ichat-member-name {
+  font-size: 12px;
+  color: #444;
+}
+
+.ichat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background:
+    linear-gradient(to bottom, rgba(245, 245, 245, 0.5), rgba(255, 255, 255, 0));
+}
+
+.ichat-messages-empty {
+  text-align: center;
+  color: #aaa;
+  padding: 3rem 0;
+  font-size: 13px;
+}
+
+.ichat-msg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ichat-msg-row {
   display: flex;
 }
 
-.dm-row--mine {
+.ichat-msg-row--me {
   justify-content: flex-end;
 }
 
-.dm-row--theirs {
+.ichat-msg-row--them {
   justify-content: flex-start;
 }
 
-.dm-time {
-  margin-top: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--color-text-faint);
+.ichat-msg-wrap {
+  max-width: 75%;
+}
+
+.ichat-msg-sender {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 2px;
+  padding-left: 4px;
+}
+
+.ichat-bubble {
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.ichat-bubble--them {
+  background: linear-gradient(to bottom, #e8e8e8 0%, #d8d8d8 100%);
+  color: #222;
+  border-bottom-left-radius: 4px;
+}
+
+.ichat-bubble--me {
+  background: linear-gradient(to bottom, #5bbd5b 0%, #3a9e3a 100%);
+  color: white;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+  border-bottom-right-radius: 4px;
+}
+
+.ichat-msg-time {
+  margin-top: 3px;
+  font-size: 10px;
+  color: #aaa;
+  padding: 0 4px;
+}
+
+.ichat-msg-time--right {
+  text-align: right;
+}
+
+/* ============================================================================
+   iChat Theme — Compose Bar
+   ============================================================================ */
+
+.ichat-compose-bar {
+  padding: 10px 14px;
+  border-top: 1px solid #ccc;
+  background: linear-gradient(to bottom, #f0f0f0, #e4e4e4);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.ichat-compose-input {
+  flex: 1;
+  height: 28px;
+  border-radius: 14px;
+  border: 1px solid #aaa;
+  padding: 0 14px;
+  font-size: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) inset;
+  background: white;
+  font-family: inherit;
+  outline: none;
+}
+
+.ichat-compose-input:focus {
+  border-color: #6699cc;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.1) inset,
+    0 0 4px rgba(100, 150, 220, 0.3);
+}
+
+.ichat-send-btn {
+  background: linear-gradient(to bottom, #5ca7f2 0%, #2d7fd4 50%, #1a6bc0 100%);
+  color: white;
+  border: 1px solid #1a5faa;
+  border-radius: 5px;
+  padding: 4px 16px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset;
+  font-family: inherit;
+}
+
+.ichat-send-btn:hover {
+  background: linear-gradient(to bottom, #6cb7ff 0%, #3d8fe4 50%, #2a7bd0 100%);
+}
+
+.ichat-send-btn:active {
+  background: linear-gradient(to bottom, #1a6bc0 0%, #2d7fd4 100%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) inset;
+}
+
+/* ============================================================================
+   iChat Theme — Search / New Message / New Group
+   ============================================================================ */
+
+.ichat-new-message,
+.ichat-new-group {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: linear-gradient(to bottom, #e8eef5 0%, #d5dde8 100%);
+}
+
+.ichat-search-wrap {
+  padding: 12px 14px;
+}
+
+.ichat-search-input {
+  width: 100%;
+  height: 26px;
+  border-radius: 13px;
+  border: 1px solid #999;
+  background: white;
+  padding: 0 12px;
+  font-size: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) inset;
+  font-family: inherit;
+  outline: none;
+}
+
+.ichat-search-input:focus {
+  border-color: #6699cc;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.12) inset,
+    0 0 4px rgba(100, 150, 220, 0.3);
+}
+
+.ichat-search-results {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ichat-chips-wrap {
+  padding: 0 14px 6px;
+}
+
+.ichat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ichat-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(to bottom, #f0f0f0 0%, #d8d8d8 100%);
+  border: 1px solid #aaa;
+  border-radius: 12px;
+  padding: 2px 8px 2px 2px;
+  font-size: 11px;
+  color: #333;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset;
+}
+
+.ichat-chip .avatar {
+  border-radius: 50%;
+}
+
+.ichat-chip-remove {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0 0 0 2px;
+  font-size: 14px;
+  line-height: 1;
+  font-family: inherit;
+}
+
+.ichat-chip-remove:hover {
+  color: #cc2233;
+}
+
+.ichat-validation {
+  padding: 0 14px;
+  font-size: 12px;
+  color: #cc2233;
+}
+
+.ichat-bottom-bar {
+  padding: 12px 14px;
+  border-top: 1px solid #aaa;
+  background: linear-gradient(to bottom, #e0e0e0, #d0d0d0);
+}
+
+.ichat-create-btn {
+  width: 100%;
+  background: linear-gradient(to bottom, #5ca7f2 0%, #2d7fd4 50%, #1a6bc0 100%);
+  color: white;
+  border: 1px solid #1a5faa;
+  border-radius: 5px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset;
+  font-family: inherit;
+}
+
+.ichat-create-btn:hover {
+  background: linear-gradient(to bottom, #6cb7ff 0%, #3d8fe4 50%, #2a7bd0 100%);
+}
+
+/* ============================================================================
+   iChat Theme — States
+   ============================================================================ */
+
+.ichat-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
+.ichat-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  gap: 8px;
+}
+
+.ichat-empty-text {
+  font-size: 13px;
+  color: #777;
+  text-align: center;
+}
+
+.ichat-empty-subtext {
+  font-size: 11px;
+  color: #aaa;
+  text-align: center;
+}
+
+.ichat-signin-btn {
+  margin-top: 12px;
 }
 
 /* ============================================================================
@@ -843,41 +1586,6 @@ body {
   gap: 0.5rem;
   border-bottom: 1px solid var(--color-border);
   padding: 1rem;
-}
-
-/* ============================================================================
-   DM panel header
-   ============================================================================ */
-
-.dm-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--color-border);
-  padding: 0.75rem 1rem;
-}
-
-/* ============================================================================
-   Conversation list item
-   ============================================================================ */
-
-.conversation-item {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  text-align: left;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: inherit;
-  font-family: inherit;
-  transition: background-color 0.15s;
-}
-
-.conversation-item:hover {
-  background-color: var(--color-bg-secondary);
 }
 
 /* ============================================================================
@@ -1247,21 +1955,6 @@ body {
 }
 
 /* ============================================================================
-   DM compose bar
-   ============================================================================ */
-
-.compose-bar {
-  display: flex;
-  gap: 0.5rem;
-  border-top: 1px solid var(--color-border);
-  padding: 1rem;
-}
-
-.compose-bar .input {
-  flex: 1;
-}
-
-/* ============================================================================
    Success check icon (for reset sent, password updated, etc.)
    ============================================================================ */
 
@@ -1321,18 +2014,6 @@ body {
 
 @media (min-width: 768px) {
   .page-content { padding: 1.5rem; }
-}
-
-/* ============================================================================
-   Message view header (recipient info)
-   ============================================================================ */
-
-.message-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  border-bottom: 1px solid var(--color-border);
-  padding: 0.75rem 1rem;
 }
 
 /* ============================================================================

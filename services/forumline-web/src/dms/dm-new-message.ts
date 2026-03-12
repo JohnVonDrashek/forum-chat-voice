@@ -1,7 +1,8 @@
 /*
- * New 1:1 message user picker (Van.js + VanX)
+ * New 1:1 message user picker — iChat theme (Van.js + VanX)
  *
- * This file lets users start a new direct message by searching for and selecting a Forumline user.
+ * Lets users start a new DM by searching for a Forumline user,
+ * styled as an iChat buddy search with the classic Aqua aesthetic.
  *
  * It must:
  * - Provide a search input that queries Forumline user profiles by username
@@ -10,17 +11,14 @@
  * - Show a loading spinner while the search is in progress
  * - Show a "No Forumline users found" message when the search returns no results
  * - Navigate to the conversation with the selected user when tapped
- *
- * Uses list with replace for efficient search result rendering —
- * only changed results are re-rendered instead of rebuilding the entire list.
  */
 import type { ForumlineStore } from '../shared/forumline-store.js'
 import type { ForumlineProfile } from '@forumline/protocol'
 import { reactive, replace, noreactive, list } from 'vanjs-ext'
 import { tags, state } from '../shared/dom.js'
-import { createAvatar, createInput, createSpinner } from '../shared/ui.js'
+import { createAvatar, createSpinner } from '../shared/ui.js'
 
-const { div, button } = tags
+const { div, button, input, span } = tags
 
 interface DmNewMessageOptions {
   forumlineStore: ForumlineStore
@@ -34,11 +32,16 @@ export function createDmNewMessage({ forumlineStore, onSelectUser }: DmNewMessag
   const hasSearched = state(false)
   let searchTimer: ReturnType<typeof setTimeout> | null = null
 
-  const el = div({ class: 'flex flex-col', style: 'height:100%' }) as HTMLElement
+  const el = div({ class: 'ichat-new-message' }) as HTMLElement
 
-  const input = createInput({ type: 'text', placeholder: 'Search Forumline users...', autofocus: true })
-  input.addEventListener('input', () => {
-    searchQuery.val = input.value
+  const searchInput = input({
+    class: 'ichat-search-input',
+    type: 'text',
+    placeholder: 'Search Forumline users...',
+    autofocus: true,
+  }) as HTMLInputElement
+  searchInput.addEventListener('input', () => {
+    searchQuery.val = searchInput.value
     if (searchTimer) clearTimeout(searchTimer)
     if (!searchQuery.val.trim()) {
       replace(results, {})
@@ -47,7 +50,7 @@ export function createDmNewMessage({ forumlineStore, onSelectUser }: DmNewMessag
     }
     searchTimer = setTimeout(doSearch, 300)
   })
-  el.appendChild(div({ class: 'p-lg' }, input) as HTMLElement)
+  el.appendChild(div({ class: 'ichat-search-wrap' }, searchInput) as HTMLElement)
 
   async function doSearch() {
     const { forumlineClient } = forumlineStore.get()
@@ -68,27 +71,26 @@ export function createDmNewMessage({ forumlineStore, onSelectUser }: DmNewMessag
     hasSearched.val = true
   }
 
-  const resultsEl = div({ class: 'flex-1 overflow-y-auto' },
+  const resultsEl = div({ class: 'ichat-search-results' },
     () => {
       if (searching.val) {
-        const wrap = div({ class: 'flex items-center justify-center', style: 'padding-top:2rem' }) as HTMLElement
-        wrap.appendChild(createSpinner(true))
-        return wrap
+        return div({ class: 'ichat-loading' }, createSpinner(true))
       }
       if (hasSearched.val && Object.keys(results).length === 0) {
-        return div({ class: 'text-center text-sm text-muted', style: 'padding:0.75rem 1rem' }, 'No Forumline users found')
+        return div({ class: 'ichat-empty-text', style: 'padding:1rem;text-align:center' }, 'No Forumline users found')
       }
 
-      // list efficiently renders the keyed results object
-      return list(div, results, (v, _deleter, _k) => {
+      return list(div({ class: 'ichat-buddy-list' }), results, (v, _deleter, _k) => {
         const profile = v.val as ForumlineProfile
-        const btn = button({ class: 'conversation-item', onclick: () => onSelectUser(profile.id) }) as HTMLElement
-        btn.appendChild(createAvatar({ avatarUrl: profile.avatar_url, seed: profile.username, size: 40 }))
-        const info = div({ class: 'min-w-0' },
-          div({ class: 'font-medium text-white' }, profile.display_name || profile.username),
-          div({ class: 'text-sm text-muted' }, `@${profile.username}`),
+        const btn = button({ class: 'ichat-buddy', onclick: () => onSelectUser(profile.id) }) as HTMLElement
+        btn.appendChild(span({ class: 'ichat-presence-orb ichat-presence--available' }) as HTMLElement)
+        btn.appendChild(createAvatar({ avatarUrl: profile.avatar_url, seed: profile.username, size: 36 }))
+        btn.appendChild(
+          div({ class: 'ichat-buddy-info' },
+            div({ class: 'ichat-buddy-name' }, profile.display_name || profile.username),
+            div({ class: 'ichat-buddy-status' }, `@${profile.username}`),
+          ) as HTMLElement,
         )
-        btn.appendChild(info as HTMLElement)
         return btn
       })
     },
