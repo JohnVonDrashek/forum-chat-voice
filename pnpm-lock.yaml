@@ -57,22 +57,9 @@ importers:
         version: 5.9.3
 
   services/forumline-web:
-    dependencies:
-      '@forumline/protocol':
-        specifier: workspace:*
-        version: link:../../packages/protocol
-      vanjs-core:
-        specifier: ^1.6.0
-        version: 1.6.0
-      vanjs-ext:
-        specifier: ^0.6.3
-        version: 0.6.3
     devDependencies:
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
       vite:
-        specifier: ^6.0.0
+        specifier: ^6.2.0
         version: 6.4.1(@types/node@25.3.5)
 
 packages:
@@ -1037,12 +1024,6 @@ packages:
 
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
-
-  vanjs-core@1.6.0:
-    resolution: {integrity: sha512-4KM9mKEji7woioytMNKQ2XrqD31ykG9vde3N1F/gyJJ0oaOSohdeaN2o4UC4Ndu3Raj1SEXWvW7k4etZI8Ovjw==}
-
-  vanjs-ext@0.6.3:
-    resolution: {integrity: sha512-Jmaeqx9nCjelwDVSQEaRtt7R4Y/Kj/zJBG3bZSiIPj8Wtr8nEFRsJX9K5qcGl1o3cGEEFBE9suyoSqs/6tiOBg==}
 
   vite@6.4.1:
     resolution: {integrity: sha512-+Oxm7q9hDoLMyJOYfUYBuHQo+dkAloi33apOPP56pzj+vsdJDzr+j1NISE5pyaAuKL4A3UD34qd0lx5+kfKp2g==}
@@ -2010,12 +1991,6 @@ snapshots:
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
-
-  vanjs-core@1.6.0: {}
-
-  vanjs-ext@0.6.3:
-    dependencies:
-      vanjs-core: 1.6.0
 
   vite@6.4.1(@types/node@25.3.5):
     dependencies:

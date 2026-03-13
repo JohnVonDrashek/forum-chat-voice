@@ -1,6 +1,6 @@
 {
   "name": "forumline-central-services",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "description": "Forumline Central Services — neutral identity and forum registry service",
@@ -8,13 +8,7 @@
     "dev": "vite",
     "build": "vite build"
   },
-  "dependencies": {
-    "@forumline/protocol": "workspace:*",
-    "vanjs-core": "^1.6.0",
-    "vanjs-ext": "^0.6.3"
-  },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "vite": "^6.0.0"
+    "vite": "^6.2.0"
   }
 }

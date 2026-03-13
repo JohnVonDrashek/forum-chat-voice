@@ -6,11 +6,7 @@ on:
     branches: [main]
     paths:
       - 'services/forumline-api/**'
-      - 'services/forumline-web/src/**'
-      - 'services/forumline-web/index.html'
-      - 'services/forumline-web/vite.config.ts'
-      - 'services/forumline-web/tsconfig.json'
-      - 'services/forumline-web/package.json'
+      - 'services/forumline-web/**'
       - 'packages/**'
       - 'pnpm-lock.yaml'
       - 'deploy/docker/Dockerfile.go-forumline'

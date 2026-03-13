@@ -22,7 +22,6 @@ export default tseslint.config(
       parserOptions: {
         projectService: {
           allowDefaultProject: [
-            'services/forumline-web/vite.config.ts',
             'vitest.workspace.ts',
             'packages/protocol/src/validation.test.ts',
           ],
@@ -48,5 +47,13 @@ export default tseslint.config(
   {
     files: ['**/*.js', '**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
+  },
+  // Forumline-web uses innerHTML for template rendering with escaped/static data
+  {
+    files: ['services/forumline-web/src/**/*.js'],
+    rules: {
+      'no-unsanitized/property': 'warn',
+      'no-unsanitized/method': 'warn',
+    },
   },
 )

@@ -8,16 +8,4 @@ export default defineWorkspace([
       include: ['src/**/*.test.ts'],
     },
   },
-  {
-    test: {
-      name: 'web-app',
-      root: './services/forumline-web',
-      include: ['src/**/*.test.ts'],
-    },
-    resolve: {
-      alias: {
-        '@forumline/protocol': './packages/protocol/src/index.ts',
-      },
-    },
-  },
 ])

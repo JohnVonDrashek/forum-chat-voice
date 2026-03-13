@@ -1,0 +1,749 @@
+/* ========================================
+   FORUMLINE REDESIGN — Apple 2007 Aesthetic
+   ======================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --metal-light: #e8e8e8;
+  --metal-mid: #c8c8c8;
+  --metal-dark: #a0a0a0;
+  --linen: #ece5d8;
+  --linen-dark: #d4cdc0;
+  --aqua-top: #6ec6ff;
+  --aqua-bottom: #1a8dff;
+  --aqua-pressed-top: #4ba8e8;
+  --aqua-pressed-bottom: #0a6dd8;
+  --text-primary: #333;
+  --text-secondary: #666;
+  --text-muted: #999;
+  --shadow-soft: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+  --shadow-med: 0 3px 6px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.12);
+  --shadow-strong: 0 10px 30px rgba(0,0,0,0.2);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --bg-content: linear-gradient(180deg, #f5f5f5, #ebebeb);
+  --bg-card: white;
+  --bg-card-header: linear-gradient(180deg, #fafafa, #f0f0f0);
+  --border-light: #e8e8e8;
+  --border-mid: #d0d0d0;
+  --bg-input: linear-gradient(180deg, #f5f5f5, #fff 3px);
+  --input-border: #bbb;
+  --post-bg: white;
+  --post-border: #ddd;
+}
+
+/* ========== CLASSIC LINEN THEME ========== */
+[data-theme="classic"] {
+  --metal-light: #ece5d8;
+  --metal-mid: #d4cdc0;
+  --metal-dark: #b8b0a2;
+  --linen: #e2d9ca;
+  --linen-dark: #d4c9b8;
+  --aqua-top: #c49a6c;
+  --aqua-bottom: #a07844;
+  --aqua-pressed-top: #b08a5c;
+  --aqua-pressed-bottom: #8a6838;
+  --text-primary: #3e3428;
+  --text-secondary: #6b5d4f;
+  --text-muted: #8a7d6f;
+  --shadow-soft: 0 1px 3px rgba(80,60,30,0.1), 0 1px 2px rgba(80,60,30,0.06);
+  --shadow-med: 0 3px 6px rgba(80,60,30,0.12), 0 2px 4px rgba(80,60,30,0.08);
+  --shadow-strong: 0 10px 30px rgba(80,60,30,0.18);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --bg-content: linear-gradient(180deg, #f0e8db, #e6ddd0);
+  --bg-card: #f5efe6;
+  --bg-card-header: linear-gradient(180deg, #f5efe6, #ebe3d5);
+  --border-light: #ddd4c4;
+  --border-mid: #cec4b4;
+  --bg-input: linear-gradient(180deg, #f0e8db, #f8f2ea 3px);
+  --input-border: #c0b6a4;
+  --post-bg: #f5efe6;
+  --post-border: #ddd4c4;
+}
+
+[data-theme="classic"] body {
+  background: #ddd4c4;
+}
+
+[data-theme="classic"] .top-bar {
+  background: linear-gradient(180deg, #ece5d8 0%, #d8d0c2 45%, #d0c8ba 55%, #ddd4c4 100%);
+  border-bottom-color: #b8b0a2;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.4) inset, 0 1px 3px rgba(80,60,30,0.15);
+}
+
+[data-theme="classic"] .top-bar::before {
+  background: none;
+}
+
+[data-theme="classic"] .logo-text {
+  color: var(--text-primary);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+}
+
+[data-theme="classic"] .aqua-btn {
+  background: linear-gradient(180deg, var(--aqua-top) 0%, var(--aqua-bottom) 100%);
+  border-color: #8a6838;
+  color: white;
+  text-shadow: 0 -1px 0 rgba(0,0,0,0.25);
+}
+
+[data-theme="classic"] .aqua-btn:hover {
+  background: linear-gradient(180deg, #d0a878 0%, #b08850 100%);
+}
+
+[data-theme="classic"] .aqua-btn:active {
+  background: linear-gradient(180deg, var(--aqua-pressed-top) 0%, var(--aqua-pressed-bottom) 100%);
+}
+
+[data-theme="classic"] .sidebar {
+  background: var(--linen);
+  border-right-color: var(--border-mid);
+}
+
+[data-theme="classic"] .search-bar input {
+  background: var(--bg-input);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+}
+
+[data-theme="classic"] .search-bar input::placeholder { color: var(--text-muted); }
+
+/* ========== DARK AQUA THEME ========== */
+[data-theme="dark"] {
+  --metal-light: #2a2a2e;
+  --metal-mid: #222226;
+  --metal-dark: #1a1a1e;
+  --linen: #1e1e22;
+  --linen-dark: #161618;
+  --text-primary: #e8e8ec;
+  --text-secondary: #a0a0a8;
+  --text-muted: #8a8a92;
+  --shadow-soft: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-med: 0 3px 6px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.25);
+  --shadow-strong: 0 10px 30px rgba(0,0,0,0.5);
+  --bg-content: linear-gradient(180deg, #1c1c20, #161618);
+  --bg-card: #24242a;
+  --bg-card-header: linear-gradient(180deg, #28282e, #222228);
+  --border-light: #333338;
+  --border-mid: #3a3a40;
+  --bg-input: linear-gradient(180deg, #1a1a1e, #222226 3px);
+  --input-border: #444448;
+  --post-bg: #24242a;
+  --post-border: #333338;
+}
+
+[data-theme="dark"] body {
+  background: #0e0e10;
+}
+
+[data-theme="dark"] .top-bar {
+  background: linear-gradient(180deg, #2a2a2e 0%, #222226 45%, #1e1e22 55%, #24242a 100%);
+  border-bottom-color: #111;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 1px 3px rgba(0,0,0,0.4);
+}
+
+[data-theme="dark"] .top-bar::before {
+  background: repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(255,255,255,0.01) 1px, rgba(255,255,255,0.01) 2px);
+}
+
+[data-theme="dark"] .logo-text {
+  color: var(--text-primary);
+  text-shadow: none;
+}
+
+[data-theme="dark"] .search-bar input {
+  background: var(--bg-input);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.05);
+}
+
+[data-theme="dark"] .search-bar input::placeholder { color: #666; }
+
+[data-theme="dark"] .search-hint-kbd {
+  background: #333;
+  border-color: #444;
+  color: #777;
+}
+
+[data-theme="dark"] .avatar-pill {
+  background: linear-gradient(180deg, #333, #2a2a2e);
+  border-color: #444;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
+}
+
+[data-theme="dark"] .avatar-pill:hover {
+  background: linear-gradient(180deg, #3a3a3e, #333);
+}
+
+[data-theme="dark"] .sidebar {
+  background: var(--linen);
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.01) 2px, rgba(255,255,255,0.01) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.008) 2px, rgba(255,255,255,0.008) 4px);
+  border-right-color: #111;
+  box-shadow: inset -1px 0 0 rgba(255,255,255,0.03);
+}
+
+[data-theme="dark"] .sidebar-label {
+  color: #777;
+  text-shadow: none;
+}
+
+[data-theme="dark"] .forum-item:hover,
+[data-theme="dark"] .dm-item:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+[data-theme="dark"] .forum-item.active,
+[data-theme="dark"] .dm-item.active {
+  background: rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] .forum-item img,
+[data-theme="dark"] .dm-item img {
+  border-color: rgba(255,255,255,0.1);
+}
+
+[data-theme="dark"] .sidebar-btn {
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+  border-color: rgba(255,255,255,0.08);
+  color: var(--text-secondary);
+  text-shadow: none;
+}
+
+[data-theme="dark"] .sidebar-btn:hover {
+  background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+}
+
+[data-theme="dark"] .sidebar-divider {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06) 20%, rgba(255,255,255,0.06) 80%, transparent);
+}
+
+/* .content now uses var(--bg-content) directly, so dark mode is automatic */
+
+[data-theme="dark"] .content-header {
+  background: var(--bg-card-header);
+  border-bottom-color: var(--border-mid);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset;
+}
+
+[data-theme="dark"] .content-header h1 {
+  text-shadow: none;
+}
+
+[data-theme="dark"] .home-card {
+  background: var(--bg-card);
+  border-color: var(--border-mid);
+}
+
+[data-theme="dark"] .card-header {
+  background: var(--bg-card-header);
+  border-bottom-color: var(--border-mid);
+}
+
+[data-theme="dark"] .stat-row,
+[data-theme="dark"] .activity-item {
+  border-bottom-color: var(--border-light);
+}
+
+[data-theme="dark"] .thread-item {
+  border-bottom-color: var(--border-light);
+}
+
+[data-theme="dark"] .thread-item:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+[data-theme="dark"] .thread-pinned {
+  background: rgba(26,141,255,0.06);
+}
+
+[data-theme="dark"] .thread-replies {
+  background: #2a2a30;
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .post-body {
+  background: var(--post-bg);
+  border-color: var(--post-border);
+}
+
+[data-theme="dark"] .post-footer {
+  border-top-color: var(--border-light);
+}
+
+[data-theme="dark"] .reaction-btn {
+  border-color: var(--border-mid);
+  background: #2a2a30;
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .reaction-btn:hover {
+  background: #333338;
+}
+
+[data-theme="dark"] .reaction-btn.active {
+  border-color: rgba(26,141,255,0.4);
+  background: rgba(26,141,255,0.12);
+}
+
+[data-theme="dark"] .add-reaction-btn {
+  border-color: var(--border-mid);
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .reply-area {
+  background: var(--bg-card-header);
+  border-top-color: var(--border-mid);
+}
+
+[data-theme="dark"] .reply-box textarea,
+[data-theme="dark"] .settings-input,
+[data-theme="dark"] .settings-textarea,
+[data-theme="dark"] .discover-input,
+[data-theme="dark"] .composer-title-input {
+  background: var(--bg-input);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+}
+
+[data-theme="dark"] .reply-box textarea:focus,
+[data-theme="dark"] .settings-input:focus,
+[data-theme="dark"] .settings-textarea:focus,
+[data-theme="dark"] .discover-input:focus,
+[data-theme="dark"] .composer-title-input:focus {
+  border-color: var(--aqua-bottom);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 6px rgba(26,141,255,0.3);
+}
+
+[data-theme="dark"] .message-item:not(.sent) .message-bubble {
+  background: #2a2a30;
+  border-color: var(--border-mid);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .discover-card {
+  background: var(--bg-card);
+  border-color: var(--border-mid);
+}
+
+[data-theme="dark"] .discover-categories {
+  border-bottom-color: var(--border-mid);
+}
+
+[data-theme="dark"] .category-pill {
+  background: linear-gradient(180deg, #2a2a30, #222228);
+  border-color: var(--border-mid);
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .category-pill:hover {
+  background: linear-gradient(180deg, #333, #2a2a30);
+}
+
+[data-theme="dark"] .settings-sidebar {
+  background: var(--bg-card-header);
+  border-right-color: var(--border-mid);
+}
+
+[data-theme="dark"] .settings-toggle-row {
+  border-bottom-color: var(--border-light);
+}
+
+[data-theme="dark"] .settings-nav-divider {
+  background: var(--border-mid);
+}
+
+[data-theme="dark"] .toggle-slider {
+  background: #444;
+}
+
+[data-theme="dark"] .notif-dropdown,
+[data-theme="dark"] .user-dropdown {
+  background: #28282e;
+  border-color: #444;
+}
+
+[data-theme="dark"] .notif-dropdown-header,
+[data-theme="dark"] .user-dropdown-header {
+  background: var(--bg-card-header);
+}
+
+[data-theme="dark"] .notif-item.unread {
+  background: rgba(26,141,255,0.08);
+}
+
+[data-theme="dark"] .notif-item {
+  border-bottom-color: var(--border-light);
+}
+
+[data-theme="dark"] .user-dropdown-divider {
+  background: var(--border-mid);
+}
+
+[data-theme="dark"] .user-dropdown-item:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+[data-theme="dark"] .search-modal-panel {
+  background: #28282e;
+  border-color: #444;
+}
+
+[data-theme="dark"] .search-modal-input-row {
+  border-bottom-color: var(--border-mid);
+}
+
+[data-theme="dark"] .search-modal-input {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .search-result-item:hover {
+  background: rgba(26,141,255,0.1);
+}
+
+[data-theme="dark"] .search-result-name mark {
+  background: rgba(26,141,255,0.2);
+}
+
+[data-theme="dark"] .member-panel {
+  background: #24242a;
+  border-left-color: #333;
+}
+
+[data-theme="dark"] .member-panel-header {
+  background: var(--bg-card-header);
+  border-bottom-color: var(--border-mid);
+}
+
+[data-theme="dark"] .member-item:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+[data-theme="dark"] .context-menu {
+  background: #28282e;
+  border-color: #444;
+}
+
+[data-theme="dark"] .context-menu-item:hover {
+  background: rgba(26,141,255,0.1);
+}
+
+[data-theme="dark"] .context-menu-divider {
+  background: var(--border-mid);
+}
+
+[data-theme="dark"] .voice-panel {
+  background: linear-gradient(180deg, #2a2a2e, #222226);
+  border-color: #444;
+}
+
+[data-theme="dark"] .voice-panel-header {
+  background: linear-gradient(180deg, #333, #2a2a2e);
+  border-bottom-color: #444;
+}
+
+[data-theme="dark"] .voice-panel-header h2 {
+  text-shadow: none;
+}
+
+[data-theme="dark"] .voice-controls {
+  background: linear-gradient(180deg, #2a2a2e, #222226);
+  border-top-color: #444;
+}
+
+[data-theme="dark"] .mute-btn {
+  background: linear-gradient(180deg, #333, #2a2a2e);
+  border-color: #444;
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .mobile-tab-bar {
+  background: linear-gradient(180deg, #2a2a2e, #222226);
+  border-top-color: #111;
+}
+
+[data-theme="dark"] .toast {
+  background: #2a2a2e;
+  border-color: #444;
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .login-card {
+  background: #24242a;
+  border-color: #444;
+}
+
+[data-theme="dark"] .login-header {
+  background: var(--bg-card-header);
+  border-bottom-color: var(--border-mid);
+}
+
+[data-theme="dark"] .login-tab {
+  background: linear-gradient(180deg, #2a2a30, #222228);
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .login-container {
+  background-color: #161618;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.005) 2px, rgba(255,255,255,0.005) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.003) 2px, rgba(255,255,255,0.003) 4px),
+    linear-gradient(135deg, rgba(102,126,234,0.05) 0%, rgba(118,75,162,0.05) 100%);
+}
+
+[data-theme="dark"] .composer-toolbar {
+  background: var(--bg-card-header);
+  border-color: var(--input-border);
+}
+
+[data-theme="dark"] .composer-textarea {
+  background: var(--post-bg);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .toolbar-btn {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .toolbar-btn:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] .subdomain-suffix {
+  background: linear-gradient(180deg, #2a2a30, #222228);
+  border-color: var(--input-border);
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .radio-card-body {
+  background: var(--bg-card);
+  border-color: var(--border-mid);
+}
+
+[data-theme="dark"] .radio-card input:checked + .radio-card-body {
+  background: rgba(26,141,255,0.06);
+}
+
+[data-theme="dark"] .cancel-btn {
+  background: linear-gradient(180deg, #333, #2a2a2e);
+  border-color: #444;
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .hamburger span {
+  background: #aaa;
+}
+
+/* Aqua glow accents for dark mode */
+[data-theme="dark"] .aqua-btn {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.2),
+    0 1px 2px rgba(0,0,0,0.3),
+    0 0 8px rgba(26,141,255,0.15);
+}
+
+[data-theme="dark"] .unread-badge {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 0 6px rgba(26,141,255,0.3);
+}
+
+[data-theme="dark"] .logo-icon {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 0 10px rgba(26,141,255,0.3), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+/* Dark mode: batch fix hardcoded borders on avatars/images */
+[data-theme="dark"] .activity-item img,
+[data-theme="dark"] .thread-avatar,
+[data-theme="dark"] .post-avatar,
+[data-theme="dark"] .member-item img,
+[data-theme="dark"] .search-result-item img,
+[data-theme="dark"] .settings-avatar,
+[data-theme="dark"] .theme-preview,
+[data-theme="dark"] .post-image-thumb,
+[data-theme="dark"] .forum-avatar,
+[data-theme="dark"] .avatar-sm,
+[data-theme="dark"] .avatar-md {
+  border-color: var(--border-mid);
+}
+
+body {
+  font-family: -apple-system, "Lucida Grande", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: #2a2a2a;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ========== SCROLLBAR STYLING ========== */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.25);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+/* ========== SELECTION ========== */
+::selection {
+  background: rgba(26,141,255,0.3);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ========== ANIMATION KEYFRAMES ========== */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes bellWiggle {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(8deg); }
+  75% { transform: rotate(-8deg); }
+}
+
+@keyframes searchSlideIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes contextFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes hoverCardIn {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes onboardFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes onboardSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+@keyframes lightboxZoom {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes bannerSlideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes toastBounce {
+  0% { transform: translateY(10px); opacity: 0; }
+  60% { transform: translateY(-3px); }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes viewFadeSlide {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ========== REDUCED MOTION ========== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ========== GLOBAL FOCUS-VISIBLE STYLES ========== */
+.aqua-btn:focus-visible,
+.sidebar-btn:focus-visible,
+.filter-pill:focus-visible,
+.category-pill:focus-visible,
+.profile-tab:focus-visible,
+.settings-nav-item:focus-visible,
+.density-btn:focus-visible,
+.voice-control-btn:focus-visible,
+.tab-item:focus-visible,
+.hamburger:focus-visible,
+.notification-bell:focus-visible,
+.avatar-pill:focus-visible,
+.announcement-close:focus-visible,
+.voice-close:focus-visible,
+.lightbox-close:focus-visible,
+.back-btn:focus-visible,
+.toolbar-btn:focus-visible,
+.banner-swatch:focus-visible,
+.create-category-btn:focus-visible,
+.login-tab:focus-visible,
+.onboarding-skip:focus-visible,
+.onboarding-next:focus-visible,
+.context-menu-item:focus-visible,
+.post-bookmark-btn:focus-visible,
+.emoji-pick:focus-visible,
+.user-dropdown-item:focus-visible,
+.notif-mark-read:focus-visible,
+.theme-option:focus-visible,
+.size-btn:focus-visible,
+.discover-card:focus-visible,
+.radio-card:focus-visible {
+  outline: 2px solid var(--aqua-bottom, #1a8dff);
+  outline-offset: 2px;
+}
+
+.search-modal-input:focus-visible {
+  outline: 2px solid var(--aqua-bottom, #1a8dff);
+  outline-offset: -2px;
+}
+
+.toolbar-select:focus-visible {
+  outline: 2px solid var(--aqua-bottom, #1a8dff);
+  outline-offset: 1px;
+}

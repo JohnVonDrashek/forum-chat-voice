@@ -1,13 +1,998 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/forum.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Forumline</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#c0c0c0">
+  <title>Forumline</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a8dff'/><text x='50' y='72' font-size='60' font-weight='bold' text-anchor='middle' fill='white'>F</text></svg>">
+</head>
+<body>
+  <div id="app">
+    <!-- Top bar — brushed metal -->
+    <header class="top-bar">
+      <div class="top-bar-inner">
+        <div class="logo-area">
+          <button class="hamburger" id="hamburger" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+          <div class="logo-icon">F</div>
+          <span class="logo-text">Forumline</span>
+        </div>
+        <div class="search-bar">
+          <input type="text" placeholder="Search forums, threads, people..." id="globalSearch" readonly aria-label="Search forums, threads, people" role="button">
+          <div class="search-icon">&#x1F50D;</div>
+          <kbd class="search-hint-kbd">&#x2318;K</kbd>
+        </div>
+        <div class="user-area">
+          <button class="notification-bell" id="notifBell" aria-label="Notifications (3 unread)" aria-haspopup="true">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M10 18c1.1 0 2-.9 2-2H8c0 1.1.9 2 2 2zm6-4V9c0-3.07-1.63-5.64-4.5-6.32V2c0-.83-.67-1.5-1.5-1.5S8.5 1.17 8.5 2v.68C5.64 3.36 4 5.92 4 9v5l-2 2v1h16v-1l-2-2z" fill="#555"/>
+            </svg>
+            <span class="notif-badge" aria-hidden="true">3</span>
+          </button>
+          <button class="avatar-pill" id="userMenu" aria-label="User menu" aria-haspopup="true">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=testcaller" alt="" class="avatar-sm">
+            <span class="username">testcaller</span>
+            <span class="chevron" aria-hidden="true">&#x25BE;</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Announcement banner -->
+    <div class="announcement-banner" id="announcementBanner" role="alert">
+      <span class="announcement-icon" aria-hidden="true">&#x1F4E3;</span>
+      <span class="announcement-text">Forumline v2.0 is here! Voice rooms now support screen sharing. <a href="javascript:void(0)" class="announcement-link" onclick="showDiscover()">Learn more</a></span>
+      <button class="announcement-close" id="announcementClose" aria-label="Dismiss announcement">&times;</button>
+    </div>
+
+    <!-- Main layout -->
+    <div class="main-layout">
+      <!-- Sidebar backdrop for mobile -->
+      <div class="sidebar-backdrop hidden" id="sidebarBackdrop"></div>
+      <!-- Sidebar — linen texture -->
+      <nav class="sidebar" id="sidebar" aria-label="Sidebar navigation">
+        <div class="sidebar-status" id="sidebarStatus">
+          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=testcaller" class="avatar-sm" alt="Your avatar">
+          <div class="status-info">
+            <span class="status-name">testcaller</span>
+            <button class="status-message" id="statusBtn" aria-label="Set your status">
+              <span class="status-emoji" id="statusEmoji">&#x1F4BB;</span>
+              <span class="status-text" id="statusText">Working from home</span>
+            </button>
+          </div>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-label" id="forumsLabel">YOUR FORUMS</div>
+          <div class="forum-list" id="forumList" role="list" aria-labelledby="forumsLabel">
+            <!-- Populated by JS -->
+          </div>
+          <button class="sidebar-add-forum-btn" id="addForumBtn">+ Add Forum</button>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-label" id="bookmarksLabel">BOOKMARKS</div>
+          <div class="bookmark-list" id="bookmarkList" role="list" aria-labelledby="bookmarksLabel">
+            <div class="sidebar-empty-hint" id="bookmarkEmpty">No saved posts yet</div>
+          </div>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-label" id="dmsLabel" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>DIRECT MESSAGES</span>
+            <button class="sidebar-new-dm-btn" id="newDmBtn" title="New message" aria-label="New direct message" style="background:none;border:none;cursor:pointer;font-size:14px;color:#666;padding:0 2px;">+</button>
+          </div>
+          <div class="dm-list" id="dmList" role="list" aria-labelledby="dmsLabel">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        <div class="sidebar-divider"></div>
+        <button class="sidebar-btn" id="discoverBtn">
+          <span class="btn-icon" aria-hidden="true">&#x1F30D;</span>
+          Discover Forums
+        </button>
+        <button class="sidebar-btn" id="createBtn">
+          <span class="btn-icon" aria-hidden="true">&#x2795;</span>
+          Create Forum
+        </button>
+      </nav>
+
+      <!-- Content area -->
+      <!-- Active Call Bar -->
+      <div id="activeCallBar" class="active-call-bar hidden">
+        <div class="active-call-bar-inner">
+          <span class="active-call-duration" id="activeCallDuration">00:00</span>
+          <button class="active-call-mute-btn" id="activeCallMuteBtn" aria-label="Mute">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+          <button class="active-call-end-btn" id="activeCallEndBtn" aria-label="End call">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4z" transform="rotate(135 12 12)"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <main class="content" id="content">
+        <!-- Home view (default) -->
+        <div class="view" id="homeView">
+          <div class="content-header">
+            <h1>Welcome back, testcaller</h1>
+          </div>
+          <div class="home-grid">
+            <div class="home-card activity-card">
+              <div class="card-header">
+                <h2>Recent Activity</h2>
+              </div>
+              <div class="card-body" id="activityFeed">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+            <div class="home-card stats-card">
+              <div class="card-header">
+                <h2>Your Network</h2>
+              </div>
+              <div class="card-body">
+                <div class="stat-row">
+                  <span class="stat-label">Forums joined</span>
+                  <span class="stat-value">4</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Threads started</span>
+                  <span class="stat-value">12</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Replies this week</span>
+                  <span class="stat-value">28</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Voice minutes</span>
+                  <span class="stat-value">45</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Forum view -->
+        <div class="view hidden" id="forumView">
+          <div class="content-header forum-header">
+            <div class="forum-title-area">
+              <img id="forumAvatar" class="forum-avatar" src="" alt="">
+              <div>
+                <h1 id="forumName"></h1>
+                <span class="forum-meta" id="forumMeta"></span>
+              </div>
+            </div>
+            <div class="forum-actions">
+              <button class="aqua-btn members-btn" id="membersBtn" aria-label="Members: 342">
+                <span aria-hidden="true">&#x1F465;</span> <span class="members-btn-count" id="membersBtnCount">342</span>
+              </button>
+              <button class="aqua-btn voice-btn" id="voiceBtn" aria-label="Voice Room, 2 participants">
+                <span aria-hidden="true">&#x1F3A4;</span> Voice Room
+                <span class="voice-count" id="voiceCount" aria-hidden="true">2</span>
+              </button>
+              <button class="aqua-btn" id="newThreadBtn">New Thread</button>
+            </div>
+          </div>
+          <div class="online-bar" id="forumOnlineBar">
+            <div class="online-avatars" id="onlineAvatars"></div>
+            <span class="online-text" id="onlineText"></span>
+          </div>
+          <div class="thread-toolbar" id="threadToolbar">
+            <div class="thread-sort">
+              <label>Sort:</label>
+              <select id="threadSortSelect" class="toolbar-select">
+                <option value="default">Default</option>
+                <option value="newest">Newest</option>
+                <option value="most-active">Most Active</option>
+                <option value="unanswered">Unanswered</option>
+              </select>
+            </div>
+            <div class="thread-density">
+              <button class="density-btn active" data-density="comfortable" title="Comfortable" aria-label="Comfortable density" aria-pressed="true">
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="0" y="1" width="14" height="3" rx="1" fill="currentColor"/><rect x="0" y="6" width="14" height="3" rx="1" fill="currentColor"/><rect x="0" y="11" width="14" height="3" rx="1" fill="currentColor"/></svg>
+              </button>
+              <button class="density-btn" data-density="compact" title="Compact" aria-label="Compact density" aria-pressed="false">
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="0" y="0.5" width="14" height="2" rx="1" fill="currentColor"/><rect x="0" y="4" width="14" height="2" rx="1" fill="currentColor"/><rect x="0" y="7.5" width="14" height="2" rx="1" fill="currentColor"/><rect x="0" y="11" width="14" height="2" rx="1" fill="currentColor"/></svg>
+              </button>
+            </div>
+            <div class="thread-filter">
+              <label id="filterLabel">Filter:</label>
+              <div class="filter-pills" role="tablist" aria-labelledby="filterLabel">
+                <button class="filter-pill active" data-filter="all" role="tab" aria-selected="true">All</button>
+                <button class="filter-pill" data-filter="announcement" role="tab" aria-selected="false">Announcements</button>
+                <button class="filter-pill" data-filter="question" role="tab" aria-selected="false">Questions</button>
+                <button class="filter-pill" data-filter="discussion" role="tab" aria-selected="false">Discussions</button>
+              </div>
+            </div>
+          </div>
+          <div class="thread-list" id="threadList" role="list" aria-label="Threads">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Forum webview (iframe embedding for real forums) -->
+        <div class="view hidden" id="webviewView">
+          <div class="webview-header" id="webviewHeader">
+            <div class="webview-header-info">
+              <img id="webviewAvatar" class="forum-avatar" src="" alt="">
+              <div>
+                <h1 id="webviewForumName"></h1>
+                <span class="forum-meta" id="webviewForumMeta"></span>
+              </div>
+            </div>
+            <div class="webview-header-actions">
+              <button class="aqua-btn webview-auth-btn hidden" id="webviewAuthBtn">Log in to Forum</button>
+              <button class="aqua-btn" id="webviewLeaveBtn" title="Leave forum">Leave</button>
+              <button class="aqua-btn" id="webviewMuteBtn" title="Toggle mute">Mute</button>
+            </div>
+          </div>
+          <div class="webview-banner hidden" id="webviewBanner">
+            <span class="webview-banner-text">You're signed in to Forumline. <strong>Log in</strong> to this forum for the full experience.</span>
+            <button class="aqua-btn aqua-btn-sm" id="webviewBannerLoginBtn">Log in</button>
+          </div>
+          <div class="webview-iframe-wrap" id="webviewIframeWrap">
+            <div class="webview-spinner-wrap" id="webviewSpinner">
+              <div class="webview-spinner"></div>
+              <span>Loading forum...</span>
+            </div>
+            <!-- iframe injected dynamically by JS -->
+          </div>
+        </div>
+
+        <!-- Thread view -->
+        <div class="view hidden" id="threadView">
+          <div class="content-header">
+            <nav class="breadcrumbs" id="threadBreadcrumbs">
+              <a class="breadcrumb-link" data-nav="home">Home</a>
+              <span class="breadcrumb-sep">&#x203A;</span>
+              <a class="breadcrumb-link" id="breadcrumbForum" data-nav="forum">Forum</a>
+              <span class="breadcrumb-sep">&#x203A;</span>
+              <span class="breadcrumb-current" id="breadcrumbThread">Thread</span>
+            </nav>
+            <h1 id="threadTitle"></h1>
+          </div>
+          <div class="thread-presence" id="threadPresence">
+            <div class="presence-avatars" id="presenceAvatars"></div>
+            <span class="presence-text" id="presenceText"></span>
+          </div>
+          <div class="posts-list" id="postsList" role="list" aria-label="Posts">
+            <!-- Populated by JS -->
+          </div>
+          <div class="new-replies-toast hidden" id="newRepliesToast" role="status" aria-live="polite">
+            <span>&#x2B07; New replies below</span>
+          </div>
+          <div class="reply-area">
+            <div class="quote-preview hidden" id="quotePreview">
+              <div class="quote-preview-text" id="quotePreviewText"></div>
+              <button class="quote-remove" id="quoteRemove" aria-label="Remove quote">&times;</button>
+            </div>
+            <div class="image-drop-zone hidden" id="imageDropZone">
+              <div class="drop-zone-content">
+                <span class="drop-zone-icon">&#x1F5BC;</span>
+                <span class="drop-zone-text">Drop image here or <label class="drop-zone-browse" for="imageFileInput">browse</label></span>
+                <input type="file" id="imageFileInput" accept="image/*" class="hidden">
+              </div>
+            </div>
+            <div class="image-preview-bar hidden" id="imagePreviewBar">
+              <div class="image-preview-thumb" id="imagePreviewThumb"></div>
+              <button class="image-preview-remove" id="imagePreviewRemove" aria-label="Remove image">&times;</button>
+            </div>
+            <div class="reply-box">
+              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=testcaller" alt="" class="avatar-sm">
+              <textarea placeholder="Write a reply... (drag an image to attach)" id="replyInput"></textarea>
+              <button class="aqua-btn reply-btn" id="replyBtn">Reply</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- DM view -->
+        <div class="view hidden" id="dmView">
+          <div class="content-header">
+            <div class="dm-header-info">
+              <img id="dmAvatar" class="avatar-md" src="" alt="User avatar">
+              <h1 id="dmName"></h1>
+              <span class="online-dot" id="dmOnline" role="status" aria-label="Online"></span>
+              <button class="aqua-btn group-info-btn hidden" id="groupInfoBtn" aria-label="Group info" title="Group Info" style="margin-left:8px;font-size:0.8rem;padding:4px 10px;">&#x2699; Info</button>
+            </div>
+          </div>
+          <div class="messages-list" id="messagesList" role="log" aria-label="Messages" aria-live="polite">
+            <!-- Populated by JS -->
+          </div>
+          <div class="reply-area">
+            <div class="reply-box">
+              <textarea placeholder="Send a message..." id="dmInput"></textarea>
+              <button class="aqua-btn reply-btn" id="dmSendBtn">Send</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Discover view -->
+        <div class="view hidden" id="discoverView">
+          <div class="content-header">
+            <h1>Discover Forums</h1>
+            <div class="discover-search">
+              <input type="text" id="discoverSearchInput" placeholder="Search the network..." class="discover-input" aria-label="Search forums">
+            </div>
+          </div>
+          <div class="discover-categories" role="tablist" aria-label="Forum categories">
+            <button class="category-pill active" role="tab" aria-selected="true">All</button>
+            <button class="category-pill" role="tab" aria-selected="false">Technology</button>
+            <button class="category-pill" role="tab" aria-selected="false">Gaming</button>
+            <button class="category-pill" role="tab" aria-selected="false">Music</button>
+            <button class="category-pill" role="tab" aria-selected="false">Art</button>
+            <button class="category-pill" role="tab" aria-selected="false">Science</button>
+          </div>
+          <div class="discover-grid" id="discoverGrid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Profile view -->
+        <div class="view hidden" id="profileView">
+          <div class="profile-banner" id="profileBanner">
+            <div class="profile-banner-gradient"></div>
+          </div>
+          <div class="profile-info-card">
+            <img class="profile-avatar" id="profileAvatar" src="" alt="">
+            <div class="profile-details">
+              <div class="profile-name-row">
+                <h1 id="profileName"></h1>
+                <button class="aqua-btn profile-edit-btn hidden" id="profileEditBtn">Edit Profile</button>
+              </div>
+              <p class="profile-bio" id="profileBio"></p>
+              <div class="profile-stats-row">
+                <div class="profile-stat">
+                  <span class="profile-stat-value" id="profileForumCount">0</span>
+                  <span class="profile-stat-label">Forums</span>
+                </div>
+                <div class="profile-stat">
+                  <span class="profile-stat-value" id="profileThreadCount">0</span>
+                  <span class="profile-stat-label">Threads</span>
+                </div>
+                <div class="profile-stat">
+                  <span class="profile-stat-value" id="profileReplyCount">0</span>
+                  <span class="profile-stat-label">Replies</span>
+                </div>
+                <div class="profile-stat">
+                  <span class="profile-stat-value" id="profileJoined"></span>
+                  <span class="profile-stat-label">Joined</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="profile-badges" id="profileBadges"></div>
+          <div class="profile-tabs" role="tablist" aria-label="Profile sections">
+            <button class="profile-tab active" data-ptab="activity" role="tab" aria-selected="true">Activity</button>
+            <button class="profile-tab" data-ptab="threads" role="tab" aria-selected="false">Threads</button>
+            <button class="profile-tab" data-ptab="forums" role="tab" aria-selected="false">Forums</button>
+            <button class="profile-tab" data-ptab="badges" role="tab" aria-selected="false">Badges</button>
+          </div>
+          <div class="profile-tab-content" id="profileTabContent" role="tabpanel">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Settings view -->
+        <div class="view hidden" id="settingsView">
+          <div class="content-header">
+            <h1>Settings</h1>
+          </div>
+          <div class="settings-body">
+            <div class="settings-sidebar" role="tablist" aria-label="Settings sections" aria-orientation="vertical">
+              <button class="settings-nav-item active" data-settings="account" role="tab" aria-selected="true">Account</button>
+              <button class="settings-nav-item" data-settings="appearance" role="tab" aria-selected="false">Appearance</button>
+              <button class="settings-nav-item" data-settings="notifications" role="tab" aria-selected="false">Notifications</button>
+              <button class="settings-nav-item" data-settings="privacy" role="tab" aria-selected="false">Privacy</button>
+              <div class="settings-nav-divider"></div>
+              <button class="settings-nav-item danger" data-settings="logout">Log Out</button>
+            </div>
+            <div class="settings-content" id="settingsContent" role="tabpanel">
+              <!-- Account settings (default) -->
+              <div class="settings-panel" id="settingsAccount">
+                <h2>Account</h2>
+                <div class="settings-group">
+                  <label class="settings-label">Profile Picture</label>
+                  <div class="settings-avatar-row">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=testcaller" class="settings-avatar" alt="">
+                    <button class="aqua-btn settings-upload-btn">Change Photo</button>
+                  </div>
+                </div>
+                <div class="settings-group">
+                  <label class="settings-label" for="settingsDisplayName">Display Name</label>
+                  <input type="text" class="settings-input" id="settingsDisplayName" value="testcaller">
+                </div>
+                <div class="settings-group">
+                  <label class="settings-label" for="settingsEmail">Email</label>
+                  <input type="email" class="settings-input" id="settingsEmail" value="testcaller@example.com">
+                </div>
+                <div class="settings-group">
+                  <label class="settings-label" for="settingsBio">Bio</label>
+                  <textarea class="settings-textarea" id="settingsBio" placeholder="Tell people about yourself...">Exploring the forumline network. Voice room enthusiast.</textarea>
+                </div>
+                <div class="settings-group">
+                  <label class="settings-label" for="onlineStatusSelect">Online Status</label>
+                  <select class="settings-input" id="onlineStatusSelect">
+                    <option value="online">Online</option>
+                    <option value="away">Away</option>
+                    <option value="busy">Busy</option>
+                    <option value="offline">Appear Offline</option>
+                  </select>
+                </div>
+                <div class="settings-group">
+                  <button class="aqua-btn">Save Changes</button>
+                </div>
+              </div>
+              <div class="settings-panel hidden" id="settingsAppearance">
+                <h2>Appearance</h2>
+                <div class="settings-group">
+                  <label class="settings-label">Theme</label>
+                  <div class="theme-picker" role="radiogroup" aria-label="Theme">
+                    <button type="button" class="theme-option active" data-theme="light" role="radio" aria-checked="true">
+                      <div class="theme-preview theme-preview-light"></div>
+                      <span>Brushed Metal</span>
+                    </button>
+                    <button type="button" class="theme-option" data-theme="dark" role="radio" aria-checked="false">
+                      <div class="theme-preview theme-preview-dark"></div>
+                      <span>Dark Aqua</span>
+                    </button>
+                    <button type="button" class="theme-option" data-theme="classic" role="radio" aria-checked="false">
+                      <div class="theme-preview theme-preview-classic"></div>
+                      <span>Classic Linen</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="settings-group">
+                  <label class="settings-label">Font Size</label>
+                  <div class="font-size-picker">
+                    <button class="size-btn" aria-label="Decrease font size">A-</button>
+                    <span class="size-current" aria-live="polite">13px</span>
+                    <button class="size-btn" aria-label="Increase font size">A+</button>
+                  </div>
+                </div>
+                <div class="settings-group">
+                  <div class="settings-toggle-row">
+                    <span id="compactLabel">Compact thread view</span>
+                    <label class="toggle"><input type="checkbox" aria-labelledby="compactLabel"><span class="toggle-slider"></span></label>
+                  </div>
+                  <div class="settings-toggle-row">
+                    <span id="avatarsLabel">Show avatars in thread list</span>
+                    <label class="toggle"><input type="checkbox" checked aria-labelledby="avatarsLabel"><span class="toggle-slider"></span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-panel hidden" id="settingsNotifications">
+                <h2>Notifications</h2>
+                <div class="settings-group">
+                  <div class="settings-toggle-row">
+                    <div>
+                      <span>Push Notifications</span>
+                      <p class="settings-hint">Get notified about replies and mentions</p>
+                    </div>
+                    <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                  </div>
+                  <div class="settings-toggle-row">
+                    <div>
+                      <span>Direct Message alerts</span>
+                      <p class="settings-hint">Notify when you receive a DM</p>
+                    </div>
+                    <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                  </div>
+                  <div class="settings-toggle-row">
+                    <div>
+                      <span>Voice room invitations</span>
+                      <p class="settings-hint">Ring when someone invites you to voice</p>
+                    </div>
+                    <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                  </div>
+                  <div class="settings-toggle-row">
+                    <div>
+                      <span>Forum activity digest</span>
+                      <p class="settings-hint">Weekly summary of your forum activity</p>
+                    </div>
+                    <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-panel hidden" id="settingsPrivacy">
+                <h2>Privacy</h2>
+                <div class="settings-group">
+                  <div class="settings-toggle-row">
+                    <div>
+                      <span>Show online status</span>
+                      <p class="settings-hint">Let others see when you're active</p>
+                    </div>
+                    <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                  </div>
+                  <div class="settings-toggle-row">
+                    <div>
+                      <span>Allow direct messages from anyone</span>
+                      <p class="settings-hint">Otherwise, only from people in shared forums</p>
+                    </div>
+                    <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+                  </div>
+                  <div class="settings-toggle-row">
+                    <div>
+                      <span>Show profile in forum member lists</span>
+                      <p class="settings-hint">Your name appears in public member lists</p>
+                    </div>
+                    <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create forum view -->
+        <div class="view hidden" id="createForumView">
+          <div class="content-header">
+            <h1>Create a Forum</h1>
+            <p class="content-subtitle">Start a community around anything you care about.</p>
+          </div>
+          <div class="create-forum-body">
+            <div class="create-forum-form">
+              <div class="create-form-group">
+                <label for="createForumName">Forum Name</label>
+                <input type="text" class="settings-input" id="createForumName" placeholder="e.g. Vintage Synthesizers">
+                <span class="create-form-hint">This will be your forum's display name</span>
+              </div>
+              <div class="create-form-group">
+                <label for="createForumSubdomain">Subdomain</label>
+                <div class="subdomain-input-row">
+                  <input type="text" class="settings-input subdomain-input" id="createForumSubdomain" placeholder="vintage-synths">
+                  <span class="subdomain-suffix">.forumline.net</span>
+                </div>
+                <span class="create-form-hint subdomain-available hidden" id="subdomainStatus">Available!</span>
+              </div>
+              <div class="create-form-group">
+                <label for="createForumDesc">Description</label>
+                <textarea class="settings-textarea" id="createForumDesc" placeholder="What is this forum about?"></textarea>
+              </div>
+              <div class="create-form-group">
+                <label>Banner Color</label>
+                <div class="banner-picker" id="bannerPicker" role="radiogroup" aria-label="Banner color">
+                  <button type="button" class="banner-swatch active" data-gradient="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)" role="radio" aria-checked="true" aria-label="Purple gradient"></button>
+                  <button type="button" class="banner-swatch" data-gradient="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" role="radio" aria-checked="false" aria-label="Pink gradient"></button>
+                  <button type="button" class="banner-swatch" data-gradient="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" role="radio" aria-checked="false" aria-label="Blue gradient"></button>
+                  <button type="button" class="banner-swatch" data-gradient="linear-gradient(135deg, #f6d365 0%, #fda085 100%)" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%)" role="radio" aria-checked="false" aria-label="Gold gradient"></button>
+                  <button type="button" class="banner-swatch" data-gradient="linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)" style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)" role="radio" aria-checked="false" aria-label="Lavender gradient"></button>
+                  <button type="button" class="banner-swatch" data-gradient="linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)" style="background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)" role="radio" aria-checked="false" aria-label="Cyan gradient"></button>
+                  <button type="button" class="banner-swatch" data-gradient="linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)" role="radio" aria-checked="false" aria-label="Rose gradient"></button>
+                  <button type="button" class="banner-swatch" data-gradient="linear-gradient(135deg, #0c3547 0%, #204051 100%)" style="background: linear-gradient(135deg, #0c3547 0%, #204051 100%)" role="radio" aria-checked="false" aria-label="Dark teal gradient"></button>
+                </div>
+              </div>
+              <div class="create-form-group">
+                <label>Category</label>
+                <div class="create-category-grid">
+                  <button class="create-category-btn" data-cat="technology">Technology</button>
+                  <button class="create-category-btn" data-cat="gaming">Gaming</button>
+                  <button class="create-category-btn" data-cat="music">Music</button>
+                  <button class="create-category-btn" data-cat="art">Art &amp; Design</button>
+                  <button class="create-category-btn" data-cat="science">Science</button>
+                  <button class="create-category-btn" data-cat="sports">Sports</button>
+                  <button class="create-category-btn" data-cat="food">Food &amp; Drink</button>
+                  <button class="create-category-btn" data-cat="other">Other</button>
+                </div>
+              </div>
+              <div class="create-form-group">
+                <label>Visibility</label>
+                <div class="visibility-options">
+                  <label class="radio-card">
+                    <input type="radio" name="visibility" value="public" checked>
+                    <div class="radio-card-body">
+                      <span class="radio-card-icon">&#x1F310;</span>
+                      <div>
+                        <strong>Public</strong>
+                        <p>Anyone can find and join this forum</p>
+                      </div>
+                    </div>
+                  </label>
+                  <label class="radio-card">
+                    <input type="radio" name="visibility" value="private">
+                    <div class="radio-card-body">
+                      <span class="radio-card-icon">&#x1F512;</span>
+                      <div>
+                        <strong>Private</strong>
+                        <p>Only people with an invite link can join</p>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+              <div class="create-form-actions">
+                <button class="aqua-btn cancel-btn" id="createForumCancel">Cancel</button>
+                <button class="aqua-btn create-submit-btn" id="createForumSubmit">Create Forum</button>
+              </div>
+            </div>
+            <div class="create-forum-preview">
+              <div class="preview-label">Preview</div>
+              <div class="discover-card preview-card">
+                <div class="discover-card-banner" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+                  <img class="discover-card-avatar" src="https://api.dicebear.com/7.x/shapes/svg?seed=new-forum" id="previewAvatar" alt="">
+                </div>
+                <div class="discover-card-body">
+                  <div class="discover-card-name" id="previewName">Your Forum</div>
+                  <div class="discover-card-desc" id="previewDesc">Your forum description will appear here...</div>
+                  <div class="discover-card-footer">
+                    <span class="discover-card-members">1 member</span>
+                    <button class="aqua-btn join-btn" disabled>Join</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- New thread composer -->
+        <div class="view hidden" id="newThreadView">
+          <div class="content-header">
+            <button class="back-btn" id="backFromNewThread">&larr; Back to forum</button>
+            <h1>New Thread</h1>
+          </div>
+          <div class="composer-body">
+            <div class="composer-form">
+              <input type="text" class="composer-title-input" id="composerTitle" placeholder="Thread title" aria-label="Thread title">
+              <div class="composer-toolbar">
+                <button class="toolbar-btn" title="Bold"><strong>B</strong></button>
+                <button class="toolbar-btn" title="Italic"><em>I</em></button>
+                <button class="toolbar-btn" title="Link">&#x1F517;</button>
+                <button class="toolbar-btn" title="Image">&#x1F5BC;</button>
+                <button class="toolbar-btn" title="Code">&lt;/&gt;</button>
+                <button class="toolbar-btn" title="Quote">&#x201C;</button>
+              </div>
+              <textarea class="composer-textarea" id="composerBody" placeholder="Write your post..."></textarea>
+              <div class="composer-footer">
+                <span class="composer-hint">Markdown supported</span>
+                <div class="composer-actions">
+                  <button class="aqua-btn cancel-btn" id="composerCancel">Cancel</button>
+                  <button class="aqua-btn create-submit-btn" id="composerSubmit">Post Thread</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Login view (shown when logged out) -->
+        <div class="view hidden" id="loginView">
+          <div class="login-container">
+            <div class="login-card">
+              <div class="login-header">
+                <div class="logo-icon login-logo">F</div>
+                <h1>Welcome to Forumline</h1>
+                <p>Join a network of communities</p>
+              </div>
+              <div class="login-body">
+                <div class="login-tabs" role="tablist" aria-label="Authentication">
+                  <button class="login-tab active" data-ltab="signin" role="tab" aria-selected="true" aria-controls="signinForm">Sign In</button>
+                  <button class="login-tab" data-ltab="signup" role="tab" aria-selected="false" aria-controls="signupForm">Sign Up</button>
+                </div>
+                <form class="login-form" id="signinForm">
+                  <div class="login-field">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" class="settings-input" placeholder="you@example.com" id="loginEmail" required>
+                  </div>
+                  <div class="login-field">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" class="settings-input" placeholder="Enter your password" id="loginPassword" required>
+                  </div>
+                  <button type="submit" class="aqua-btn login-submit-btn" id="signinSubmitBtn">Sign In</button>
+                  <a href="#" class="forgot-link" id="forgotPasswordLink">Forgot password?</a>
+                </form>
+                <form class="login-form hidden" id="signupForm">
+                  <div class="login-field">
+                    <label for="signupUsername">Username</label>
+                    <input type="text" class="settings-input" placeholder="Choose a username" id="signupUsername" required>
+                  </div>
+                  <div class="login-field">
+                    <label for="signupEmail">Email</label>
+                    <input type="email" class="settings-input" placeholder="you@example.com" id="signupEmail" required>
+                  </div>
+                  <div class="login-field">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" class="settings-input" placeholder="At least 6 characters" id="signupPassword" required minlength="6">
+                  </div>
+                  <button type="submit" class="aqua-btn login-submit-btn" id="signupSubmitBtn">Create Account</button>
+                </form>
+                <!-- Forgot password form -->
+                <form class="login-form hidden" id="forgotForm">
+                  <p style="color: var(--text-secondary, #666); font-size: 14px; margin-bottom: 16px;">Enter your email and we'll send you a reset link.</p>
+                  <div class="login-field">
+                    <label for="forgotEmail">Email</label>
+                    <input type="email" class="settings-input" placeholder="you@example.com" id="forgotEmail" required>
+                  </div>
+                  <button type="submit" class="aqua-btn login-submit-btn" id="forgotSubmitBtn">Send Reset Link</button>
+                  <a href="#" class="forgot-link" id="backToSignin">Back to Sign In</a>
+                </form>
+                <!-- Forgot password success -->
+                <div class="login-form hidden" id="forgotSuccess">
+                  <div style="text-align: center; padding: 20px 0;">
+                    <div style="font-size: 48px; margin-bottom: 12px;">&#x2709;</div>
+                    <p style="font-weight: 600; margin-bottom: 8px;">Check your email</p>
+                    <p id="forgotSuccessEmail" style="color: var(--text-secondary, #666); font-size: 14px; margin-bottom: 16px;">We've sent a password reset link.</p>
+                    <a href="#" class="forgot-link" id="forgotTryAgain">Didn't receive it? Try again</a>
+                  </div>
+                  <button type="button" class="aqua-btn login-submit-btn" id="forgotBackBtn" style="margin-top: 12px;">Back to Sign In</button>
+                </div>
+                <!-- Reset password form (shown after clicking recovery link) -->
+                <div class="login-form hidden" id="resetPasswordForm">
+                  <p style="color: var(--text-secondary, #666); font-size: 14px; margin-bottom: 16px;">Enter your new password below.</p>
+                  <div class="login-field">
+                    <label for="resetNewPassword">New Password</label>
+                    <input type="password" class="settings-input" placeholder="At least 6 characters" id="resetNewPassword" required minlength="6">
+                  </div>
+                  <div class="login-field">
+                    <label for="resetConfirmPassword">Confirm Password</label>
+                    <input type="password" class="settings-input" placeholder="Confirm your new password" id="resetConfirmPassword" required minlength="6">
+                  </div>
+                  <button type="button" class="aqua-btn login-submit-btn" id="resetPasswordBtn">Update Password</button>
+                </div>
+                <!-- Reset password success -->
+                <div class="login-form hidden" id="resetPasswordSuccess">
+                  <div style="text-align: center; padding: 20px 0;">
+                    <div style="font-size: 48px; margin-bottom: 12px;">&#x2705;</div>
+                    <p style="font-weight: 600; margin-bottom: 8px;">Password Updated</p>
+                    <p style="color: var(--text-secondary, #666); font-size: 14px;">Your password has been successfully reset. Redirecting...</p>
+                  </div>
+                </div>
+                <!-- Login error message -->
+                <div class="hidden" id="loginError" style="color: #d32f2f; font-size: 13px; padding: 8px 12px; margin-top: 8px; background: rgba(211,47,47,0.08); border-radius: 6px; text-align: center;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Notifications dropdown -->
+  <div class="notif-dropdown hidden" id="notifDropdown" role="menu" aria-label="Notifications">
+    <div class="notif-dropdown-header">
+      <h3>Notifications</h3>
+      <button class="notif-mark-read" id="markAllRead">Mark all read</button>
+    </div>
+    <div class="notif-list" id="notifList" role="list" aria-label="Notification items">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- User menu dropdown -->
+  <div class="user-dropdown hidden" id="userDropdown" role="menu" aria-label="User menu">
+    <div class="user-dropdown-header">
+      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=testcaller" class="avatar-md" alt="Your avatar">
+      <div>
+        <div class="user-dropdown-name">testcaller</div>
+        <div class="user-dropdown-email">testcaller@example.com</div>
+      </div>
+    </div>
+    <div class="user-dropdown-divider"></div>
+    <button class="user-dropdown-item" id="menuProfile" role="menuitem">
+      <span aria-hidden="true">&#x1F464;</span> My Profile
+    </button>
+    <button class="user-dropdown-item" id="menuSettings" role="menuitem">
+      <span aria-hidden="true">&#x2699;</span> Settings
+    </button>
+    <div class="user-dropdown-divider"></div>
+    <button class="user-dropdown-item danger" id="menuLogout" role="menuitem">
+      <span aria-hidden="true">&#x1F6AA;</span> Log Out
+    </button>
+  </div>
+
+  <!-- Search modal (Cmd+K) -->
+  <div class="search-modal hidden" id="searchModal" role="dialog" aria-modal="true" aria-label="Search">
+    <div class="search-modal-backdrop" id="searchModalBackdrop"></div>
+    <div class="search-modal-panel">
+      <div class="search-modal-input-row">
+        <span class="search-modal-icon" aria-hidden="true">&#x1F50D;</span>
+        <input type="text" class="search-modal-input" id="searchModalInput" placeholder="Search forums, threads, people..." autofocus role="combobox" aria-expanded="true" aria-controls="searchModalResults" aria-autocomplete="list" aria-label="Search forums, threads, people">
+        <kbd class="search-kbd" aria-hidden="true">ESC</kbd>
+      </div>
+      <div class="search-modal-results" id="searchModalResults" role="listbox">
+        <div class="search-modal-hint">Type to search across all forums, threads, and people...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Member list panel -->
+  <div class="member-panel hidden" id="memberPanel" role="complementary" aria-label="Member list">
+    <div class="member-panel-header">
+      <h3>Members <span class="member-count" id="memberCount">0</span></h3>
+      <button class="voice-close" id="memberPanelClose" aria-label="Close member panel">&times;</button>
+    </div>
+    <div class="member-panel-search">
+      <input type="text" placeholder="Filter members..." id="memberSearch" class="settings-input" aria-label="Filter members">
+    </div>
+    <div class="member-list" id="memberList" role="list" aria-label="Members">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- Context menu -->
+  <div class="context-menu hidden" id="contextMenu" role="menu" aria-label="Thread actions">
+    <button class="context-menu-item" data-action="pin" role="menuitem">&#x1F4CC; Pin thread</button>
+    <button class="context-menu-item" data-action="mute" role="menuitem">&#x1F515; Mute thread</button>
+    <button class="context-menu-item" data-action="copy" role="menuitem">&#x1F517; Copy link</button>
+    <div class="context-menu-divider" role="separator"></div>
+    <button class="context-menu-item danger" data-action="report" role="menuitem">&#x26A0; Report</button>
+  </div>
+
+  <!-- Confetti canvas -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <!-- Status modal -->
+  <div class="status-modal hidden" id="statusModal" role="dialog" aria-modal="true" aria-label="Set your status">
+    <div class="status-modal-backdrop" id="statusModalBackdrop"></div>
+    <div class="status-modal-panel">
+      <h3>Set your status</h3>
+      <div class="status-emoji-row">
+        <button class="emoji-pick status-emoji-pick" data-emoji="&#x1F4BB;">&#x1F4BB;</button>
+        <button class="emoji-pick status-emoji-pick" data-emoji="&#x1F3E0;">&#x1F3E0;</button>
+        <button class="emoji-pick status-emoji-pick" data-emoji="&#x1F3A4;">&#x1F3A4;</button>
+        <button class="emoji-pick status-emoji-pick" data-emoji="&#x2615;">&#x2615;</button>
+        <button class="emoji-pick status-emoji-pick" data-emoji="&#x1F4A4;">&#x1F4A4;</button>
+        <button class="emoji-pick status-emoji-pick" data-emoji="&#x1F3AE;">&#x1F3AE;</button>
+        <button class="emoji-pick status-emoji-pick" data-emoji="&#x1F4D6;">&#x1F4D6;</button>
+      </div>
+      <input type="text" class="settings-input" id="statusInput" placeholder="What are you up to?" value="Working from home" aria-label="Status message">
+      <div class="status-modal-actions">
+        <button class="aqua-btn cancel-btn" id="statusClear">Clear</button>
+        <button class="aqua-btn create-submit-btn" id="statusSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User hover card -->
+  <div class="hover-card hidden" id="hoverCard">
+    <div class="hover-card-banner" id="hoverCardBanner"></div>
+    <div class="hover-card-body">
+      <img class="hover-card-avatar" id="hoverCardAvatar" src="" alt="">
+      <div class="hover-card-info">
+        <div class="hover-card-name" id="hoverCardName"></div>
+        <div class="hover-card-bio" id="hoverCardBio"></div>
+      </div>
+      <div class="hover-card-stats">
+        <div class="hover-card-stat"><strong id="hoverCardForums">0</strong><span>Forums</span></div>
+        <div class="hover-card-stat"><strong id="hoverCardThreads">0</strong><span>Threads</span></div>
+        <div class="hover-card-stat"><strong id="hoverCardReplies">0</strong><span>Replies</span></div>
+      </div>
+      <div class="hover-card-footer">
+        <button class="aqua-btn hover-card-btn" id="hoverCardViewProfile">View Profile</button>
+        <button class="aqua-btn hover-card-dm-btn" id="hoverCardDm">Message</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image lightbox -->
+  <div class="lightbox hidden" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+    <div class="lightbox-backdrop" id="lightboxBackdrop"></div>
+    <div class="lightbox-content">
+      <img id="lightboxImg" src="" alt="Enlarged image">
+      <button class="lightbox-close" id="lightboxClose" aria-label="Close image">&times;</button>
+    </div>
+  </div>
+
+  <!-- Emoji picker -->
+  <div class="emoji-picker hidden" id="emojiPicker" role="dialog" aria-modal="false" aria-label="Emoji picker">
+    <div class="emoji-picker-grid" id="emojiGrid" role="grid" aria-label="Emojis">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- Onboarding overlay -->
+  <div class="onboarding-overlay hidden" id="onboardingOverlay" role="dialog" aria-modal="true" aria-label="Welcome to Forumline">
+    <div class="onboarding-card">
+      <div class="onboarding-illustration" id="onboardIllustration" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+        &#x1F30D;
+      </div>
+      <div class="onboarding-body">
+        <h2 id="onboardTitle">Welcome to Forumline</h2>
+        <p id="onboardText">A network of communities built for meaningful conversation. Join forums, voice chat, and connect with people who share your interests.</p>
+        <div class="onboarding-dots" id="onboardDots">
+          <div class="onboarding-dot active"></div>
+          <div class="onboarding-dot"></div>
+          <div class="onboarding-dot"></div>
+          <div class="onboarding-dot"></div>
+        </div>
+        <div class="onboarding-actions">
+          <button class="onboarding-skip" id="onboardSkip">Skip</button>
+          <button class="aqua-btn onboarding-next" id="onboardNext">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create forum success toast -->
+  <div class="toast hidden" id="toast" role="status" aria-live="polite">
+    <div class="toast-icon" aria-hidden="true">&#x2705;</div>
+    <div class="toast-message" id="toastMessage"></div>
+  </div>
+
+  <!-- Mobile bottom tab bar -->
+  <nav class="mobile-tab-bar" id="mobileTabBar">
+    <button class="tab-item active" data-tab="home">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="tab-item" data-tab="forums">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+      <span>Forums</span>
+    </button>
+    <button class="tab-item" data-tab="discover">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 10.9c-.61 0-1.1.49-1.1 1.1s.49 1.1 1.1 1.1c.61 0 1.1-.49 1.1-1.1s-.49-1.1-1.1-1.1zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm2.19 12.19L6 18l3.81-8.19L18 6l-3.81 8.19z"/></svg>
+      <span>Discover</span>
+    </button>
+    <button class="tab-item" data-tab="messages">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+      <span>Messages</span>
+    </button>
+  </nav>
+
+  <!-- Voice room overlay -->
+  <div class="voice-overlay hidden" id="voiceOverlay" role="dialog" aria-modal="true" aria-label="Voice room">
+    <div class="voice-panel">
+      <div class="voice-panel-header">
+        <h2 id="voiceRoomTitle">Voice Room</h2>
+        <button class="voice-close" id="voiceClose" aria-label="Close voice room">&times;</button>
+      </div>
+      <div class="voice-participants" id="voiceParticipants">
+        <!-- Populated by JS -->
+      </div>
+      <div class="voice-controls">
+        <button class="voice-control-btn mute-btn" id="muteBtn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+          </svg>
+        </button>
+        <button class="voice-control-btn leave-btn" id="leaveBtn">Leave</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group Info Modal -->
+  <div class="add-forum-modal-backdrop hidden" id="groupInfoModal">
+    <div class="add-forum-modal" style="max-width:440px;">
+      <div class="group-info-header">
+        <h3>Group Info</h3>
+        <button class="group-info-close" id="groupInfoClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="group-info-name-section">
+        <label style="font-size:12px;color:#888;display:block;margin-bottom:4px;">Group Name</label>
+        <div class="group-info-name-row">
+          <input type="text" id="groupInfoNameInput" class="group-info-name-input" placeholder="Group name...">
+          <button class="aqua-btn" id="groupInfoNameSave" style="font-size:0.8rem;padding:4px 12px;">Save</button>
+        </div>
+      </div>
+      <div class="group-info-members-section">
+        <div class="group-info-members-header">
+          <label style="font-size:12px;color:#888;">Members</label>
+          <button class="aqua-btn" id="groupInfoAddMemberBtn" style="font-size:0.75rem;padding:3px 10px;">+ Add</button>
+        </div>
+        <div class="group-info-add-member hidden" id="groupInfoAddMember">
+          <input type="text" id="groupInfoMemberSearch" placeholder="Search users to add..." style="width:100%;padding:6px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;margin-bottom:6px;">
+          <div id="groupInfoSearchResults" class="group-info-search-results"></div>
+        </div>
+        <div id="groupInfoMemberList" class="group-info-member-list"></div>
+      </div>
+      <div style="border-top:1px solid #e5e5e5;margin-top:16px;padding-top:12px;">
+        <button class="aqua-btn" id="groupInfoLeaveBtn" style="background:linear-gradient(180deg,#ff6b6b,#e53e3e);color:white;width:100%;padding:8px;">Leave Group</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Forum Modal -->
+  <div class="add-forum-modal-backdrop hidden" id="addForumModal">
+    <div class="add-forum-modal">
+      <h3>Add a Forum</h3>
+      <p>Enter the URL of a Forumline-compatible forum</p>
+      <input type="url" id="addForumUrlInput" placeholder="https://example-forum.com">
+      <div class="modal-error hidden" id="addForumError"></div>
+      <div class="modal-actions">
+        <button class="aqua-btn" id="addForumCancel" style="background: #e8e8e8; color: #333;">Cancel</button>
+        <button class="aqua-btn" id="addForumSubmit">Add Forum</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
 </html>

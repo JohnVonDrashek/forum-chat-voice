@@ -14,8 +14,6 @@ services:
     build:
       context: .
       dockerfile: deploy/docker/Dockerfile.go-forumline
-      args:
-        GITHUB_PACKAGES_TOKEN: ${GITHUB_PACKAGES_TOKEN}
     ports:
       - "3001:3000"
     env_file:
