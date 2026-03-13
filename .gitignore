@@ -54,3 +54,6 @@ deploy/compose/**/.env
 CLAUDE.md
 .claude/
 .playwright-cli/
+playwright-report/
+test-results/
+tests/auth/
