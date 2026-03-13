@@ -27,6 +27,7 @@ locals {
     "app-ssh"    = { hostname = "app-ssh.forumline.net", name = "Forumline App SSH" }
     "www-ssh"    = { hostname = "www-ssh.forumline.net", name = "Website SSH" }
     "hosted-ssh" = { hostname = "hosted-ssh.forumline.net", name = "Hosted Platform SSH" }
+    "logs-ssh"   = { hostname = "logs-ssh.forumline.net", name = "Logs SSH" }
   }
 }
 
