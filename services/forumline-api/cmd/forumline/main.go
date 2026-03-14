@@ -115,6 +115,10 @@ func spaHandler(apiHandler http.Handler) http.Handler {
 		// Try to serve the static file
 		path := filepath.Join(distDir, r.URL.Path)
 		if info, err := os.Stat(path); err == nil && !info.IsDir() { // #nosec G703 -- path is cleaned by http.Dir
+			// Hashed assets (Vite output) are immutable — cache forever
+			if strings.HasPrefix(r.URL.Path, "/assets/") {
+				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			}
 			fileServer.ServeHTTP(w, r)
 			return
 		}
@@ -127,7 +131,8 @@ func spaHandler(apiHandler http.Handler) http.Handler {
 			return
 		}
 
-		// SPA fallback — serve index.html
+		// SPA fallback — serve index.html (always revalidate so deploys take effect)
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, filepath.Join(distDir, "index.html"))
 	})
 }
