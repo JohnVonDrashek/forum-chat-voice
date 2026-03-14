@@ -29,6 +29,8 @@ func newRouter(s *store.Store, sseHub *shared.SSEHub) *http.ServeMux {
 	// Services
 	forumSvc := service.NewForumService(s)
 	pushSvc := service.NewPushService(s)
+	convoSvc := service.NewConversationService(s)
+	callSvc := service.NewCallService(s, pushSvc)
 
 	// Handlers
 	authH := handler.NewAuthHandler(s)
@@ -36,8 +38,8 @@ func newRouter(s *store.Store, sseHub *shared.SSEHub) *http.ServeMux {
 	identityH := handler.NewIdentityHandler(s)
 	membershipH := handler.NewMembershipHandler(s, forumSvc)
 	forumH := handler.NewForumHandler(s, forumSvc)
-	convoH := handler.NewConversationHandler(s, sseHub)
-	callH := handler.NewCallHandler(s, sseHub, pushSvc)
+	convoH := handler.NewConversationHandler(convoSvc, sseHub)
+	callH := handler.NewCallHandler(callSvc, sseHub)
 	pushH := handler.NewPushHandler(s, pushSvc)
 	activityH := handler.NewActivityHandler(s)
 	notifH := handler.NewNotificationHandler(s, sseHub)

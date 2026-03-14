@@ -2,27 +2,27 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/forumline/forumline/services/forumline-api/model"
-	"github.com/forumline/forumline/services/forumline-api/store"
+	"github.com/forumline/forumline/services/forumline-api/service"
 	shared "github.com/forumline/forumline/shared-go"
 )
 
 type ConversationHandler struct {
-	Store  *store.Store
-	SSEHub *shared.SSEHub
+	Service *service.ConversationService
+	SSEHub  *shared.SSEHub
 }
 
-func NewConversationHandler(s *store.Store, hub *shared.SSEHub) *ConversationHandler {
-	return &ConversationHandler{Store: s, SSEHub: hub}
+func NewConversationHandler(svc *service.ConversationService, hub *shared.SSEHub) *ConversationHandler {
+	return &ConversationHandler{Service: svc, SSEHub: hub}
 }
 
 func (h *ConversationHandler) HandleList(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
-	convos, err := h.Store.ListConversations(r.Context(), userID)
+	convos, err := h.Service.List(r.Context(), userID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to fetch conversations"})
 		return
@@ -33,7 +33,7 @@ func (h *ConversationHandler) HandleList(w http.ResponseWriter, r *http.Request)
 func (h *ConversationHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
 	convoID := r.PathValue("conversationId")
-	c, err := h.Store.GetConversation(r.Context(), userID, convoID)
+	c, err := h.Service.Get(r.Context(), userID, convoID)
 	if err != nil || c == nil {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Conversation not found"})
 		return
@@ -43,7 +43,6 @@ func (h *ConversationHandler) HandleGet(w http.ResponseWriter, r *http.Request) 
 
 func (h *ConversationHandler) HandleGetOrCreateDM(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
-	ctx := r.Context()
 	var body struct {
 		UserID string `json:"userId"`
 	}
@@ -51,26 +50,9 @@ func (h *ConversationHandler) HandleGetOrCreateDM(w http.ResponseWriter, r *http
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
-	if body.UserID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "userId is required"})
-		return
-	}
-	if body.UserID == userID {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Cannot message yourself"})
-		return
-	}
-	exists, err := h.Store.ProfileExists(ctx, body.UserID)
+	convoID, err := h.Service.GetOrCreateDM(r.Context(), userID, body.UserID)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to verify user"})
-		return
-	}
-	if !exists {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})
-		return
-	}
-	convoID, err := h.Store.FindOrCreate1to1Conversation(ctx, userID, body.UserID)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create conversation"})
+		writeServiceError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"id": convoID})
@@ -78,7 +60,6 @@ func (h *ConversationHandler) HandleGetOrCreateDM(w http.ResponseWriter, r *http
 
 func (h *ConversationHandler) HandleCreateGroup(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
-	ctx := r.Context()
 	var body struct {
 		MemberIDs []string `json:"memberIds"`
 		Name      string   `json:"name"`
@@ -87,81 +68,21 @@ func (h *ConversationHandler) HandleCreateGroup(w http.ResponseWriter, r *http.R
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
-	if len(body.MemberIDs) < 2 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Group must have at least 2 other members"})
-		return
-	}
-	if len(body.MemberIDs) > 50 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Group cannot exceed 50 members"})
-		return
-	}
-	name := trimString(body.Name)
-	if name == "" || len(name) > 100 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Group name must be 1-100 characters"})
-		return
-	}
-
-	allMembers := append([]string{userID}, body.MemberIDs...)
-	seen := make(map[string]bool)
-	var unique []string
-	for _, id := range allMembers {
-		if !seen[id] && id != "" {
-			seen[id] = true
-			unique = append(unique, id)
-		}
-	}
-	if len(unique) < 3 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Group must have at least 3 members including yourself"})
-		return
-	}
-	count, _ := h.Store.CountExistingUsers(ctx, unique)
-	if count != len(unique) {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "One or more users not found"})
-		return
-	}
-
-	convoID, err := h.Store.CreateGroupConversation(ctx, name, userID, unique)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create group"})
-		return
-	}
-
-	profiles, _ := h.Store.FetchProfilesByIDs(ctx, unique)
-	members := make([]model.ConversationMember, 0, len(unique))
-	for _, id := range unique {
-		m := model.ConversationMember{ID: id}
-		if p := profiles[id]; p != nil {
-			m.Username = p.Username
-			m.DisplayName = p.DisplayName
-			if m.DisplayName == "" {
-				m.DisplayName = p.Username
-			}
-			m.AvatarURL = p.AvatarURL
-		}
-		members = append(members, m)
-	}
-
-	writeJSON(w, http.StatusCreated, model.Conversation{
-		ID: convoID, IsGroup: true, Name: &name, Members: members,
-		LastMessageTime: time.Now().Format(time.RFC3339),
+	convo, err := h.Service.CreateGroup(r.Context(), userID, service.CreateGroupInput{
+		Name:      trimString(body.Name),
+		MemberIDs: body.MemberIDs,
 	})
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	convo.LastMessageTime = time.Now().Format(time.RFC3339)
+	writeJSON(w, http.StatusCreated, convo)
 }
 
 func (h *ConversationHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
 	convoID := r.PathValue("conversationId")
-	ctx := r.Context()
-
-	isGroup, err := h.Store.IsGroupConversation(ctx, convoID, userID)
-	if err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Conversation not found"})
-		return
-	}
-	if !isGroup {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Cannot modify a 1:1 conversation"})
-		return
-	}
-
 	var body struct {
 		Name          *string  `json:"name"`
 		AddMembers    []string `json:"addMembers"`
@@ -171,28 +92,14 @@ func (h *ConversationHandler) HandleUpdate(w http.ResponseWriter, r *http.Reques
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
-
-	if body.Name != nil {
-		name := trimString(*body.Name)
-		if name == "" || len(name) > 100 {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Group name must be 1-100 characters"})
-			return
-		}
-		_ = h.Store.UpdateConversationName(ctx, convoID, name)
-	}
-	if len(body.AddMembers) > 0 {
-		_ = h.Store.AddConversationMembers(ctx, convoID, body.AddMembers)
-	}
-	if len(body.RemoveMembers) > 0 {
-		var filtered []string
-		for _, id := range body.RemoveMembers {
-			if id != userID {
-				filtered = append(filtered, id)
-			}
-		}
-		if len(filtered) > 0 {
-			_ = h.Store.RemoveConversationMembers(ctx, convoID, filtered)
-		}
+	err := h.Service.Update(r.Context(), userID, convoID, service.UpdateInput{
+		Name:          body.Name,
+		AddMembers:    body.AddMembers,
+		RemoveMembers: body.RemoveMembers,
+	})
+	if err != nil {
+		writeServiceError(w, err)
+		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
 }
@@ -200,16 +107,9 @@ func (h *ConversationHandler) HandleUpdate(w http.ResponseWriter, r *http.Reques
 func (h *ConversationHandler) HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
 	convoID := r.PathValue("conversationId")
-	ctx := r.Context()
-
-	isMember, _ := h.Store.IsConversationMember(ctx, convoID, userID)
-	if !isMember {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Conversation not found"})
-		return
-	}
-	msgs, err := h.Store.GetMessages(ctx, convoID, r.URL.Query().Get("before"), r.URL.Query().Get("limit"))
+	msgs, err := h.Service.GetMessages(r.Context(), userID, convoID, r.URL.Query().Get("before"), r.URL.Query().Get("limit"))
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to fetch messages"})
+		writeServiceError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, msgs)
@@ -218,14 +118,6 @@ func (h *ConversationHandler) HandleGetMessages(w http.ResponseWriter, r *http.R
 func (h *ConversationHandler) HandleSendMessage(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
 	convoID := r.PathValue("conversationId")
-	ctx := r.Context()
-
-	isMember, _ := h.Store.IsConversationMember(ctx, convoID, userID)
-	if !isMember {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Conversation not found"})
-		return
-	}
-
 	var body struct {
 		Content string `json:"content"`
 	}
@@ -233,15 +125,9 @@ func (h *ConversationHandler) HandleSendMessage(w http.ResponseWriter, r *http.R
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
-	content := trimString(body.Content)
-	if content == "" || len(content) > 2000 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Message must be 1-2000 characters"})
-		return
-	}
-
-	msg, err := h.Store.SendMessage(ctx, convoID, userID, content)
+	msg, err := h.Service.SendMessage(r.Context(), userID, convoID, body.Content)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to send message"})
+		writeServiceError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, msg)
@@ -250,7 +136,7 @@ func (h *ConversationHandler) HandleSendMessage(w http.ResponseWriter, r *http.R
 func (h *ConversationHandler) HandleMarkRead(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
 	convoID := r.PathValue("conversationId")
-	if err := h.Store.MarkRead(r.Context(), convoID, userID); err != nil {
+	if err := h.Service.MarkRead(r.Context(), userID, convoID); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to mark as read"})
 		return
 	}
@@ -260,18 +146,10 @@ func (h *ConversationHandler) HandleMarkRead(w http.ResponseWriter, r *http.Requ
 func (h *ConversationHandler) HandleLeave(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
 	convoID := r.PathValue("conversationId")
-	ctx := r.Context()
-
-	isGroup, err := h.Store.IsGroupConversation(ctx, convoID, userID)
-	if err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Conversation not found"})
+	if err := h.Service.Leave(r.Context(), userID, convoID); err != nil {
+		writeServiceError(w, err)
 		return
 	}
-	if !isGroup {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Cannot leave a 1:1 conversation"})
-		return
-	}
-	_ = h.Store.LeaveConversation(ctx, convoID, userID)
 	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
 }
 
@@ -354,14 +232,30 @@ func (h *ConversationHandler) HandleLegacyMarkRead(w http.ResponseWriter, r *htt
 func (h *ConversationHandler) resolveConversationID(w http.ResponseWriter, r *http.Request) string {
 	userID := shared.UserIDFromContext(r.Context())
 	otherUserID := r.PathValue("userId")
-	if otherUserID == "" || otherUserID == userID {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Conversation not found"})
-		return ""
-	}
-	convoID, err := h.Store.FindOrCreate1to1Conversation(r.Context(), userID, otherUserID)
+	convoID, err := h.Service.ResolveConversationID(r.Context(), userID, otherUserID)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Conversation not found"})
 		return ""
 	}
 	return convoID
+}
+
+// writeServiceError maps service-layer errors to HTTP status codes.
+func writeServiceError(w http.ResponseWriter, err error) {
+	var validationErr *service.ValidationError
+	var notFoundErr *service.NotFoundError
+	var conflictErr *service.ConflictError
+	var forbiddenErr *service.ForbiddenError
+	switch {
+	case errors.As(err, &validationErr):
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": validationErr.Msg})
+	case errors.As(err, &notFoundErr):
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": notFoundErr.Msg})
+	case errors.As(err, &conflictErr):
+		writeJSON(w, http.StatusConflict, map[string]string{"error": conflictErr.Msg})
+	case errors.As(err, &forbiddenErr):
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": forbiddenErr.Msg})
+	default:
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Internal server error"})
+	}
 }

@@ -1,13 +1,9 @@
 package handler
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -16,7 +12,6 @@ import (
 	"github.com/forumline/forumline/services/forumline-api/service"
 	"github.com/forumline/forumline/services/forumline-api/store"
 	shared "github.com/forumline/forumline/shared-go"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type ForumHandler struct {
@@ -78,7 +73,6 @@ func (h *ForumHandler) HandleRecommended(w http.ResponseWriter, r *http.Request)
 
 func (h *ForumHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
-	ctx := r.Context()
 
 	var body struct {
 		Domain       string   `json:"domain"`
@@ -94,107 +88,29 @@ func (h *ForumHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
-	if body.Domain == "" || body.Name == "" || body.APIBase == "" || body.WebBase == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "domain, name, api_base, and web_base are required"})
-		return
-	}
-	if err := service.ValidateDomain(body.Domain); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("invalid domain: %v", err)})
-		return
-	}
-	for _, u := range []string{body.APIBase, body.WebBase} {
-		if _, err := url.ParseRequestURI(u); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("invalid URL: %s", u)})
-			return
-		}
-	}
 
-	count, err := h.Store.CountForumsByOwner(ctx, userID)
+	result, err := h.ForumService.RegisterForum(r.Context(), userID, service.RegisterForumInput{
+		Domain:       body.Domain,
+		Name:         body.Name,
+		APIBase:      body.APIBase,
+		WebBase:      body.WebBase,
+		Capabilities: body.Capabilities,
+		Description:  body.Description,
+		Tags:         body.Tags,
+		RedirectURIs: body.RedirectURIs,
+	})
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to check forum quota"})
-		return
-	}
-	if count >= 5 {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Maximum of 5 forums per user"})
-		return
-	}
-	exists, _ := h.Store.DomainExists(ctx, body.Domain)
-	if exists {
-		// Forum exists — check if it needs OAuth credentials
-		forumID := h.Store.GetForumIDByDomain(ctx, body.Domain)
-		if forumID != "" {
-			hasOAuth, _ := h.Store.OAuthClientExistsByForumID(ctx, forumID)
-			if !hasOAuth {
-				// Create OAuth credentials for existing forum without them
-				cidBytes := make([]byte, 16)
-				csBytes := make([]byte, 32)
-				if _, err := rand.Read(cidBytes); err != nil {
-					writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to generate credentials"})
-					return
-				}
-				if _, err := rand.Read(csBytes); err != nil {
-					writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to generate credentials"})
-					return
-				}
-				clientID := hex.EncodeToString(cidBytes)
-				clientSecret := hex.EncodeToString(csBytes)
-				hash, _ := bcrypt.GenerateFromPassword([]byte(clientSecret), bcrypt.DefaultCost)
-				redirectURIs := body.RedirectURIs
-				if len(redirectURIs) == 0 {
-					redirectURIs = []string{body.WebBase + "/api/forumline/auth/callback"}
-				}
-				if err := h.Store.CreateOAuthClient(ctx, forumID, clientID, string(hash), redirectURIs); err != nil {
-					writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create OAuth credentials"})
-					return
-				}
-				writeJSON(w, http.StatusOK, map[string]interface{}{
-					"forum_id": forumID, "client_id": clientID, "client_secret": clientSecret,
-					"message": "OAuth credentials created for existing forum.",
-				})
-				return
-			}
-		}
-		writeJSON(w, http.StatusConflict, map[string]string{"error": "Forum with this domain is already registered"})
+		writeServiceError(w, err)
 		return
 	}
 
-	tags := service.NormalizeTags(body.Tags)
-	forumID, err := h.Store.RegisterForum(ctx, body.Domain, body.Name, body.APIBase, body.WebBase,
-		body.Capabilities, body.Description, tags, userID)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to register forum"})
-		return
+	status := http.StatusCreated
+	if result.Approved {
+		status = http.StatusOK
 	}
-
-	// Generate OAuth credentials
-	cidBytes := make([]byte, 16)
-	if _, err := rand.Read(cidBytes); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to generate credentials"})
-		return
-	}
-	clientID := hex.EncodeToString(cidBytes)
-	csBytes := make([]byte, 32)
-	if _, err := rand.Read(csBytes); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to generate credentials"})
-		return
-	}
-	clientSecret := hex.EncodeToString(csBytes)
-	hash, _ := bcrypt.GenerateFromPassword([]byte(clientSecret), bcrypt.DefaultCost)
-
-	redirectURIs := body.RedirectURIs
-	if len(redirectURIs) == 0 {
-		redirectURIs = []string{body.WebBase + "/api/forumline/auth/callback"}
-	}
-
-	if err := h.Store.CreateOAuthClient(ctx, forumID, clientID, string(hash), redirectURIs); err != nil {
-		_ = h.Store.DeleteForumByID(ctx, forumID)
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create OAuth credentials"})
-		return
-	}
-
-	writeJSON(w, http.StatusCreated, map[string]interface{}{
-		"forum_id": forumID, "client_id": clientID, "client_secret": clientSecret,
-		"approved": false, "message": "Forum registered. OAuth credentials generated. Forum requires approval before appearing in public listings.",
+	writeJSON(w, status, map[string]interface{}{
+		"forum_id": result.ForumID, "client_id": result.ClientID, "client_secret": result.ClientSecret,
+		"approved": result.Approved, "message": result.Message,
 	})
 }
 
@@ -364,39 +280,15 @@ func (h *ForumHandler) HandleEnsureOAuth(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ctx := r.Context()
-	forumID := h.Store.GetForumIDByDomain(ctx, body.Domain)
-	if forumID == "" {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "forum not found"})
+	creds, err := h.ForumService.EnsureOAuth(r.Context(), body.Domain)
+	if err != nil {
+		writeServiceError(w, err)
 		return
 	}
 
-	// Delete existing OAuth client if present (allows re-provisioning)
-	_ = h.Store.DeleteOAuthClientByForumID(ctx, forumID)
-
-	cidBytes := make([]byte, 16)
-	csBytes := make([]byte, 32)
-	if _, err := rand.Read(cidBytes); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to generate credentials"})
-		return
-	}
-	if _, err := rand.Read(csBytes); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to generate credentials"})
-		return
-	}
-	clientID := hex.EncodeToString(cidBytes)
-	clientSecret := hex.EncodeToString(csBytes)
-	hash, _ := bcrypt.GenerateFromPassword([]byte(clientSecret), bcrypt.DefaultCost)
-	redirectURIs := []string{"https://" + body.Domain + "/api/forumline/auth/callback"}
-
-	if err := h.Store.CreateOAuthClient(ctx, forumID, clientID, string(hash), redirectURIs); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create OAuth credentials"})
-		return
-	}
-
-	log.Printf("ensure-oauth: created OAuth for %s: client_id=%s", body.Domain, clientID)
+	log.Printf("ensure-oauth: created OAuth for %s: client_id=%s", body.Domain, creds.ClientID)
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
-		"client_id": clientID, "client_secret": clientSecret,
+		"client_id": creds.ClientID, "client_secret": creds.ClientSecret,
 	})
 }
 
