@@ -75,13 +75,13 @@ export function renderDiscover() {
       html += '<div style="margin:16px 0;border-top:1px solid #ddd"></div></div>';
     }
 
-    // Main results
+    // Main results (also in a full-width section with inner grid)
     if (discoveryLoading) {
       html += '<div class="discover-section" style="text-align:center;padding:40px;color:#999">Loading...</div>';
     } else if (discoveryForumsApi.length === 0) {
       html += '<div class="discover-section" style="text-align:center;padding:40px;color:#999">' + (discoveryQuery ? 'No forums found' : 'No forums available yet') + '</div>';
     } else {
-      html += discoveryForumsApi.map(f => renderDiscoverCard(f)).join('');
+      html += '<div class="discover-section"><div class="discover-grid-inner">' + discoveryForumsApi.map(f => renderDiscoverCard(f)).join('') + '</div></div>';
     }
 
     el.innerHTML = html;
@@ -122,35 +122,10 @@ export function renderDiscover() {
 }
 
 function renderDiscoverTags() {
-  // Insert or update tags row after the discover header
-  let tagsRow = document.getElementById('discoverTagsRow');
-  if (!tagsRow) {
-    tagsRow = document.createElement('div');
-    tagsRow.id = 'discoverTagsRow';
-    tagsRow.className = 'discover-tags-row';
-    const categories = document.querySelector('#discoverView .discover-categories');
-    if (categories) {
-      categories.after(tagsRow);
-    }
-  }
-
-  if (discoveryTags.length === 0) {
-    tagsRow.innerHTML = '';
-    return;
-  }
-
-  tagsRow.innerHTML = discoveryTags.map(tag =>
-    `<button class="discover-tag-pill ${discoveryActiveTag === tag ? 'active' : ''}" data-tag="${tag}">${escapeHtml(tag)}</button>`
-  ).join('');
-
-  tagsRow.querySelectorAll('.discover-tag-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      discoveryActiveTag = discoveryActiveTag === pill.dataset.tag ? null : pill.dataset.tag;
-      if (discoverySearchTimeout) clearTimeout(discoverySearchTimeout);
-      void fetchDiscoveryForums();
-      renderDiscoverTags();
-    });
-  });
+  // Dynamic tag row is replaced by the static category pills in the HTML.
+  // We just hide any existing dynamic tag row element.
+  const tagsRow = document.getElementById('discoverTagsRow');
+  if (tagsRow) tagsRow.innerHTML = '';
 }
 
 async function fetchDiscoveryForums() {
@@ -193,15 +168,20 @@ export function initDiscover(deps) {
     });
   }
 
-  // Category pills as tag filters
+  // Category pills as tag filters (lowercase to match DB tags)
   document.querySelectorAll('#discoverView .category-pill').forEach(pill => {
     pill.addEventListener('click', () => {
       const text = pill.textContent.trim();
       if (text === 'All') {
         discoveryActiveTag = null;
       } else {
-        discoveryActiveTag = discoveryActiveTag === text ? null : text;
+        const tag = text.toLowerCase();
+        discoveryActiveTag = discoveryActiveTag === tag ? null : tag;
       }
+      // Update active state on pills
+      document.querySelectorAll('#discoverView .category-pill').forEach(p => {
+        p.classList.toggle('active', p === pill || (text === 'All' && p.textContent.trim() === 'All'));
+      });
       if (discoverySearchTimeout) clearTimeout(discoverySearchTimeout);
       void fetchDiscoveryForums();
     });
