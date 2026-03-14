@@ -16,7 +16,9 @@ jobs:
       - name: Upload config files
         run: |
           scp deploy/compose/logs/docker-compose.yml logs-prod:/opt/logs/docker-compose.yml
-          scp deploy/compose/logs/users.yml logs-prod:/opt/logs/users.yml
+          scp deploy/compose/logs/vmauth.yml logs-prod:/opt/logs/vmauth.yml
 
-      - name: Pull and restart
-        run: ssh logs-prod "cd /opt/logs && docker compose pull && docker compose up -d && docker compose ps"
+      - name: Set password and restart
+        run: |
+          VMAUTH_PASSWORD=$(security find-generic-password -a admin -s logs-forumline -w)
+          ssh logs-prod "cd /opt/logs && echo 'VMAUTH_PASSWORD=$VMAUTH_PASSWORD' > .env && docker compose pull && docker compose up -d --remove-orphans && docker compose ps"

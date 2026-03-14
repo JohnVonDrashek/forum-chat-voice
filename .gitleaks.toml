@@ -26,6 +26,6 @@ regex = '''(?i)(client_secret|api_secret|secret_key|smtp_pass|service_role_key)\
 keywords = ["client_secret", "api_secret", "secret_key", "smtp_pass", "service_role_key"]
 
 # Allow .env.example and .env.enc files — these are safe (placeholders / encrypted)
-# Allow users.yml — contains bcrypt hashes only (one-way, safe to commit)
+# Allow vmauth.yml — contains env var placeholder (%{VMAUTH_PASSWORD}), not real secrets
 [allowlist]
-paths = ['''\.env\.example$''', '''\.env\.enc$''', '''users\.yml$''']
+paths = ['''\.env\.example$''', '''\.env\.enc$''', '''vmauth\.yml$''']

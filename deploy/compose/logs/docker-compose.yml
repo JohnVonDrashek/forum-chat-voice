@@ -11,16 +11,20 @@ services:
     ports:
       - "9428:9428"
 
-  dozzle:
-    image: amir20/dozzle:v10.1.1
+  vmauth:
+    image: victoriametrics/vmauth:latest
     restart: unless-stopped
     volumes:
-      - /opt/logs/users.yml:/data/users.yml:ro
+      - /opt/logs/vmauth.yml:/etc/vmauth/config.yml:ro
+    command:
+      - -auth.config=/etc/vmauth/config.yml
+      - -httpListenAddr=:8427
     environment:
-      DOZZLE_AUTH_PROVIDER: simple
-      DOZZLE_REMOTE_AGENT: "192.168.1.23:7007,192.168.1.99:7007,192.168.1.106:7007,192.168.1.107:7007"
+      - VMAUTH_PASSWORD=${VMAUTH_PASSWORD}
     ports:
-      - "8080:8080"
+      - "8080:8427"
+    depends_on:
+      - victoria-logs
 
 volumes:
   victoria-logs-data:
