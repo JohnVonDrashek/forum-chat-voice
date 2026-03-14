@@ -22,7 +22,7 @@ keywords = ["password", "passwd"]
 [[rules]]
 id = "secret-assignment"
 description = "Secret or key value assignment"
-regex = '''(?i)(client_secret|api_secret|secret_key|smtp_pass|service_role_key)\s*[=:]\s*["']([^"']{8,})["']'''
+regex = '''(?i)(client_secret|api_secret|secret_key|smtp_pass|service_role_key)\s*[=:]\s*["']([^"'$]{8,})["']'''
 keywords = ["client_secret", "api_secret", "secret_key", "smtp_pass", "service_role_key"]
 
 # Allow .env.example and .env.enc files — these are safe (placeholders / encrypted)

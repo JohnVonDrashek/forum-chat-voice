@@ -151,9 +151,6 @@ func main() {
 		}
 
 		cfg := &forum.Config{
-			// No GoTrue in multi-tenant mode — auth is via Forumline identity
-			GoTrueURL:              "",
-			GoTrueServiceRoleKey:   "",
 			SiteURL:                "https://" + tenant.Domain,
 			Domain:                 tenant.Domain,
 			ForumName:              tenant.Name,
@@ -161,8 +158,6 @@ func main() {
 			ForumlineClientID:      tenant.ForumlineClientID,
 			ForumlineClientSecret:  tenant.ForumlineClientSecret,
 			ForumlineJWTSecret:     os.Getenv("FORUMLINE_JWT_SECRET"),
-			ForumlineGoTrueURL:     os.Getenv("FORUMLINE_GOTRUE_URL"),
-			ForumlineServiceRoleKey: os.Getenv("FORUMLINE_SERVICE_ROLE_KEY"),
 			LiveKitURL:             os.Getenv("LIVEKIT_URL"),
 			LiveKitAPIKey:          os.Getenv("LIVEKIT_API_KEY"),
 			LiveKitAPISecret:       os.Getenv("LIVEKIT_API_SECRET"),
@@ -333,7 +328,7 @@ func spaHandler(apiHandler http.Handler, store *plat.TenantStore, cache *plat.Si
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/health" || strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/auth/") || strings.HasPrefix(r.URL.Path, "/.well-known/") {
+		if r.URL.Path == "/health" || strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/.well-known/") {
 			apiHandler.ServeHTTP(w, r)
 			return
 		}
