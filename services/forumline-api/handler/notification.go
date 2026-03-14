@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/forumline/forumline/services/forumline-api/store"
@@ -9,11 +10,12 @@ import (
 )
 
 type NotificationHandler struct {
-	Store *store.Store
+	Store  *store.Store
+	SSEHub *shared.SSEHub
 }
 
-func NewNotificationHandler(s *store.Store) *NotificationHandler {
-	return &NotificationHandler{Store: s}
+func NewNotificationHandler(s *store.Store, hub *shared.SSEHub) *NotificationHandler {
+	return &NotificationHandler{Store: s, SSEHub: hub}
 }
 
 type notificationResponse struct {
@@ -99,4 +101,40 @@ func (h *NotificationHandler) HandleUnreadCount(w http.ResponseWriter, r *http.R
 	}
 
 	writeJSON(w, http.StatusOK, map[string]int{"count": count})
+}
+
+// HandleStream handles GET /api/notifications/stream (SSE).
+// Pushes new notifications in real-time via pg_notify.
+func (h *NotificationHandler) HandleStream(w http.ResponseWriter, r *http.Request) {
+	tokenStr := r.URL.Query().Get("access_token")
+	if tokenStr == "" {
+		tokenStr = extractTokenFromRequest(r)
+	}
+	if tokenStr == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "missing authorization"})
+		return
+	}
+	claims, err := shared.ValidateJWT(tokenStr)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid token"})
+		return
+	}
+	userID := claims.Subject
+
+	client := &shared.SSEClient{
+		Channel: "forumline_notification_changes",
+		FilterFunc: func(data map[string]interface{}) bool {
+			return fmt.Sprintf("%v", data["user_id"]) == userID
+		},
+		Send: make(chan []byte, 32),
+		Done: make(chan struct{}),
+	}
+
+	h.SSEHub.Register(client)
+	defer func() {
+		h.SSEHub.Unregister(client)
+		close(client.Done)
+	}()
+
+	shared.ServeSSE(w, r, client)
 }

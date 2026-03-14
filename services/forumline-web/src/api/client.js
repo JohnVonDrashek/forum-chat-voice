@@ -94,6 +94,8 @@ function getActivity() { return apiFetch('/api/activity'); }
 
 function getNotifications() { return apiFetch('/api/notifications'); }
 
+function getUnreadCount() { return apiFetch('/api/notifications/unread'); }
+
 function markNotificationRead(id) {
   return apiFetch('/api/notifications/read', {
     method: 'POST', body: JSON.stringify({ id }),
@@ -118,5 +120,5 @@ export const ForumlineAPI = {
   getConversations, getConversation, getMessages, sendMessage, markRead,
   getOrCreateDM, createGroupConversation, updateConversation, leaveConversation,
   searchProfiles, searchIdentity, getActivity, presenceHeartbeat, getPresenceStatus,
-  getNotifications, markNotificationRead, markAllNotificationsRead,
+  getNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead,
 };

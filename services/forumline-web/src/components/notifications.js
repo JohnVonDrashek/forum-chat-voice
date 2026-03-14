@@ -4,6 +4,7 @@ import { ForumStore } from '../api/forum-store.js';
 
 let _notifications = [];
 let _loading = false;
+let _eventSource = null;
 
 function timeAgo(timestamp) {
   const now = new Date();
@@ -20,14 +21,16 @@ function timeAgo(timestamp) {
   return `${weeks}w ago`;
 }
 
-function updateBadge() {
-  const unreadCount = _notifications.filter(n => !n.read).length;
+function updateBadge(count) {
+  if (count === undefined) {
+    count = _notifications.filter(n => !n.read).length;
+  }
   const badge = $('notifBell')?.querySelector('.notif-badge');
   if (!badge) return;
-  if (unreadCount > 0) {
-    badge.textContent = unreadCount;
+  if (count > 0) {
+    badge.textContent = count;
     badge.style.display = '';
-    $('notifBell').setAttribute('aria-label', `Notifications (${unreadCount} unread)`);
+    $('notifBell').setAttribute('aria-label', `Notifications (${count} unread)`);
   } else {
     badge.style.display = 'none';
     $('notifBell').setAttribute('aria-label', 'Notifications');
@@ -101,6 +104,46 @@ async function fetchNotifications() {
   renderNotifications();
 }
 
+function connectSSE() {
+  if (_eventSource) return;
+  const token = ForumlineAPI.getToken();
+  if (!token) return;
+
+  _eventSource = new EventSource(`/api/notifications/stream?access_token=${encodeURIComponent(token)}`);
+
+  _eventSource.onmessage = (event) => {
+    try {
+      const notif = JSON.parse(event.data);
+      // Add to the front of the list
+      _notifications.unshift({
+        id: notif.id,
+        type: notif.type,
+        title: notif.title,
+        body: notif.body,
+        link: notif.link || '/',
+        read: false,
+        timestamp: notif.created_at,
+        forum_domain: notif.forum_domain,
+        forum_name: notif.forum_name,
+      });
+      updateBadge();
+      // Re-render if dropdown is open
+      if (!$('notifDropdown')?.classList.contains('hidden')) {
+        renderNotifications();
+      }
+    } catch (e) {
+      // ignore parse errors (heartbeats etc)
+    }
+  };
+
+  _eventSource.onerror = () => {
+    _eventSource?.close();
+    _eventSource = null;
+    // Reconnect after 5s
+    setTimeout(connectSSE, 5000);
+  };
+}
+
 export function initNotifications() {
   // Notification bell click handler
   $('notifBell')?.addEventListener('click', (e) => {
@@ -121,11 +164,13 @@ export function initNotifications() {
     ForumlineAPI.markAllNotificationsRead().catch(() => {});
   });
 
-  // Initial badge fetch (don't render dropdown, just update count)
+  // Initial badge: use lightweight unread count endpoint
   if (ForumlineAPI.isAuthenticated()) {
-    ForumlineAPI.getNotifications().then(notifs => {
-      _notifications = notifs;
-      updateBadge();
+    ForumlineAPI.getUnreadCount().then(data => {
+      updateBadge(data.count);
     }).catch(() => {});
+
+    // Connect SSE for real-time updates
+    connectSSE();
   }
 }
