@@ -7,24 +7,15 @@ on:
 
 jobs:
   screenshots:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      - uses: dagger/dagger-for-github@v7
-        with:
-          module: ci
-          verb: call
-          args: >-
-            update-screenshots
-            --source .
-            --forumline-api-url env:FORUMLINE_API_URL
-            --forumline-service-key env:FORUMLINE_SERVICE_KEY
-            --r2-account-id env:R2_ACCOUNT_ID
-            --r2-access-key-id env:R2_ACCESS_KEY_ID
-            --r2-secret-access-key env:R2_SECRET_ACCESS_KEY
-            --r2-bucket-name env:R2_BUCKET_NAME
-            --r2-public-url env:R2_PUBLIC_URL
-          version: "0.20.1"
+
+      - name: Install Playwright
+        run: npx playwright install chromium --with-deps
+
+      - name: Take screenshots and upload
+        working-directory: .github/scripts
         env:
           FORUMLINE_API_URL: ${{ secrets.FORUMLINE_API_URL }}
           FORUMLINE_SERVICE_KEY: ${{ secrets.FORUMLINE_SERVICE_KEY }}
@@ -33,3 +24,6 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
           R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+        run: |
+          npm install
+          node update-forum-screenshots.js

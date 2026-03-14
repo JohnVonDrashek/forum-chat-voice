@@ -2,12 +2,8 @@ name: CI
 on: [push, pull_request]
 jobs:
   ci:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      - uses: dagger/dagger-for-github@v7
-        with:
-          module: ci
-          verb: call
-          args: lint --source .
-          version: "0.20.1"
+      - run: pnpm install --frozen-lockfile
+      - run: npx lefthook run pre-commit --all-files --no-tty

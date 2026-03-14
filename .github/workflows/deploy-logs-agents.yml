@@ -9,21 +9,19 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      - uses: dagger/dagger-for-github@v7
-        with:
-          module: ci
-          verb: call
-          args: >-
-            deploy-logs-agents
-            --source .
-            --ssh-key env:FORUM_SSH_KEY
-            --cf-access-client-id env:CF_ACCESS_CLIENT_ID
-            --cf-access-client-secret env:CF_ACCESS_CLIENT_SECRET
-          version: "0.20.1"
-        env:
-          FORUM_SSH_KEY: ${{ secrets.FORUM_SSH_KEY }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+
+      - name: Deploy to all hosts
+        run: |
+          for host in forum-prod forumline-prod website-prod hosted-prod; do
+            echo "=== Deploying to $host ==="
+            ssh "$host" "mkdir -p /opt/logs-agent"
+            sed "s/\${LOGS_HOST_LABEL}/$host/" deploy/compose/logs-agent/alloy-config.alloy > "/tmp/alloy-config-$host.alloy"
+            scp deploy/compose/logs-agent/docker-compose.yml "$host:/opt/logs-agent/docker-compose.yml"
+            scp deploy/compose/logs-agent/docker-compose.dozzle.yml "$host:/opt/logs-agent/docker-compose.dozzle.yml"
+            scp "/tmp/alloy-config-$host.alloy" "$host:/opt/logs-agent/alloy-config.alloy"
+            ssh "$host" "cd /opt/logs-agent && docker compose pull && docker compose up -d && docker compose -f docker-compose.dozzle.yml pull && docker compose -f docker-compose.dozzle.yml up -d"
+            rm -f "/tmp/alloy-config-$host.alloy"
+          done

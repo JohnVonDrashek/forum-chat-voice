@@ -13,19 +13,66 @@ permissions:
 
 jobs:
   split:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: dagger/dagger-for-github@v7
-        with:
-          module: ci
-          verb: call
-          args: >-
-            split-repos
-            --source .
-            --split-repo-token env:SPLIT_REPO_TOKEN
-          version: "0.20.1"
+
+      - name: Install splitsh-lite
+        run: |
+          if ! command -v splitsh-lite &>/dev/null; then
+            curl -fsSL https://github.com/splitsh/lite/releases/download/v1.0.1/lite_linux_amd64.tar.gz -o /tmp/splitsh.tar.gz
+            sudo tar -xzf /tmp/splitsh.tar.gz -C /usr/local/bin
+            rm /tmp/splitsh.tar.gz
+          fi
+
+      - name: Split and push
         env:
           SPLIT_REPO_TOKEN: ${{ secrets.SPLIT_REPO_TOKEN }}
+        run: |
+          # Tag shared-go if changed
+          if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -q '^packages/shared-go/'; then
+            latest=$(git tag -l 'shared-go/v*' --sort=-version:refname | head -1)
+            if [ -z "$latest" ]; then
+              next="shared-go/v0.1.0"
+            else
+              version=${latest#shared-go/v}
+              major=$(echo "$version" | cut -d. -f1)
+              minor=$(echo "$version" | cut -d. -f2)
+              patch=$(echo "$version" | cut -d. -f3)
+              next="shared-go/v${major}.${minor}.$((patch + 1))"
+            fi
+            git tag "$next"
+            git push origin "$next"
+          fi
+
+          # Split the subtree
+          SPLIT_SHA=$(splitsh-lite --prefix=services/forum)
+          git checkout -b split-result "$SPLIT_SHA"
+
+          # Get latest shared-go version
+          SHARED_TAG=$(git tag -l 'shared-go/v*' --sort=-version:refname | head -1)
+          if [ -z "$SHARED_TAG" ]; then
+            echo "No shared-go tag found — skipping split"
+            exit 0
+          fi
+          SHARED_VERSION=${SHARED_TAG#shared-go/}
+
+          # Rewrite go.mod
+          sed -i "s|github.com/forumline/forumline/shared-go v0.0.0-00010101000000-000000000000|github.com/forumline/forumline/shared-go $SHARED_VERSION|" go.mod
+          sed -i '/^replace github.com\/forumline\/forumline\/shared-go/d' go.mod
+          sed -i -e :a -e '/^\n*$/{$d;N;ba;}' go.mod
+          go mod tidy
+
+          # Strip production secrets
+          git rm -f deploy/.env.enc deploy/.sops.yaml 2>/dev/null || true
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add go.mod go.sum
+          git commit --amend --no-edit
+
+          # Push to read-only repo
+          git config --unset-all http.https://github.com/.extraheader || true
+          git push "https://x-access-token:${SPLIT_REPO_TOKEN}@github.com/forumline/forum-server.git" HEAD:main --force

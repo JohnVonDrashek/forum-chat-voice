@@ -14,24 +14,21 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      - uses: dagger/dagger-for-github@v7
-        with:
-          module: ci
-          verb: call
-          args: >-
-            deploy
-            --source .
-            --service hosted
-            --ssh-key env:FORUM_SSH_KEY
-            --cf-access-client-id env:CF_ACCESS_CLIENT_ID
-            --cf-access-client-secret env:CF_ACCESS_CLIENT_SECRET
-            --sops-age-key env:SOPS_AGE_KEY
-          version: "0.20.1"
-        env:
-          FORUM_SSH_KEY: ${{ secrets.FORUM_SSH_KEY }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+
+      - name: Decrypt and upload env
+        run: |
+          SOPS_AGE_KEY="${{ secrets.SOPS_AGE_KEY }}" sops -d --input-type dotenv --output-type dotenv deploy/compose/hosted/.env.enc > /tmp/hosted.env
+          scp /tmp/hosted.env hosted-prod:/opt/hosted/.env
+          rm -f /tmp/hosted.env
+
+      - name: Upload compose file
+        run: scp deploy/compose/hosted/docker-compose.yml hosted-prod:/opt/hosted/docker-compose.yml
+
+      - name: Pull latest code
+        run: ssh hosted-prod "cd /opt/hosted/repo && git fetch origin main && git reset --hard origin/main"
+
+      - name: Rebuild and restart
+        run: ssh hosted-prod "cd /opt/hosted && docker compose up -d --build hosted && docker compose ps"
