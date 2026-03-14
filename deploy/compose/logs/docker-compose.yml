@@ -11,20 +11,5 @@ services:
     ports:
       - "9428:9428"
 
-  vmauth:
-    image: victoriametrics/vmauth:latest
-    restart: unless-stopped
-    volumes:
-      - /opt/logs/vmauth.yml:/etc/vmauth/config.yml:ro
-    command:
-      - -auth.config=/etc/vmauth/config.yml
-      - -httpListenAddr=:8427
-    environment:
-      - VMAUTH_PASSWORD=${VMAUTH_PASSWORD}
-    ports:
-      - "8080:8427"
-    depends_on:
-      - victoria-logs
-
 volumes:
   victoria-logs-data:

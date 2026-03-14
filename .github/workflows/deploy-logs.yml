@@ -13,13 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Upload config files
-        run: |
-          scp deploy/compose/logs/docker-compose.yml logs-prod:/opt/logs/docker-compose.yml
-          scp deploy/compose/logs/vmauth.yml logs-prod:/opt/logs/vmauth.yml
+      - name: Upload compose file
+        run: scp deploy/compose/logs/docker-compose.yml logs-prod:/opt/logs/docker-compose.yml
 
-      - name: Set password and restart
-        env:
-          VMAUTH_PASSWORD: ${{ secrets.VMAUTH_PASSWORD }}
+      - name: Restart
         run: |
-          ssh logs-prod "cd /opt/logs && echo 'VMAUTH_PASSWORD=$VMAUTH_PASSWORD' > .env && docker compose pull && docker compose up -d --remove-orphans && docker compose ps"
+          ssh logs-prod "cd /opt/logs && docker compose pull && docker compose up -d --remove-orphans && docker compose ps"

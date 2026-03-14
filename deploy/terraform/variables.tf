@@ -15,11 +15,6 @@ variable "tunnel_id" {
   default     = "b00696cc-c867-42d0-8649-6367b96abd64"
 }
 
-variable "developer_email" {
-  description = "Email address of the developer allowed SSH access"
-  type        = string
-}
-
 variable "state_encryption_passphrase" {
   description = "Passphrase for encrypting state and plan files (OpenTofu 1.7+)"
   type        = string

@@ -1,4 +1,0 @@
-users:
-  - username: admin
-    password: "%{VMAUTH_PASSWORD}"
-    url_prefix: "http://victoria-logs:9428/"
