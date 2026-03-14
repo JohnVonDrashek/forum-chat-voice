@@ -109,7 +109,7 @@ func (h *CallHandler) HandleStream(w http.ResponseWriter, r *http.Request) {
 	userID := claims.Subject
 
 	client := &shared.SSEClient{
-		Channel: "call_signal",
+		Channel: "voice_signal",
 		FilterFunc: func(data map[string]interface{}) bool {
 			targetID, _ := data["target_user_id"].(string)
 			return targetID == userID

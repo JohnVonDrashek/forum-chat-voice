@@ -8,6 +8,9 @@
     "dev": "vite",
     "build": "vite build"
   },
+  "dependencies": {
+    "@forumline/shared-voice": "workspace:*"
+  },
   "devDependencies": {
     "vite": "^6.2.0"
   }

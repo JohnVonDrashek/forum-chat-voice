@@ -139,6 +139,6 @@ func (s *Store) CleanupStaleCalls(ctx context.Context) (int64, error) {
 }
 
 func (s *Store) NotifyCallSignal(ctx context.Context, payload string) error {
-	_, err := s.Pool.Exec(ctx, "SELECT pg_notify('call_signal', $1)", payload)
+	_, err := s.Pool.Exec(ctx, "SELECT pg_notify('voice_signal', $1)", payload)
 	return err
 }

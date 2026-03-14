@@ -135,11 +135,11 @@ func newRouter(s *store.Store, sseHub *shared.SSEHub) *http.ServeMux {
 	mux.Handle("GET /api/profiles/search", use(identityH.HandleSearchProfiles, auth))
 
 	// Calls
-	mux.HandleFunc("GET /api/calls/stream", callH.HandleStream)
+	mux.HandleFunc("GET /api/voice/signal/stream", callH.HandleStream)
 	mux.Handle("POST /api/calls", use(callH.HandleInitiate, auth))
 	mux.Handle("POST /api/calls/{callId}/respond", use(callH.HandleRespond, auth))
 	mux.Handle("POST /api/calls/{callId}/end", use(callH.HandleEnd, auth))
-	mux.Handle("POST /api/calls/signal", use(callH.HandleSignal, auth))
+	mux.Handle("POST /api/voice/signal", use(callH.HandleSignal, auth))
 
 	// Push notifications
 	mux.HandleFunc("POST /api/push", pushH.Handle)

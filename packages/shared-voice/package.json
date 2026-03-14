@@ -1,0 +1,32 @@
+{
+  "name": "@forumline/shared-voice",
+  "version": "0.1.0",
+  "description": "Unified voice engine with automatic P2P/SFU switching",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/forumline/forumline.git",
+    "directory": "packages/shared-voice"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "livekit-client": "^2.17.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

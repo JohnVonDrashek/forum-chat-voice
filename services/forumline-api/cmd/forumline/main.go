@@ -37,7 +37,7 @@ func main() {
 	sseHub := shared.NewSSEHub(listenDSN)
 	sseHub.Listen(ctx, "dm_changes")
 	sseHub.Listen(ctx, "push_dm")
-	sseHub.Listen(ctx, "call_signal")
+	sseHub.Listen(ctx, "voice_signal")
 	sseHub.Listen(ctx, "forumline_notification_changes")
 	sseHub.StartListening(ctx)
 

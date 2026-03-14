@@ -20,9 +20,13 @@ RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
 
 WORKDIR /app
 
+# Copy shared-voice package (forum uses file: reference)
+COPY packages/shared-voice/package.json /packages/shared-voice/package.json
+COPY packages/shared-voice/dist/ /packages/shared-voice/dist/
+
 COPY services/forum/package.json services/forum/pnpm-lock.yaml* ./
 
-RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install --frozen-lockfile || pnpm install --ignore-workspace
 
 COPY services/forum/index.html services/forum/vite.config.js services/forum/eslint.config.mjs ./
 COPY services/forum/src/ src/

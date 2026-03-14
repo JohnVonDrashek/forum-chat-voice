@@ -71,10 +71,14 @@ func (cs *CallService) Initiate(ctx context.Context, callerID, conversationID st
 	}
 
 	signalData, _ := json.Marshal(map[string]interface{}{
-		"type": "incoming_call", "call_id": call.ID, "conversation_id": call.ConversationID,
-		"caller_id": callerID, "caller_username": callerUsername,
-		"caller_display_name": displayName, "caller_avatar_url": callerAvatarURL,
+		"type":           "incoming_call",
 		"target_user_id": calleeID,
+		"sender_user_id": callerID,
+		"payload": map[string]interface{}{
+			"call_id": call.ID, "conversation_id": call.ConversationID,
+			"caller_username": callerUsername, "caller_display_name": displayName,
+			"caller_avatar_url": callerAvatarURL,
+		},
 	})
 	_ = cs.Store.NotifyCallSignal(ctx, string(signalData))
 
@@ -118,7 +122,12 @@ func (cs *CallService) Respond(ctx context.Context, userID, callID, action strin
 	}
 
 	signalData, _ := json.Marshal(map[string]interface{}{
-		"type": signalType, "call_id": callID, "target_user_id": callerID,
+		"type":           signalType,
+		"target_user_id": callerID,
+		"sender_user_id": userID,
+		"payload": map[string]interface{}{
+			"call_id": callID,
+		},
 	})
 	_ = cs.Store.NotifyCallSignal(ctx, string(signalData))
 
@@ -138,7 +147,12 @@ func (cs *CallService) End(ctx context.Context, userID, callID string) (*EndResu
 	}
 
 	signalData, _ := json.Marshal(map[string]interface{}{
-		"type": "call_ended", "call_id": callID, "ended_by": userID, "target_user_id": otherUserID,
+		"type":           "call_ended",
+		"target_user_id": otherUserID,
+		"sender_user_id": userID,
+		"payload": map[string]interface{}{
+			"call_id": callID,
+		},
 	})
 	_ = cs.Store.NotifyCallSignal(ctx, string(signalData))
 
@@ -168,8 +182,12 @@ func (cs *CallService) Signal(ctx context.Context, senderID string, input Signal
 	}
 
 	signalData, _ := json.Marshal(map[string]interface{}{
-		"type": input.Type, "call_id": input.CallID, "sender_id": senderID,
-		"target_user_id": input.TargetUserID, "payload": input.Payload,
+		"type":           input.Type,
+		"target_user_id": input.TargetUserID,
+		"sender_user_id": senderID,
+		"payload": map[string]interface{}{
+			"call_id": input.CallID, "data": input.Payload,
+		},
 	})
 	_ = cs.Store.NotifyCallSignal(ctx, string(signalData))
 

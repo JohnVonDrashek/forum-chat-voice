@@ -732,3 +732,157 @@ graph LR
 
     style VL fill:#e8f5e9
 ```
+
+## 13. Shared Voice Package (@forumline/shared-voice)
+
+### Before: Duplicated WebRTC
+
+```mermaid
+graph LR
+    subgraph Forum["Forum Server"]
+        FSignal["POST /api/voice-signal<br/>GET /api/voice-signal/stream<br/>pg_notify('voice_signal_changes')"]
+    end
+
+    subgraph Forumline["Forumline API"]
+        CSignal["POST /api/calls/signal<br/>GET /api/calls/stream<br/>pg_notify('call_signal')"]
+    end
+
+    subgraph FrontendDupe["Duplicated Frontend Code"]
+        VP2P["voice-p2p.js<br/>RTCPeerConnection, ICE,<br/>speaking detection<br/>~430 lines"]
+        CallsJS["calls.js<br/>RTCPeerConnection, ICE,<br/>offer/answer<br/>~440 lines"]
+    end
+
+    FSignal --> VP2P
+    CSignal --> CallsJS
+
+    style FrontendDupe fill:#ffcdd2
+```
+
+### After: Shared JS Package, Standardized Endpoints
+
+```mermaid
+graph TB
+    subgraph Package["@forumline/shared-voice (JS)"]
+        Session["VoiceSession"]
+        P2P["P2PEngine<br/>WebRTC connections<br/>speaking detection"]
+        SFU["SfuEngine<br/>LiveKit (lazy-loaded)"]
+        SignalBus["SignalBus<br/>POST + SSE to /api/voice/signal<br/>routes incoming by type"]
+
+        Session -->|"p2p-only / auto"| P2P
+        Session -->|"sfu-only / auto"| SFU
+        Session -.->|"escalateAt: N"| SFU
+        SignalBus -->|WebRTC signals| P2P
+        SignalBus -->|"onSignal(type, handler)"| Session
+    end
+
+    subgraph GoServers["Go Servers (standardize endpoints, keep own handlers)"]
+        ForumServer["Forum Server<br/>POST /api/voice/signal<br/>GET /api/voice/signal/stream<br/>pg_notify('voice_signal')<br/>+ presence, LiveKit token"]
+        ForumlineServer["Forumline API<br/>POST /api/voice/signal<br/>GET /api/voice/signal/stream<br/>pg_notify('voice_signal')<br/>+ call REST endpoints"]
+    end
+
+    subgraph Consumers["Consumer Apps"]
+        ForumApp["Forum voice.js<br/>Presence, room UI"]
+        CallApp["Forumline calls.js<br/>Ringtone, native bridge"]
+        HostedApp["Hosted forums"]
+    end
+
+    ForumApp -->|"mode: 'auto', escalateAt: 5"| Session
+    CallApp -->|"mode: 'p2p-only'"| Session
+    HostedApp -->|"mode: 'auto'"| Session
+
+    SignalBus <-->|"POST + SSE"| GoServers
+    SFU <-->|room connect| LK["LiveKit Cloud"]
+    P2P <-->|peer connections| STUN["STUN servers"]
+
+    Session -->|"onStateChange()"| Consumers
+
+    style Package fill:#fff3e0
+```
+
+### Signal Routing
+
+```mermaid
+graph LR
+    subgraph Channel["One pg channel: voice_signal"]
+        direction TB
+        WebRTC["offer, answer,<br/>ice-candidate, escalate"]
+        CallLife["incoming_call, call_accepted,<br/>call_declined, call_ended"]
+        Custom["Future signal types"]
+    end
+
+    subgraph Routing["SignalBus routes by type"]
+        P2PEngine["P2PEngine handles<br/>offer / answer / ice-candidate"]
+        Orchestrator["Session handles<br/>escalate"]
+        AppHandler["Consumer handles via<br/>onSignal(type, callback)"]
+    end
+
+    WebRTC --> P2PEngine
+    WebRTC --> Orchestrator
+    CallLife --> AppHandler
+    Custom --> AppHandler
+
+    style Channel fill:#e8f5e9
+    style Routing fill:#fff3e0
+```
+
+### Session Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Disconnected
+
+    state "Rooms (no invitation)" as Rooms {
+        Connected_R: Connected
+        Connected_R --> P2P : addPeer()
+        Connected_R --> SFU_R : [mode: sfu-only]
+        P2P --> P2P : addPeer() / removePeer()
+        P2P --> Escalating : escalateAt reached\nor screen share
+        Escalating --> SFU_R : SFU connected,\ntear down P2P
+        SFU_R: SFU
+    }
+
+    state "Calls (invitation: true)" as Calls {
+        Connected_C: Connected
+        Connected_C --> Inviting : invite(peerId)
+        Connected_C --> Invited : received invite signal
+        Inviting --> Active : invite_accepted
+        Inviting --> Connected_C : invite_declined\nor timeout (30s)
+        Invited --> Active : accept()
+        Invited --> Connected_C : decline()\nor timeout (30s)
+        Active --> Active : WebRTC connected
+    }
+
+    Disconnected --> Connecting : connect()
+    Connecting --> Connected_R : [no invitation]
+    Connecting --> Connected_C : [invitation: true]
+
+    Rooms --> Disconnected : disconnect()
+    Calls --> Disconnected : disconnect()
+```
+
+### Consumer Examples
+
+```mermaid
+graph LR
+    subgraph ForumUsage["Forum Voice Room"]
+        F1["new VoiceSession({<br/>  mode: 'auto',<br/>  escalateAt: 5,<br/>  getAuthToken,<br/>  sfu: { url, getRoomToken }<br/>})"]
+        F2["session.connect(userId, name, roomSlug)"]
+        F3["session.addPeer(peerId)<br/>// from presence changes"]
+        F4["session.onStateChange(s =><br/>  voiceStore.set(s))"]
+    end
+
+    subgraph CallUsage["Forumline 1:1 Call"]
+        C1["new VoiceSession({<br/>  mode: 'p2p-only',<br/>  invitation: { timeoutMs: 30000 },<br/>  getAuthToken<br/>})"]
+        C2["session.connect(userId, name)"]
+        C3["session.invite(remoteUserId,<br/>  { display_name, avatar_url })"]
+        C4["session.onStateChange(s => {<br/>  if (s.status === 'invited')<br/>    playRingtone(), showOverlay()<br/>  if (s.status === 'active')<br/>    stopRingtone(), showCallBar()<br/>})"]
+    end
+
+    F1 --> F2 --> F3
+    F1 --> F4
+    C1 --> C2 --> C3
+    C1 --> C4
+
+    style ForumUsage fill:#e8f5e9
+    style CallUsage fill:#e3f2fd
+```
