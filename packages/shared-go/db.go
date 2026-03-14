@@ -36,7 +36,9 @@ func NewDBPool(ctx context.Context) (*pgxpool.Pool, error) {
 	config.MinConns = 1
 	// LISTEN connections use direct pgx.Conn (not from pool), so pool
 	// only needs enough connections for concurrent API queries.
-	maxConns := int32(5)
+	// In multi-tenant hosted mode, SSE streams may briefly acquire
+	// connections for per-event queries, so allow headroom.
+	maxConns := int32(20)
 	if v := os.Getenv("DB_MAX_CONNS"); v != "" {
 		if n, err := fmt.Sscanf(v, "%d", &maxConns); n == 1 && err == nil && maxConns > 0 {
 			// use parsed value
