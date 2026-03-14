@@ -8,6 +8,7 @@ on:
       - 'services/hosted/**'
       - 'services/forum/**'
       - 'packages/shared-go/**'
+      - 'packages/shared-voice/**'
       - 'deploy/docker/Dockerfile.go-hosted'
       - '.github/workflows/deploy-hosted.yml'
       - 'deploy/compose/hosted/**'

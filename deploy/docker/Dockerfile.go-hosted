@@ -20,9 +20,9 @@ RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
 
 WORKDIR /app
 
-# Copy shared-voice package (forum uses file: reference)
-COPY packages/shared-voice/package.json /packages/shared-voice/package.json
-COPY packages/shared-voice/dist/ /packages/shared-voice/dist/
+# Build shared-voice package (forum uses file: reference)
+COPY packages/shared-voice/ /packages/shared-voice/
+RUN cd /packages/shared-voice && pnpm install --ignore-scripts && pnpm run build
 
 COPY services/forum/package.json services/forum/pnpm-lock.yaml* ./
 
