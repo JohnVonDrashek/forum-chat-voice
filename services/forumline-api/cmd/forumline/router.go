@@ -107,10 +107,17 @@ func newRouter(s *store.Store, sseHub *shared.SSEHub) *http.ServeMux {
 	// Activity feed
 	mux.Handle("GET /api/activity", use(activityH.HandleActivity, auth))
 
-	// Notifications (aggregated from forums)
+	// Notifications (local DB, pushed from forums)
 	mux.Handle("GET /api/notifications", use(notifH.HandleNotifications, auth))
+	mux.Handle("GET /api/notifications/unread", use(notifH.HandleUnreadCount, auth))
 	mux.Handle("POST /api/notifications/read", use(notifH.HandleMarkRead, auth))
 	mux.Handle("POST /api/notifications/read-all", use(notifH.HandleMarkAllRead, auth))
+
+	// Webhook (forum → forumline push)
+	webhookH := handler.NewWebhookHandler(s)
+	webhookRL := shared.RateLimitMiddleware(shared.NewRateLimiter(100, time.Minute))
+	mux.Handle("POST /api/webhooks/notification", use(webhookH.HandleNotification, webhookRL))
+	mux.Handle("POST /api/webhooks/notifications", use(webhookH.HandleNotificationBatch, webhookRL))
 
 	// Presence
 	mux.Handle("POST /api/presence/heartbeat", use(presenceH.HandleHeartbeat, auth))

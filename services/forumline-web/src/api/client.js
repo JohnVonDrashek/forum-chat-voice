@@ -94,9 +94,9 @@ function getActivity() { return apiFetch('/api/activity'); }
 
 function getNotifications() { return apiFetch('/api/notifications'); }
 
-function markNotificationRead(id, forumDomain) {
+function markNotificationRead(id) {
   return apiFetch('/api/notifications/read', {
-    method: 'POST', body: JSON.stringify({ id, forum_domain: forumDomain }),
+    method: 'POST', body: JSON.stringify({ id }),
   });
 }
 

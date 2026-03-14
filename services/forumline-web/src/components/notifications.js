@@ -73,7 +73,7 @@ export function renderNotifications() {
       if (notif && !notif.read) {
         notif.read = true;
         updateBadge();
-        ForumlineAPI.markNotificationRead(id, domain).catch(() => {});
+        ForumlineAPI.markNotificationRead(id).catch(() => {});
       }
 
       $('notifDropdown').classList.add('hidden');

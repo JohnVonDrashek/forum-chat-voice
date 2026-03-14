@@ -236,6 +236,50 @@ CREATE TRIGGER push_dm_notify
   AFTER INSERT ON forumline_direct_messages
   FOR EACH ROW EXECUTE FUNCTION notify_new_dm();
 
+-- Notifications (pushed from forums)
+CREATE TABLE IF NOT EXISTS forumline_notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES forumline_profiles(id) ON DELETE CASCADE,
+  forum_domain TEXT NOT NULL,
+  forum_name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL DEFAULT '',
+  link TEXT NOT NULL DEFAULT '/',
+  read BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_forumline_notifs_user_unread
+  ON forumline_notifications(user_id, created_at DESC) WHERE read = false;
+CREATE INDEX IF NOT EXISTS idx_forumline_notifs_user_all
+  ON forumline_notifications(user_id, created_at DESC);
+
+CREATE OR REPLACE FUNCTION notify_forumline_notification_insert()
+RETURNS trigger AS $$
+BEGIN
+  PERFORM pg_notify('forumline_notification_changes', json_build_object(
+    'id', NEW.id,
+    'user_id', NEW.user_id,
+    'forum_domain', NEW.forum_domain,
+    'forum_name', NEW.forum_name,
+    'type', NEW.type,
+    'title', NEW.title,
+    'body', NEW.body,
+    'link', NEW.link,
+    'read', NEW.read,
+    'created_at', NEW.created_at
+  )::text);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_forumline_notification_insert ON forumline_notifications;
+CREATE TRIGGER trg_forumline_notification_insert
+  AFTER INSERT ON forumline_notifications
+  FOR EACH ROW
+  EXECUTE FUNCTION notify_forumline_notification_insert();
+
 -- ============================================================================
 -- Seed Data
 -- ============================================================================
