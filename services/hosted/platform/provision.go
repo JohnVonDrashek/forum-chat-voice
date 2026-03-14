@@ -107,6 +107,15 @@ func Provision(ctx context.Context, pool *pgxpool.Pool, store *TenantStore, req 
 
 	log.Printf("provisioned forum %q at %s (schema: %s)", req.Name, domain, schemaName)
 
+	// Register with Citus for distributed schema-based sharding.
+	// Must run outside the CREATE SCHEMA transaction. On single-node
+	// this is a no-op; when workers are added later, Citus distributes
+	// the schema across nodes automatically.
+	if _, err := pool.Exec(ctx, "SELECT citus_schema_distribute($1)", schemaName); err != nil {
+		// Non-fatal: Citus may not be installed (e.g. single-tenant dev mode)
+		log.Printf("citus_schema_distribute(%s): %v (non-fatal)", schemaName, err)
+	}
+
 	// Refresh tenant store so the new forum is immediately routable
 	if err := store.refresh(ctx); err != nil {
 		log.Printf("warning: tenant refresh after provision failed: %v", err)

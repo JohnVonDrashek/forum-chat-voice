@@ -1,3 +1,14 @@
+-- Citus extension — enables distributed PostgreSQL for horizontal scaling.
+-- Schema-based sharding distributes tenant schemas across worker nodes
+-- transparently; all existing queries, search_path routing, and triggers
+-- continue to work unchanged.
+CREATE EXTENSION IF NOT EXISTS citus;
+
+-- Enable schema-based sharding persistently (writes to postgresql.auto.conf).
+-- New schemas are automatically distributed across Citus worker nodes.
+ALTER SYSTEM SET citus.enable_schema_based_sharding = on;
+SELECT pg_reload_conf();
+
 -- Platform metadata for multi-tenant hosted forums.
 -- This schema lives in the 'public' search_path of the shared database.
 -- Each hosted forum gets its own schema (forum_{slug}) with the standard
