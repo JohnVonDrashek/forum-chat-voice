@@ -13,6 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug SSH
+        run: |
+          whoami
+          echo "HOME=$HOME"
+          ls -la /home/john/.ssh/id_ed25519 || echo "key not found"
+          ssh -vvv -o StrictHostKeyChecking=no -o BatchMode=yes -i /home/john/.ssh/id_ed25519 root@192.168.1.110 hostname 2>&1 | tail -20
+
       - name: Decrypt and upload env
         run: |
           SOPS_AGE_KEY="${{ secrets.SOPS_AGE_KEY }}" sops -d --input-type dotenv --output-type dotenv deploy/compose/auth/.env.enc > /tmp/auth.env
