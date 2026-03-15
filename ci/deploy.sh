@@ -5,10 +5,15 @@
 # Usage: ci/deploy.sh <service>
 #
 # Services: forumline, hosted, website, logs, auth
+#
+# Secrets are read from deploy/secrets.kdbx via ci/secrets.sh.
+# The master password comes from KEEPASS_PASSWORD env var (CI)
+# or macOS Keychain (local dev).
 
 set -euo pipefail
 
 SERVICE="${1:?Usage: ci/deploy.sh <service>}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 declare -A HOSTS=(
   [forumline]="forumline-prod"
@@ -26,15 +31,22 @@ declare -A PATHS=(
   [auth]="/opt/auth"
 )
 
+# Map service name to KeePass group (services without secrets have no group)
+declare -A SECRET_GROUPS=(
+  [forumline]="forumline-prod"
+  [hosted]="hosted-prod"
+  [auth]="auth-prod"
+)
+
 HOST="${HOSTS[$SERVICE]:?Unknown service: $SERVICE}"
 REMOTE="${PATHS[$SERVICE]}"
 
 echo "=== Deploying $SERVICE to $HOST ==="
 
-# Decrypt and upload .env if service has encrypted secrets
-if [ -f "deploy/compose/$SERVICE/.env.enc" ]; then
-  echo "Decrypting .env..."
-  sops -d --input-type dotenv --output-type dotenv "deploy/compose/$SERVICE/.env.enc" > /tmp/service.env
+# Generate and upload .env from KeePass secrets
+if [ -n "${SECRET_GROUPS[$SERVICE]:-}" ]; then
+  echo "Generating .env from secrets.kdbx..."
+  "$SCRIPT_DIR/secrets.sh" "${SECRET_GROUPS[$SERVICE]}" /tmp/service.env
   scp /tmp/service.env "$HOST:$REMOTE/.env"
   rm -f /tmp/service.env
 fi

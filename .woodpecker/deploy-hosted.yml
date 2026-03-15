@@ -7,13 +7,14 @@ when:
         - "packages/shared-go/**"
         - "deploy/docker/Dockerfile.go-hosted"
         - "deploy/compose/hosted/**"
+        - "deploy/secrets.kdbx"
   - event: manual
 
 steps:
   - name: deploy
     image: bash
     environment:
-      SOPS_AGE_KEY:
-        from_secret: sops_age_key
+      KEEPASS_PASSWORD:
+        from_secret: keepass_password
     commands:
       - ci/deploy.sh hosted

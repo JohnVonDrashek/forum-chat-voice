@@ -1,0 +1,20 @@
+name: Deploy Auth (Zitadel)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/compose/auth/**'
+      - 'secrets.kdbx'
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy
+        run: ci/deploy.sh auth
+        env:
+          KEEPASS_PASSWORD: ${{ secrets.KEEPASS_PASSWORD }}
