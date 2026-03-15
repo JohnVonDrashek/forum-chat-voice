@@ -25,7 +25,7 @@ description = "Secret or key value assignment"
 regex = '''(?i)(client_secret|api_secret|secret_key|smtp_pass|service_role_key)\s*[=:]\s*["']([^"'$]{8,})["']'''
 keywords = ["client_secret", "api_secret", "secret_key", "smtp_pass", "service_role_key"]
 
-# Allow .env.example and .env.enc files — these are safe (placeholders / encrypted)
+# Allow .env.example files and secrets.kdbx (encrypted KeePass database)
 # Allow vmauth.yml — contains env var placeholder (%{VMAUTH_PASSWORD}), not real secrets
 [allowlist]
-paths = ['''\.env\.example$''', '''\.env\.enc$''', '''vmauth\.yml$''', '''go\.sum$''', '''docker-compose\.yml$''', '''docker-compose\.prod\.yml$''']
+paths = ['''\.env\.example$''', '''secrets\.kdbx$''', '''vmauth\.yml$''', '''go\.sum$''', '''docker-compose\.yml$''', '''docker-compose\.prod\.yml$''']

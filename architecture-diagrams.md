@@ -38,9 +38,8 @@ graph TB
     %% Avatar generation
     DiceBear["DiceBear API<br/>avataaars + shapes styles<br/>Deterministic avatars"]
 
-    %% Infrastructure tools (run inside Dagger)
+    %% Infrastructure tools
     OpenTofu["OpenTofu 1.11.5<br/>Cloudflare infra management<br/>State in R2"]
-    SOPS["SOPS + Age<br/>Secrets encryption<br/>.env.enc files"]
 
     %% ═══════════════════════════════════════════════
     %% PROXMOX HOST (The "motherboard" — real physical grouping)
@@ -79,9 +78,8 @@ graph TB
             VLogs["VictoriaLogs<br/>:9428 · 30-day retention<br/>LogsQL · vmui web UI"]
         end
 
-        subgraph CT102["CT 102 · ci-docker · 192.168.1.112"]
-            Woodpecker["Woodpecker CI<br/>:8000 web · :9000 gRPC"]
-            Dagger["Dagger v0.20.1<br/>Containerized CI engine"]
+        subgraph CT109["CT 109 · ci · 192.168.1.112"]
+            GHARunners["GitHub Actions<br/>2x self-hosted runners"]
         end
     end
 
@@ -100,7 +98,7 @@ graph TB
     Cloudflared -->|"*.forumline.net"| Hosted_API
     Cloudflared -->|"auth.forumline.net"| Zitadel
     Cloudflared -->|"forumline.net"| Website_Nginx
-    Cloudflared -->|"ci.forumline.net"| Woodpecker
+    GitHubActions -->|"self-hosted runners"| GHARunners
     ZeroTrust -->|"ssh.forumline.net · CI only"| Proxmox
 
     %% ═══════════════════════════════════════════════
@@ -161,18 +159,14 @@ graph TB
     %% ═══════════════════════════════════════════════
     %% CONNECTIONS — CI/CD
     %% ═══════════════════════════════════════════════
-    GitHubRepos -->|"push webhook"| Woodpecker
-    Woodpecker --> Dagger
-    Dagger -->|"SSH deploy"| CT101
-    Dagger -->|"SSH deploy"| CT104
-    Dagger -->|"SSH deploy"| CT106
-    Dagger -->|"SSH deploy"| CT103
-    Dagger -->|"SSH deploy"| CT105
-    Dagger --> SOPS
-    Dagger --> OpenTofu
+    GitHubRepos -->|"push → GHA"| GitHubActions
+    GitHubActions -->|"SSH deploy"| CT101
+    GitHubActions -->|"SSH deploy"| CT104
+    GitHubActions -->|"SSH deploy"| CT106
+    GitHubActions -->|"SSH deploy"| CT103
+    GitHubActions -->|"SSH deploy"| CT105
     OpenTofu -->|"manages"| Tunnel
     OpenTofu -->|"manages"| ZeroTrust
-    SOPS -->|"decrypts .env.enc"| Dagger
 
     %% ═══════════════════════════════════════════════
     %% CONNECTIONS — Distribution
@@ -188,7 +182,7 @@ graph TB
     style CT106 fill:#16213e,color:#e0e0e0,stroke:#0f3460
     style CT103 fill:#16213e,color:#e0e0e0,stroke:#0f3460
     style CT105 fill:#1a3a1a,color:#e0e0e0,stroke:#2d6a2d
-    style CT102 fill:#3a1a1a,color:#e0e0e0,stroke:#6a2d2d
+    style CT109 fill:#3a1a1a,color:#e0e0e0,stroke:#6a2d2d
 ```
 
 ## Quick Reference
@@ -199,7 +193,7 @@ graph TB
 | `*.forumline.net` | Hosted Multi-Tenant | CT 104 | 192.168.1.107 | Go + Citus |
 | `auth.forumline.net` | Zitadel OIDC | CT 106 | 192.168.1.110 | Zitadel |
 | `forumline.net` | Static Website | CT 103 | 192.168.1.106 | Nginx |
-| `ci.forumline.net` | Woodpecker CI | CT 102 | 192.168.1.112 | Woodpecker |
+| (LAN only) | GHA Runners | CT 109 | 192.168.1.112 | 2x self-hosted |
 | `status.forumline.net` | Uptimer | — | Cloudflare | Workers + D1 |
 | (VPN only) | VictoriaLogs | CT 105 | 192.168.1.108 | VictoriaLogs |
 | `ssh.forumline.net` | SSH Bastion | — | Proxmox host | CI only |
@@ -212,8 +206,8 @@ Voice Room:    Browser → LiveKit Cloud (SFU) ← Browser
 1:1 Call:      Browser ←→ WebRTC P2P (signaled via SSE, ICE via Google STUN)
 Push Notify:   Postgres NOTIFY → Go API → VAPID Web Push → Browser
 Log Pipeline:  Docker Container → Vector Agent → VictoriaLogs (:9428)
-Deploy:        git push → GitHub Repos → Woodpecker → Dagger → SOPS decrypt → SSH to LXC → docker compose up
-Infra Change:  Dagger → OpenTofu → Cloudflare (Tunnel + Zero Trust)
+Deploy:        git push → GitHub Actions → self-hosted runner → secrets.kdbx → SSH to LXC → docker compose up
+Infra Change:  OpenTofu → Cloudflare (Tunnel + Zero Trust)
 Auth:          Any service → Zitadel OIDC (auth.forumline.net) → Postgres
 Avatars:       Go API → Cloudflare R2 → CDN public URL
 Fallback Avs:  Frontend → DiceBear API → SVG (seeded by user/thread ID)

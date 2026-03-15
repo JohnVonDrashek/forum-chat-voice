@@ -5,8 +5,8 @@ pre-commit:
       run: bash .githooks/lockfile-check.sh
       glob: "**/package.json"
 
-    sops-check:
-      run: bash .githooks/sops-check.sh
+    env-check:
+      run: bash .githooks/env-check.sh
       glob: "**/.env*"
 
     gitleaks:

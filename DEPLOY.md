@@ -1,8 +1,6 @@
 # Deployment Guide
 
-All CI/CD pipelines are defined in **Dagger** (`ci/main.go`). GitHub Actions workflows are thin wrappers that trigger on push to `main` and pass secrets to Dagger.
-
-Run any pipeline locally: `dagger call <function> --source .`
+CI/CD runs on **GitHub Actions** with two self-hosted runners on Proxmox (CT 109). Deploy workflows in `.github/workflows/`, deploy script at `ci/deploy.sh`.
 
 ## Production URLs
 
@@ -14,14 +12,12 @@ Run any pipeline locally: `dagger call <function> --source .`
 ## Architecture
 
 ```
-GitHub push/PR → webhook → Woodpecker CI (single LXC, ~130MB idle)
-                              ├── lint/test: runs directly on host (local backend)
-                              └── deploy: SSH to service LXCs (direct LAN)
+GitHub push → GHA workflow → self-hosted runner (CT 109) → SSH to LXC → docker compose up
 ```
 
-## CI/CD Pipelines (Woodpecker)
+## CI/CD Pipelines (GitHub Actions)
 
-Pipelines are defined in `.woodpecker/` as YAML files. The Woodpecker agent runs commands directly on the host (local backend — no containers).
+Workflows in `.github/workflows/`. Runners execute on CT 109 with direct LAN access to all LXCs.
 
 | Pipeline | Trigger | Description |
 |----------|---------|-------------|
@@ -36,34 +32,15 @@ Pipelines are defined in `.woodpecker/` as YAML files. The Woodpecker agent runs
 | `terraform-plan` | PR touching `deploy/terraform/` | Run OpenTofu plan |
 | `terraform-apply` | manual | Run OpenTofu apply |
 
-Deploy logic lives in `ci/deploy.sh` — a shared script that handles sops decrypt, scp, SSH rebuild per service.
+Deploy logic lives in `ci/deploy.sh` — generates `.env` from `secrets.kdbx`, SCPs to LXC, rebuilds.
 
-## Required Woodpecker Secrets
+## Secrets
 
-Add these in the Woodpecker UI (repo settings > secrets):
+All secrets live in `secrets.kdbx` (KeePass, AES-256 encrypted) at the repo root. The master password is stored as the `KEEPASS_PASSWORD` GitHub Actions secret. See `ci/secrets.sh` for the helper script.
 
-- `sops_age_key` — age key for decrypting .env.enc files
-- `github_packages_token` — GitHub token with packages:write scope
-- `tf_state_r2_access_key_id` — R2 access key for OpenTofu state backend
-- `tf_state_r2_secret_access_key` — R2 secret key for OpenTofu state backend
-- `tf_cloudflare_api_token` — Cloudflare API token for tunnel/access management
-- `tf_state_encryption_passphrase` — passphrase for OpenTofu state encryption
+## GitHub Actions Runners
 
-SSH deploy key is installed directly on the Woodpecker agent host (not a CI secret).
-
-## Woodpecker CI Setup
-
-Single LXC runs both the Woodpecker server (Docker) and agent (local backend).
-
-1. Create a Proxmox LXC (Debian 12, 2 cores, 4GB RAM, 32GB disk) with nesting:
-   ```bash
-   pct set <CTID> -features nesting=1
-   ```
-2. Run the setup script: `sudo bash ci/setup-woodpecker.sh`
-3. Create GitHub OAuth App (Homepage: `https://ci.forumline.net`, Callback: `https://ci.forumline.net/authorize`)
-4. Add Cloudflare Tunnel route: `ci.forumline.net` → `http://localhost:8000`
-5. Create `/opt/woodpecker/.env`, start server + agent (see script output)
-6. Log in, activate the repo, add secrets
+Two self-hosted runners on CT 109 (192.168.1.112). Registered at the repo level with labels `self-hosted,linux,x64,forumline`. Tools installed: Go, pnpm, keepassxc-cli, Docker, golangci-lint.
 
 ## Cloudflare Tunnel (Terraform)
 

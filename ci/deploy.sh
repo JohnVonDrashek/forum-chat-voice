@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Deploy a service to production via direct LAN SSH.
-# Called by Woodpecker CI pipelines.
+# Called by GitHub Actions deploy workflows.
 #
 # Usage: ci/deploy.sh <service>
 #

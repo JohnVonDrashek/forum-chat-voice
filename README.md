@@ -17,7 +17,7 @@ Traditional forums lack real-time interaction. Chat apps lack structure. Forumli
 - **Realtime** — SSE via Postgres LISTEN/NOTIFY
 - **Voice** — LiveKit
 - **Storage** — Cloudflare R2 (avatars/images)
-- **Deploy** — Self-hosted Proxmox LXCs, Docker Compose, Cloudflare Tunnel, Dagger CI/CD
+- **Deploy** — Self-hosted Proxmox LXCs, Docker Compose, Cloudflare Tunnel, GitHub Actions
 
 ## Monorepo Layout
 
@@ -62,7 +62,7 @@ pnpm format         # Prettier
 
 ## Deployment
 
-All services are self-hosted on Proxmox LXCs with Docker Compose, exposed via Cloudflare Tunnel. CI/CD pipelines are defined in Dagger (`ci/main.go`) and triggered by thin GitHub Actions wrappers on push to `main`. Run any pipeline locally with `dagger call <function> --source .`.
+All services are self-hosted on Proxmox LXCs with Docker Compose, exposed via Cloudflare Tunnel. CI/CD runs on GitHub Actions with self-hosted runners. Secrets managed via KeePass (`secrets.kdbx`).
 
 ## License
 
