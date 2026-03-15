@@ -44,7 +44,8 @@ packages/*/src/**/*.js.map
 *.png
 
 # Deploy secrets live in secrets.kdbx, never commit .env files
-deploy/compose/**/.env
+**/.env
+!.env.example
 
 # Wrangler local state
 .wrangler/
