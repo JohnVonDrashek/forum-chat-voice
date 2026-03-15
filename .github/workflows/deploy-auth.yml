@@ -13,6 +13,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure SSH for auth-prod
+        run: |
+          grep -q "auth-prod" ~/.ssh/config 2>/dev/null || cat >> ~/.ssh/config << 'SSHEOF'
+
+          Host auth-prod
+            HostName 192.168.1.110
+            User root
+            StrictHostKeyChecking no
+          SSHEOF
+
       - name: Decrypt and upload env
         run: |
           SOPS_AGE_KEY="${{ secrets.SOPS_AGE_KEY }}" sops -d --input-type dotenv --output-type dotenv deploy/compose/auth/.env.enc > /tmp/auth.env
