@@ -35,12 +35,6 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "forumline" {
       service  = "http://192.168.1.107:3000"
     }
 
-    # Woodpecker CI — ci.forumline.net
-    ingress_rule {
-      hostname = "ci.forumline.net"
-      service  = "http://192.168.1.112:8000"
-    }
-
     # SSH access for CI deploys — single bastion on Proxmox host
     # Developer SSH goes through WireGuard VPN instead
     ingress_rule {
