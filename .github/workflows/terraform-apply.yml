@@ -12,8 +12,12 @@ jobs:
       - name: Install OpenTofu
         run: |
           if ! command -v tofu &>/dev/null; then
-            curl -fsSL https://get.opentofu.org/install-opentofu.sh | bash -s -- --install-method standalone --opentofu-version 1.11.5 --install-path "$HOME/.local/bin"
-            echo "$HOME/.local/bin" >> $GITHUB_PATH
+            mkdir -p "$HOME/.local/bin"
+            curl -fsSL "https://github.com/opentofu/opentofu/releases/download/v1.11.5/tofu_1.11.5_linux_amd64.zip" -o /tmp/tofu.zip
+            unzip -o /tmp/tofu.zip tofu -d "$HOME/.local/bin"
+            chmod +x "$HOME/.local/bin/tofu"
+            rm /tmp/tofu.zip
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           fi
 
       - name: Run OpenTofu apply
