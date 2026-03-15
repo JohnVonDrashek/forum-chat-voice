@@ -1,0 +1,27 @@
+name: Split Read-Only Repos
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/shared-go/**'
+      - 'services/forum/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  split:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Split via Dagger
+        run: >-
+          dagger -m ci call split-repos --source .
+          --split-repo-token env:SPLIT_REPO_TOKEN
+        env:
+          SPLIT_REPO_TOKEN: ${{ secrets.SPLIT_REPO_TOKEN }}
