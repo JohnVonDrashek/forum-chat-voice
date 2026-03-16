@@ -32,7 +32,7 @@ for HOST_LABEL in "${!AGENT_HOSTS[@]}"; do
   fi
 
   # Clean up orphaned syslog daemon.json if present (from reverted a6665b3)
-  ssh "root@$LXC_IP" 'if [ -f /etc/docker/daemon.json ]; then rm /etc/docker/daemon.json && systemctl restart docker && echo "Removed orphaned daemon.json and restarted Docker"; fi'
+  ssh "root@$LXC_IP" 'if [ -f /etc/docker/daemon.json ]; then rm /etc/docker/daemon.json && systemctl restart docker && echo "Removed orphaned daemon.json, restarting Docker..." && while ! docker info >/dev/null 2>&1; do sleep 1; done && echo "Docker ready"; fi'
 
   scp "$REPO_ROOT/services/logs/agent/docker-compose.yml" "root@$LXC_IP:/opt/logs-agent/docker-compose.yml"
   scp /tmp/vector.toml "root@$LXC_IP:/opt/logs-agent/vector.toml"
