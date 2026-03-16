@@ -15,17 +15,22 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o forumline ./cmd/forumline/
 # ---- Frontend build stage ----
 FROM node:20-slim AS frontend-build
 
-RUN corepack enable && corepack prepare pnpm@10.6.5 --activate && npm install -g vite
+RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
 
 WORKDIR /app
 
-# Set up pnpm workspace so @forumline/client-sdk resolves
+# Copy workspace config and package sources
 COPY pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY packages/client-sdk/package.json packages/client-sdk/package.json
+COPY services/forumline-web/package.json services/forumline-web/package.json
+
+RUN pnpm install --ignore-scripts
+
+# Copy source files after deps are cached
 COPY packages/client-sdk/ packages/client-sdk/
 COPY services/forumline-web/ services/forumline-web/
 
-RUN pnpm install --ignore-scripts --frozen-lockfile && \
-    pnpm --filter forumline-central-services run build
+RUN cd services/forumline-web && npx vite build
 
 # ---- Production stage ----
 FROM alpine:3.21
