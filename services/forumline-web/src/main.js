@@ -47,7 +47,7 @@ import { initRouter, pushState, consumePendingRoute } from './router.js';
 // API modules
 import { ForumlineAPI } from './api/client.js';
 import { ForumlineAuth } from './api/auth.js';
-import { DmSSE } from './api/dm-sse.js';
+import { EventStream } from './api/event-stream.js';
 import { DmStore } from './api/dm-store.js';
 import { PresenceTracker } from './api/presence.js';
 import { ForumStore } from './api/forum-store.js';
@@ -190,7 +190,7 @@ ForumlineAuth.onAuthStateChange((event, session) => {
       _updateUserDisplay(session);
       _authHasRendered = true;
     }
-    DmSSE.reconnect();
+    EventStream.reconnect();
     CallManager.reconnectCallSSE();
   } else if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
     if (session) {
@@ -240,7 +240,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('beforeunload', () => {
-  DmSSE.disconnect();
+  EventStream.disconnect();
 });
 
 // ========== INITIALIZE ALL MODULES ==========

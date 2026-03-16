@@ -2,7 +2,7 @@
 // Conversation store with real-time SSE updates and polling fallback.
 
 import { ForumlineAPI } from './client.js';
-import { DmSSE } from './dm-sse.js';
+import { EventStream } from './event-stream.js';
 
 let conversations = [];
 let initialLoad = true;
@@ -44,7 +44,7 @@ function startUpdates() {
   refCount++;
   if (refCount === 1) {
     fetchConversations();
-    sseUnsub = DmSSE.subscribe(() => {
+    sseUnsub = EventStream.subscribeDm(() => {
       if (sseDebounce) clearTimeout(sseDebounce);
       sseDebounce = setTimeout(fetchConversations, 200);
     });

@@ -2,10 +2,11 @@ import { $ } from '../lib/utils.js';
 import { avatarUrl } from '../lib/avatar.js';
 import { ForumlineAPI } from '../api/client.js';
 import { ForumStore } from '../api/forum-store.js';
+import { EventStream } from '../api/event-stream.js';
 
 let _notifications = [];
 let _loading = false;
-let _eventSource = null;
+let _notifUnsub = null;
 
 function timeAgo(timestamp) {
   const now = new Date();
@@ -105,44 +106,26 @@ async function fetchNotifications() {
   renderNotifications();
 }
 
-function connectSSE() {
-  if (_eventSource) return;
-  const token = ForumlineAPI.getToken();
-  if (!token) return;
+function connectNotifications() {
+  if (_notifUnsub) return;
 
-  _eventSource = new EventSource(`/api/notifications/stream?access_token=${encodeURIComponent(token)}`);
-
-  _eventSource.onmessage = (event) => {
-    try {
-      const notif = JSON.parse(event.data);
-      // Add to the front of the list
-      _notifications.unshift({
-        id: notif.id,
-        type: notif.type,
-        title: notif.title,
-        body: notif.body,
-        link: notif.link || '/',
-        read: false,
-        timestamp: notif.created_at,
-        forum_domain: notif.forum_domain,
-        forum_name: notif.forum_name,
-      });
-      updateBadge();
-      // Re-render if dropdown is open
-      if (!$('notifDropdown')?.classList.contains('hidden')) {
-        renderNotifications();
-      }
-    } catch (e) {
-      // ignore parse errors (heartbeats etc)
+  _notifUnsub = EventStream.subscribeNotification((notif) => {
+    _notifications.unshift({
+      id: notif.id,
+      type: notif.type,
+      title: notif.title,
+      body: notif.body,
+      link: notif.link || '/',
+      read: false,
+      timestamp: notif.created_at,
+      forum_domain: notif.forum_domain,
+      forum_name: notif.forum_name,
+    });
+    updateBadge();
+    if (!$('notifDropdown')?.classList.contains('hidden')) {
+      renderNotifications();
     }
-  };
-
-  _eventSource.onerror = () => {
-    _eventSource?.close();
-    _eventSource = null;
-    // Reconnect after 5s
-    setTimeout(connectSSE, 5000);
-  };
+  });
 }
 
 export function initNotifications() {
@@ -175,6 +158,6 @@ export function startNotificationUpdates() {
     updateBadge(data.count);
   }).catch(() => {});
 
-  // Connect SSE for real-time updates
-  connectSSE();
+  // Subscribe to unified event stream for real-time updates
+  connectNotifications();
 }

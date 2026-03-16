@@ -4,7 +4,7 @@ import { escapeHtml, renderMarkdown } from '../lib/markdown.js';
 import store from '../state/store.js';
 import * as data from '../state/data.js';
 import { ForumlineAPI } from '../api/client.js';
-import { DmSSE } from '../api/dm-sse.js';
+import { EventStream } from '../api/event-stream.js';
 import { DmStore } from '../api/dm-store.js';
 import { PresenceTracker } from '../api/presence.js';
 import { CallManager } from '../api/calls.js';
@@ -113,7 +113,7 @@ export function showDm(dmId) {
     }).catch(err => console.error('[DM] Failed to fetch conversation:', err));
 
     // Subscribe to SSE for this conversation
-    _dmSseUnsub = DmSSE.subscribe((event) => {
+    _dmSseUnsub = EventStream.subscribeDm((event) => {
       if (event.conversation_id && event.conversation_id !== dmId) return;
       if (_dmSseDebounce) clearTimeout(_dmSseDebounce);
       _dmSseDebounce = setTimeout(() => {

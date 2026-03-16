@@ -38,6 +38,7 @@ func newRouter(s *store.Store, sseHub *shared.SSEHub) *http.ServeMux {
 		APISecret: os.Getenv("LIVEKIT_API_SECRET"),
 	}
 	callH := handler.NewCallHandler(callSvc, sseHub, lkCfg)
+	eventsH := handler.NewEventsHandler(sseHub)
 	pushH := handler.NewPushHandler(s, pushSvc)
 	activityH := handler.NewActivityHandler(s)
 	notifH := handler.NewNotificationHandler(s, sseHub)
@@ -121,6 +122,9 @@ func newRouter(s *store.Store, sseHub *shared.SSEHub) *http.ServeMux {
 
 	// Profile search
 	mux.Handle("GET /api/profiles/search", use(identityH.HandleSearchProfiles, auth))
+
+	// Unified event stream (DMs + notifications + calls in one SSE connection)
+	mux.Handle("GET /api/events/stream", use(eventsH.HandleStream, auth))
 
 	// Calls (lifecycle via SSE, media via LiveKit)
 	mux.Handle("GET /api/calls/stream", use(callH.HandleStream, auth))

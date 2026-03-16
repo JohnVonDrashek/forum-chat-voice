@@ -185,6 +185,100 @@ func ServeSSE(w http.ResponseWriter, r *http.Request, client *SSEClient) {
 	}
 }
 
+// SSEMultiClient fans multiple channel subscriptions into a single HTTP response.
+// Each event is tagged with the SSE "event:" field so clients can use addEventListener.
+type SSEMultiClient struct {
+	Entries []SSEMultiEntry
+	Send    chan SSETaggedEvent
+	Done    chan struct{}
+}
+
+// SSEMultiEntry describes one channel subscription within a multi-client.
+type SSEMultiEntry struct {
+	Channel    string
+	EventType  string // SSE event: field (e.g. "dm", "notification", "call")
+	FilterFunc func(data map[string]interface{}) bool
+}
+
+// SSETaggedEvent carries a payload with its event type for ServeSSEMulti.
+type SSETaggedEvent struct {
+	EventType string
+	Data      []byte
+}
+
+// RegisterMulti registers an SSEMultiClient by creating internal per-channel
+// clients that fan into the shared Send channel.
+func (h *SSEHub) RegisterMulti(mc *SSEMultiClient) []*SSEClient {
+	clients := make([]*SSEClient, len(mc.Entries))
+	for i, entry := range mc.Entries {
+		client := &SSEClient{
+			Channel:    entry.Channel,
+			FilterFunc: entry.FilterFunc,
+			Send:       make(chan []byte, 32),
+			Done:       mc.Done,
+		}
+		clients[i] = client
+		h.Register(client)
+
+		// Fan each internal client's Send into the multi-client's tagged Send
+		go func(c *SSEClient, eventType string) {
+			for {
+				select {
+				case <-mc.Done:
+					return
+				case data, ok := <-c.Send:
+					if !ok {
+						return
+					}
+					select {
+					case mc.Send <- SSETaggedEvent{EventType: eventType, Data: data}:
+					case <-mc.Done:
+						return
+					}
+				}
+			}
+		}(client, entry.EventType)
+	}
+	return clients
+}
+
+// UnregisterMulti removes all internal clients for a multi-client.
+func (h *SSEHub) UnregisterMulti(clients []*SSEClient) {
+	for _, c := range clients {
+		h.Unregister(c)
+	}
+}
+
+// ServeSSEMulti writes tagged SSE events to the response from an SSEMultiClient.
+func ServeSSEMulti(w http.ResponseWriter, r *http.Request, mc *SSEMultiClient) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+	flusher.Flush()
+
+	ctx := r.Context()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-mc.Done:
+			return
+		case tagged := <-mc.Send:
+			if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", tagged.EventType, tagged.Data); err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
+}
+
 func matchesFilter(data map[string]interface{}, filter map[string]string) bool {
 	for key, expected := range filter {
 		val, ok := data[key]

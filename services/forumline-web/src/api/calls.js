@@ -5,6 +5,7 @@
 import { ForumlineAPI } from './client.js';
 import { avatarUrl } from '../lib/avatar.js';
 import { NativeBridge } from './native-bridge.js';
+import { EventStream } from './event-stream.js';
 
 const RING_TIMEOUT_MS = 30000;
 
@@ -18,10 +19,8 @@ const callState = {
 
 let room = null;
 let livekitModule = null;
-let callSignalSSE = null;
 let callTimer = null;
-let sseReconnectTimer = null;
-let sseReconnectAttempts = 0;
+let callSseUnsub = null;
 let durationInterval = null;
 
 const callStateListeners = [];
@@ -42,32 +41,16 @@ async function getLiveKit() {
   return livekitModule;
 }
 
-// --- SSE for call lifecycle events ---
+// --- Call signal subscription via unified event stream ---
 function connectCallSSE() {
-  if (callSignalSSE) return;
-  const token = ForumlineAPI.getToken();
-  if (!token) return;
-  callSignalSSE = new EventSource('/api/calls/stream?access_token=' + encodeURIComponent(token));
-  callSignalSSE.onopen = () => { sseReconnectAttempts = 0; };
-  callSignalSSE.onmessage = (event) => {
-    try {
-      const signal = JSON.parse(event.data);
-      handleCallSignal(signal);
-    } catch (err) { console.error('[Call] SSE parse error:', err); }
-  };
-  callSignalSSE.onerror = () => {
-    callSignalSSE?.close(); callSignalSSE = null;
-    if (!ForumlineAPI.getToken()) return;
-    const base = Math.min(1000 * Math.pow(2, sseReconnectAttempts), 30000);
-    sseReconnectAttempts++;
-    sseReconnectTimer = setTimeout(connectCallSSE, base + Math.random() * base * 0.3);
-  };
+  if (callSseUnsub) return;
+  callSseUnsub = EventStream.subscribeCall((signal) => {
+    handleCallSignal(signal);
+  });
 }
 
 function reconnectCallSSE() {
-  if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
-  callSignalSSE?.close(); callSignalSSE = null;
-  sseReconnectAttempts = 0;
+  if (callSseUnsub) { callSseUnsub(); callSseUnsub = null; }
   connectCallSSE();
 }
 
@@ -212,8 +195,7 @@ function callCleanup() {
 
 function destroyCallManager() {
   callCleanup();
-  if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
-  if (callSignalSSE) { callSignalSSE.close(); callSignalSSE = null; }
+  if (callSseUnsub) { callSseUnsub(); callSseUnsub = null; }
 }
 
 // --- Ringtone (Web Audio, no external files) ---
