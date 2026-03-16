@@ -1,4 +1,5 @@
 import { $ } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 import { escapeHtml, renderMarkdown } from '../lib/markdown.js';
 import store from '../state/store.js';
 import * as data from '../state/data.js';
@@ -67,12 +68,12 @@ export function showDm(dmId) {
         ? cached.name
         : others.map(m => m.displayName || m.username).join(', ') || 'Chat';
       const seed = cached.isGroup ? (cached.name || cached.id) : (others[0]?.username || cached.id);
-      const avatarUrl = !cached.isGroup && others[0]?.avatarUrl
+      const convoAvatar = !cached.isGroup && others[0]?.avatarUrl
         ? others[0].avatarUrl
-        : `https://api.dicebear.com/7.x/${cached.isGroup ? 'shapes' : 'avataaars'}/svg?seed=${seed}`;
+        : avatarUrl(seed, cached.isGroup ? 'shapes' : 'avataaars');
 
       $('dmName').textContent = displayName;
-      $('dmAvatar').src = avatarUrl;
+      $('dmAvatar').src = convoAvatar;
       // Use PresenceTracker to set online indicator for 1:1 conversations
       const otherForPresence = !cached.isGroup && others.length === 1 ? others[0].id : null;
       $('dmOnline').style.display = otherForPresence && PresenceTracker.isOnline(otherForPresence) ? 'block' : 'none';
@@ -96,12 +97,12 @@ export function showDm(dmId) {
         ? convo.name
         : others.map(m => m.displayName || m.username).join(', ') || 'Chat';
       const seed = convo.isGroup ? (convo.name || convo.id) : (others[0]?.username || convo.id);
-      const avatarUrl = !convo.isGroup && others[0]?.avatarUrl
+      const convoAvatar = !convo.isGroup && others[0]?.avatarUrl
         ? others[0].avatarUrl
-        : `https://api.dicebear.com/7.x/${convo.isGroup ? 'shapes' : 'avataaars'}/svg?seed=${seed}`;
+        : avatarUrl(seed, convo.isGroup ? 'shapes' : 'avataaars');
 
       $('dmName').textContent = displayName;
-      $('dmAvatar').src = avatarUrl;
+      $('dmAvatar').src = convoAvatar;
       // Update presence indicator from PresenceTracker
       const otherPresence = !convo.isGroup && others.length === 1 ? others[0].id : null;
       const onlineEl = $('dmOnline');
@@ -137,7 +138,7 @@ export function showDm(dmId) {
   const dm = data.dms.find(d => d.id === dmId);
   if (!dm) return;
   $('dmName').textContent = dm.name;
-  $('dmAvatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${dm.seed}`;
+  $('dmAvatar').src = avatarUrl(dm.seed);
   $('dmOnline').style.display = dm.online ? 'block' : 'none';
   _showView('dmView');
   renderMessages(dmId);
@@ -179,7 +180,7 @@ export function renderMessages(dmId) {
   // Render base messages
   el.innerHTML = dmMessages.map(m => `
     <div class="message-item ${m.from === 'me' ? 'sent' : ''}">
-      ${m.from !== 'me' ? `<img class="avatar-sm" src="https://api.dicebear.com/7.x/avataaars/svg?seed=${dm?.seed}" alt="">` : ''}
+      ${m.from !== 'me' ? `<img class="avatar-sm" src="${avatarUrl(dm?.seed)}" alt="">` : ''}
       <div class="message-bubble">${renderMarkdown(m.content)}</div>
       <span class="message-time">${m.time}</span>
     </div>
@@ -248,7 +249,7 @@ async function _fetchAndRenderMessages(dmId, el, isInitial) {
 
       return `
         <div class="message-item ${isMe ? 'sent' : ''}">
-          ${!isMe ? `<img class="avatar-sm" src="${senderMember?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(senderSeed)}" alt="" onerror="this.style.display='none'">` : ''}
+          ${!isMe ? `<img class="avatar-sm" src="${senderMember?.avatarUrl || avatarUrl(senderSeed)}" alt="" onerror="this.style.display='none'">` : ''}
           <div>
             ${senderLabel}
             <div class="message-bubble">${renderMarkdown(m.content)}</div>
@@ -292,7 +293,7 @@ async function _loadOlderMessages(dmId) {
       const timeStr = _formatMsgTime(m.created_at);
       return `
         <div class="message-item ${isMe ? 'sent' : ''}">
-          ${!isMe ? `<img class="avatar-sm" src="${senderMember?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(senderSeed)}" alt="" onerror="this.style.display='none'">` : ''}
+          ${!isMe ? `<img class="avatar-sm" src="${senderMember?.avatarUrl || avatarUrl(senderSeed)}" alt="" onerror="this.style.display='none'">` : ''}
           <div class="message-bubble">${renderMarkdown(m.content)}</div>
           <span class="message-time">${timeStr}</span>
         </div>
@@ -321,8 +322,8 @@ export function initConversation(deps) {
     const others = (_currentConvoMeta.members || []).filter(m => m.id !== myId);
     if (others.length !== 1) return; // only 1:1 calls
     const remote = others[0];
-    const avatarUrl = remote.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(remote.username || remote.id)}`;
-    CallManager.initiateCall(store.currentDm, remote.id, remote.displayName || remote.username, avatarUrl);
+    const remoteAvatar = remote.avatarUrl || avatarUrl(remote.username || remote.id);
+    CallManager.initiateCall(store.currentDm, remote.id, remote.displayName || remote.username, remoteAvatar);
   });
 
   // DM send button handler (with real API optimistic sends + mock fallback)

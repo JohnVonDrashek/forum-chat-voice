@@ -3,6 +3,7 @@
 // Server is the source of truth; localStorage is a cache.
 
 import { ForumlineAPI } from './client.js';
+import { avatarUrl } from '../lib/avatar.js';
 
 export const ForumStore = {
   _accessToken: null,
@@ -154,7 +155,7 @@ export const ForumStore = {
     const avEl = document.getElementById('webviewAvatar');
     const nmEl = document.getElementById('webviewForumName');
     const mtEl = document.getElementById('webviewForumMeta');
-    if (avEl) avEl.src = forum.icon_url ? (forum.icon_url.startsWith('/') ? forum.web_base + forum.icon_url : forum.icon_url) : 'https://api.dicebear.com/7.x/shapes/svg?seed=' + forum.seed;
+    if (avEl) avEl.src = forum.icon_url ? (forum.icon_url.startsWith('/') ? forum.web_base + forum.icon_url : forum.icon_url) : avatarUrl(forum.seed, 'shapes');
     if (nmEl) nmEl.textContent = forum.name;
     if (mtEl) mtEl.textContent = forum.domain;
     if (spinner) spinner.classList.remove('hidden');

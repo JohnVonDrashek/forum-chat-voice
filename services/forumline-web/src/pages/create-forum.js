@@ -1,4 +1,5 @@
 import { $ } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 import store from '../state/store.js';
 import * as data from '../state/data.js';
 import { ForumlineAPI } from '../api/client.js';
@@ -29,7 +30,7 @@ export function initCreateForum(deps) {
     // Auto-generate subdomain
     const subdomain = e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     $('createForumSubdomain').value = subdomain;
-    $('previewAvatar').src = `https://api.dicebear.com/7.x/shapes/svg?seed=${subdomain || 'new-forum'}`;
+    $('previewAvatar').src = avatarUrl(subdomain || 'new-forum', 'shapes');
 
     if (subdomain) {
       $('subdomainStatus').classList.remove('hidden');

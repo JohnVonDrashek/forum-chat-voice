@@ -1,4 +1,5 @@
 import { $ } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 import store from '../state/store.js';
 import { ForumlineAPI } from '../api/client.js';
 import { ForumlineAuth } from '../api/auth.js';
@@ -19,7 +20,7 @@ export function showSettings() {
     Identity.getProfile().then(profile => {
       const userId = profile.forumline_id || ForumlineAPI.getUserId();
       const displayName = profile.display_name || profile.username || '';
-      const avatarUrl = profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`;
+      const profileAvatar = profile.avatar_url || avatarUrl(userId);
 
       const nameInput = $('settingsDisplayName');
       if (nameInput) nameInput.value = displayName;
@@ -32,7 +33,7 @@ export function showSettings() {
       if (bioInput) bioInput.value = profile.bio || profile.status_message || '';
 
       const avatarImg = document.querySelector('.settings-avatar');
-      if (avatarImg) avatarImg.src = avatarUrl;
+      if (avatarImg) avatarImg.src = profileAvatar;
 
       const onlineSelect = $('onlineStatusSelect');
       if (onlineSelect && profile.online_status) onlineSelect.value = profile.online_status;

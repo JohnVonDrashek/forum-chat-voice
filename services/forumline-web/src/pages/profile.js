@@ -1,4 +1,5 @@
 import { $, plural } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 import store from '../state/store.js';
 import * as data from '../state/data.js';
 import { Identity } from '../api/identity.js';
@@ -63,7 +64,7 @@ export function showProfile(username) {
       // Show placeholder while loading
       $('profileName').textContent = profileKey;
       $('profileBio').textContent = '';
-      $('profileAvatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUserId || profileKey}`;
+      $('profileAvatar').src = avatarUrl(currentUserId || profileKey);
       $('profileForumCount').textContent = '—';
       $('profileThreadCount').textContent = '—';
       $('profileReplyCount').textContent = '—';
@@ -105,12 +106,12 @@ export function clearIdentityProfile() {
 function _renderApiProfileData(profile, currentUserId, profileKey, _isOwnProfile) {
   const userId = profile.forumline_id || currentUserId;
   const displayName = profile.display_name || profile.username || profileKey;
-  const avatarUrl = profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`;
+  const profileAvatar = profile.avatar_url || avatarUrl(userId);
   const bio = profile.bio || profile.status_message || '';
 
   $('profileName').textContent = displayName;
   $('profileBio').textContent = bio;
-  $('profileAvatar').src = avatarUrl;
+  $('profileAvatar').src = profileAvatar;
 
   // Stats — API doesn't currently return these, so show '—' placeholders
   $('profileForumCount').textContent = '—';
@@ -133,7 +134,7 @@ function _renderProfileData(profile, username, isOwnProfile) {
     $('profileName').textContent = profile.name || profile.display_name || username;
     $('profileBio').textContent = profile.bio || '';
     const seed = isOwnProfile && currentUserId ? currentUserId : (profile.seed || username);
-    $('profileAvatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+    $('profileAvatar').src = avatarUrl(seed);
     $('profileForumCount').textContent = profile.forums || 0;
     $('profileThreadCount').textContent = profile.threads || 0;
     $('profileReplyCount').textContent = profile.replies || 0;
@@ -141,7 +142,7 @@ function _renderProfileData(profile, username, isOwnProfile) {
   } else {
     $('profileName').textContent = username;
     $('profileBio').textContent = '';
-    $('profileAvatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`;
+    $('profileAvatar').src = avatarUrl(username);
     $('profileForumCount').textContent = '0';
     $('profileThreadCount').textContent = '0';
     $('profileReplyCount').textContent = '0';
@@ -200,7 +201,7 @@ export function renderProfileTab(tab, username) {
       .filter(a => !username || a.user === username)
       .map(a => `
         <div class="activity-item">
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${a.seed}" alt="">
+          <img src="${avatarUrl(a.seed)}" alt="">
           <div>
             <div class="activity-text">${a.text}</div>
             <div class="activity-time">${a.time}</div>
@@ -214,7 +215,7 @@ export function renderProfileTab(tab, username) {
     } else {
       el.innerHTML = userThreads.map(t => `
         <div class="thread-item" data-thread="${t.id}" tabindex="0" role="button" style="cursor:pointer;">
-          <img class="thread-avatar" src="https://api.dicebear.com/7.x/shapes/svg?seed=${t.id}" alt="">
+          <img class="thread-avatar" src="${avatarUrl(t.id, 'shapes')}" alt="">
           <div class="thread-info">
             <div class="thread-title">${t.title}</div>
             <div class="thread-snippet">${t.snippet}</div>
@@ -233,7 +234,7 @@ export function renderProfileTab(tab, username) {
   } else if (tab === 'forums') {
     el.innerHTML = data.forums.map(f => `
       <div class="forum-item" data-forum="${f.id}" style="border-left:none;padding:10px 0;cursor:pointer;" tabindex="0" role="button">
-        <img src="https://api.dicebear.com/7.x/shapes/svg?seed=${f.seed}" alt="">
+        <img src="${avatarUrl(f.seed, 'shapes')}" alt="">
         <div class="forum-item-info">
           <div class="forum-item-name">${f.name}</div>
           <div class="forum-item-count">${plural(f.members, 'member')}</div>

@@ -3,6 +3,7 @@
 // signaling via SSE (lifecycle events only — media handled by LiveKit).
 
 import { ForumlineAPI } from './client.js';
+import { avatarUrl } from '../lib/avatar.js';
 import { NativeBridge } from './native-bridge.js';
 
 const RING_TIMEOUT_MS = 30000;
@@ -302,10 +303,10 @@ function renderCallUI() {
       document.body.appendChild(el);
     }
     el.classList.remove('hidden');
-    const avatarUrl = info.remoteAvatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(info.remoteDisplayName);
+    const callAvatar = info.remoteAvatarUrl || avatarUrl(info.remoteDisplayName);
     const isIncoming = s === 'ringing-incoming';
     el.innerHTML =
-      '<img src="' + avatarUrl + '" alt="" style="width:56px;height:56px;border-radius:50%;" onerror="this.style.display=\'none\'">' +
+      '<img src="' + callAvatar + '" alt="" style="width:56px;height:56px;border-radius:50%;" onerror="this.style.display=\'none\'">' +
       '<div style="font-size:0.95rem;font-weight:600;color:white;">' + escapeHtml(info.remoteDisplayName) + '</div>' +
       '<div style="font-size:0.75rem;color:rgba(255,255,255,0.5);">' + (isIncoming ? 'Incoming call' : 'Calling...') + '</div>' +
       '<div style="display:flex;gap:1rem;margin-top:0.5rem;">' +

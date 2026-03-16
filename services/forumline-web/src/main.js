@@ -6,6 +6,7 @@ import './styles/layout.css';
 import './styles/components.css';
 
 import { $ } from './lib/utils.js';
+import { avatarUrl } from './lib/avatar.js';
 import { initSafeStorage } from './lib/storage.js';
 import { setTheme, initThemePicker } from './lib/theme.js';
 import { initAccessibility } from './lib/a11y.js';
@@ -136,17 +137,17 @@ function _updateUserDisplay(session) {
   const dropdownAvatar = document.querySelector('.user-dropdown-header img');
   if (dropdownName) dropdownName.textContent = username;
   if (dropdownEmail) dropdownEmail.textContent = email;
-  if (dropdownAvatar) dropdownAvatar.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + seed;
+  if (dropdownAvatar) dropdownAvatar.src = avatarUrl(seed);
 
   const userMenuAvatar = document.querySelector('#userMenu img');
-  if (userMenuAvatar) userMenuAvatar.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + seed;
+  if (userMenuAvatar) userMenuAvatar.src = avatarUrl(seed);
 
   const userMenuName = document.querySelector('#userMenu .username');
   if (userMenuName) userMenuName.textContent = username;
 
   // Sidebar user display
   const sidebarAvatar = $('sidebarAvatar');
-  if (sidebarAvatar) sidebarAvatar.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + seed;
+  if (sidebarAvatar) sidebarAvatar.src = avatarUrl(seed);
   const sidebarUsername = $('sidebarUsername');
   if (sidebarUsername) sidebarUsername.textContent = username;
 
@@ -156,7 +157,7 @@ function _updateUserDisplay(session) {
 
   // Reply box avatar
   const replyAvatar = $('replyAvatar');
-  if (replyAvatar) replyAvatar.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + seed;
+  if (replyAvatar) replyAvatar.src = avatarUrl(seed);
 }
 
 function _startDmStoreIfAuth() {

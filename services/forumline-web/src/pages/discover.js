@@ -1,4 +1,5 @@
 import { $, plural } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 import { escapeHtml } from '../lib/markdown.js';
 import store from '../state/store.js';
 import { ForumlineAPI } from '../api/client.js';
@@ -21,7 +22,7 @@ function renderDiscoverCard(f, showJoined) {
   const isJoined = ForumStore.forums.some(rf => rf.domain === f.domain);
   const iconUrl = f.icon_url
     ? (f.icon_url.startsWith('/') ? (f.web_base || '') + f.icon_url : f.icon_url)
-    : `https://api.dicebear.com/7.x/shapes/svg?seed=${f.domain || f.seed || 'unknown'}`;
+    : avatarUrl(f.domain || f.seed || 'unknown', 'shapes');
   const banner = f.screenshot_url
     ? `background-image:url(${f.screenshot_url});background-size:cover;background-position:center;`
     : `background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)`;

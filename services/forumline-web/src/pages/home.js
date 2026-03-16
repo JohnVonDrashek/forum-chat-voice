@@ -1,4 +1,5 @@
 import { $ } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 import store from '../state/store.js';
 import { ForumlineAPI } from '../api/client.js';
 import { ForumStore } from '../api/forum-store.js';
@@ -53,14 +54,14 @@ export function renderActivityFeed() {
     }
 
     el.innerHTML = items.map(a => {
-      const avatarUrl = a.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(a.author)}`;
+      const itemAvatar = a.avatar_url || avatarUrl(a.author);
       const actionText = a.action === 'posted'
         ? `posted "${a.thread_title}"`
         : `replied in "${a.thread_title}"`;
 
       return `
         <div class="activity-item" data-domain="${a.forum_domain || ''}" data-thread="${a.thread_id || ''}">
-          <img src="${avatarUrl}" alt="">
+          <img src="${itemAvatar}" alt="">
           <div>
             <div class="activity-text"><strong>${a.author}</strong> ${actionText} in <span class="activity-forum">${a.forum_name}</span></div>
             <div class="activity-time">${timeAgo(a.timestamp)}</div>

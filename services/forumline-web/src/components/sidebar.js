@@ -1,4 +1,5 @@
 import { $, plural } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 import { escapeHtml } from '../lib/markdown.js';
 import store from '../state/store.js';
 import { ForumlineAPI } from '../api/client.js';
@@ -82,7 +83,7 @@ export function renderForumList() {
   el.innerHTML = forums.map(f => {
     const iconUrl = f.icon_url
       ? (f.icon_url.startsWith('/') ? (f.web_base || '') + f.icon_url : f.icon_url)
-      : `https://api.dicebear.com/7.x/shapes/svg?seed=${f.seed || f.domain || 'unknown'}`;
+      : avatarUrl(f.seed || f.domain || 'unknown', 'shapes');
     const forumId = f.id || f.domain;
     return `
     <div class="forum-item ${currentForum === forumId ? 'active' : ''}" data-forum="${forumId}" ${f.isReal ? `data-domain="${f.domain}"` : ''} tabindex="0" role="listitem" aria-label="${f.name}${f.unread > 0 ? ', ' + f.unread + ' unread' : ''}">
@@ -159,9 +160,9 @@ export function renderDmList() {
         ? c.name
         : others.map(m => m.displayName || m.username).join(', ') || 'Chat';
       const seed = c.isGroup ? (c.name || c.id) : (others[0]?.username || c.id);
-      const avatarUrl = !c.isGroup && others[0]?.avatarUrl
+      const convoAvatar = !c.isGroup && others[0]?.avatarUrl
         ? others[0].avatarUrl
-        : `https://api.dicebear.com/7.x/${c.isGroup ? 'shapes' : 'avataaars'}/svg?seed=${encodeURIComponent(seed)}`;
+        : avatarUrl(seed, c.isGroup ? 'shapes' : 'avataaars');
       const preview = escapeHtml(typeof c.lastMessage === 'string' ? c.lastMessage : (c.lastMessage?.content || ''));
       const hasUnread = (c.unreadCount || 0) > 0;
 
@@ -176,7 +177,7 @@ export function renderDmList() {
       return `
         <div class="dm-item ${currentDm === c.id ? 'active' : ''}" data-dm="${c.id}" tabindex="0" role="listitem" aria-label="${escapedName}${hasUnread ? ', unread message' : ''}">
           <div class="dm-avatar-wrap">
-            <img src="${avatarUrl}" alt="" onerror="this.style.display='none'">
+            <img src="${convoAvatar}" alt="" onerror="this.style.display='none'">
             ${isOnline ? '<span class="dm-online-dot"></span>' : ''}
           </div>
           <div class="dm-item-info">
@@ -327,10 +328,10 @@ function initNewDmModal() {
         results.innerHTML = filtered.map(p => {
           const name = escapeHtml(p.display_name || p.username);
           const username = escapeHtml(p.username);
-          const avatarUrl = p.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(p.username)}`;
+          const userAvatar = p.avatar_url || avatarUrl(p.username);
           return `
             <div class="search-modal-result" data-user-id="${p.id}" role="option" tabindex="0" style="display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;">
-              <img src="${avatarUrl}" alt="" style="width:32px;height:32px;border-radius:50%;" onerror="this.style.display='none'">
+              <img src="${userAvatar}" alt="" style="width:32px;height:32px;border-radius:50%;" onerror="this.style.display='none'">
               <div>
                 <div style="font-weight:600;">${name}</div>
                 ${name !== username ? `<div style="font-size:12px;color:#888;">@${username}</div>` : ''}

@@ -118,10 +118,4 @@ export function initAccessibility() {
   protectDoubleClick($('replyBtn'));
   protectDoubleClick($('dmSendBtn'));
 
-  // --- GLOBAL IMAGE ERROR HANDLER FOR DICEBEAR ---
-  document.addEventListener('error', (e) => {
-    if (e.target.tagName === 'IMG' && e.target.src.includes('dicebear.com')) {
-      e.target.style.display = 'none';
-    }
-  }, true);
 }

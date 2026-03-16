@@ -1,4 +1,5 @@
 import { $, plural } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 import { escapeHtml } from '../lib/markdown.js';
 import store from '../state/store.js';
 import * as data from '../state/data.js';
@@ -128,7 +129,7 @@ function handleSearchInput(e) {
     html += '<div class="search-result-group"><div class="search-result-label">Forums</div>';
     html += matchedForums.map(f => `
       <div class="search-result-item" data-action="forum" data-id="${f.id}">
-        <img src="https://api.dicebear.com/7.x/shapes/svg?seed=${f.seed}" alt="">
+        <img src="${avatarUrl(f.seed, 'shapes')}" alt="">
         <div>
           <div class="search-result-name">${highlightMatch(f.name, query)}</div>
           <div class="search-result-meta">${plural(f.members, 'member')}</div>
@@ -147,7 +148,7 @@ function handleSearchInput(e) {
       const forum = forums.find(f => f.id === t.forumId);
       return `
         <div class="search-result-item" data-action="thread" data-id="${t.id}">
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${t.seed}" class="round" alt="">
+          <img src="${avatarUrl(t.seed)}" class="round" alt="">
           <div>
             <div class="search-result-name">${highlightMatch(t.title, query)}</div>
             <div class="search-result-meta">in ${forum?.name || 'Unknown'} · ${plural(t.replies, 'reply')}</div>
@@ -164,7 +165,7 @@ function handleSearchInput(e) {
     html += '<div class="search-result-group"><div class="search-result-label">People</div>';
     html += matchedPeople.map(p => `
       <div class="search-result-item" data-action="profile" data-id="${p.name}">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${p.seed}" class="round" alt="">
+        <img src="${avatarUrl(p.seed)}" class="round" alt="">
         <div>
           <div class="search-result-name">${highlightMatch(p.name, query)}</div>
           <div class="search-result-meta">${p.bio.substring(0, 50)}...</div>

@@ -1,4 +1,5 @@
 import { $ } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 import { ForumlineAPI } from '../api/client.js';
 import { ForumStore } from '../api/forum-store.js';
 
@@ -56,7 +57,7 @@ export function renderNotifications() {
     return `
     <div class="notif-item ${!n.read ? 'unread' : ''}" role="listitem"
          data-id="${n.id}" data-domain="${n.forum_domain}" data-link="${n.link || '/'}">
-      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}" alt="" onerror="this.style.display='none'">
+      <img src="${avatarUrl(seed)}" alt="" onerror="this.style.display='none'">
       <div>
         <div class="notif-item-text">${n.title}${n.forum_name ? ' <span class="notif-forum">in ' + n.forum_name + '</span>' : ''}</div>
         <div class="notif-item-time">${timeAgo(n.timestamp)}</div>

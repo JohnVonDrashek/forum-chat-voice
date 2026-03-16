@@ -1,4 +1,5 @@
 import { $ } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 import * as data from '../state/data.js';
 
 let _deps = {
@@ -15,7 +16,7 @@ export function showHoverCard(username, anchorEl) {
   if (!profile) return;
 
   const card = $('hoverCard');
-  $('hoverCardAvatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.seed}`;
+  $('hoverCardAvatar').src = avatarUrl(profile.seed);
   $('hoverCardName').textContent = profile.name;
   $('hoverCardBio').textContent = profile.bio;
   $('hoverCardForums').textContent = profile.forums;

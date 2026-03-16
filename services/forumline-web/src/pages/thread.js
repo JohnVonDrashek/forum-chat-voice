@@ -1,4 +1,5 @@
 import { $, plural } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 import { escapeHtml, renderMarkdown } from '../lib/markdown.js';
 import store from '../state/store.js';
 import * as data from '../state/data.js';
@@ -111,7 +112,7 @@ export function renderPosts(threadId) {
 
     return `
       <div class="post-item" role="listitem">
-        <img class="post-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=${p.seed}" alt="${p.author}'s avatar" onerror="this.style.display='none'">
+        <img class="post-avatar" src="${avatarUrl(p.seed)}" alt="${p.author}'s avatar" onerror="this.style.display='none'">
         <div class="post-body">
           <div class="post-author">${p.author} <span class="post-time">${p.time}</span></div>
           ${quoteHtml}
@@ -340,7 +341,7 @@ export function renderThreadPresence(threadId) {
   bar.style.display = 'flex';
 
   $('presenceAvatars').innerHTML = viewers.slice(0, 4).map(v =>
-    `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${v.seed}" alt="${v.name}" title="${v.name}">`
+    `<img src="${avatarUrl(v.seed)}" alt="${v.name}" title="${v.name}">`
   ).join('');
 
   const names = viewers.map(v => v.name);
@@ -408,7 +409,7 @@ export function initThread(deps) {
       const newPostIndex = data.posts[store.currentThread].length - 1;
 
       newPost.innerHTML = `
-        <img class="post-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=testcaller" alt="">
+        <img class="post-avatar" src="${avatarUrl('testcaller')}" alt="">
         <div class="post-body">
           <div class="post-author">testcaller <span class="badge-inline" title="Early Adopter">&#x2B50;</span><span class="post-time">just now</span></div>
           ${quoteHtml}

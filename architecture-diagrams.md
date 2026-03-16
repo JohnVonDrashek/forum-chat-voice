@@ -36,7 +36,7 @@ graph TB
     GitHubPackages["GitHub Packages<br/>npm registry<br/>@forumline scope"]
 
     %% Avatar generation
-    DiceBear["DiceBear API<br/>avataaars + shapes styles<br/>Deterministic avatars"]
+    %% DiceBear removed — avatars generated client-side via bundled @dicebear packages
 
     %% Infrastructure tools
     OpenTofu["OpenTofu 1.11.5<br/>Cloudflare infra management<br/>State in R2"]
@@ -134,8 +134,7 @@ graph TB
 
     FL_API --> Resend
 
-    FL_SPA --> DiceBear
-    Hosted_FE --> DiceBear
+    %% Avatars now generated locally (no external DiceBear API dependency)
 
     %% ═══════════════════════════════════════════════
     %% CONNECTIONS — Push notifications
@@ -208,5 +207,5 @@ Website Deploy: git push → GitHub Actions → wrangler pages deploy → Cloudf
 Infra Change:  OpenTofu → Cloudflare (Tunnel + Zero Trust)
 Auth:          Any service → Zitadel OIDC (auth.forumline.net) → Postgres
 Avatars:       Go API → Cloudflare R2 → CDN public URL
-Fallback Avs:  Frontend → DiceBear API → SVG (seeded by user/thread ID)
+Fallback Avs:  Bundled @dicebear → SVG data URI (seeded by user/thread ID, no external API)
 ```

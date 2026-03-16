@@ -1,4 +1,5 @@
 import { $ } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 import store from '../state/store.js';
 import * as data from '../state/data.js';
 
@@ -9,7 +10,7 @@ let _deps = {
 export function renderMemberList(members) {
   $('memberList').innerHTML = members.map(m => `
     <div class="member-item" data-name="${m.name}" role="listitem" tabindex="0" aria-label="${m.name}, ${m.role}, ${m.online ? 'online' : 'offline'}">
-      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${m.seed}" alt="" onerror="this.style.display='none'">
+      <img src="${avatarUrl(m.seed)}" alt="" onerror="this.style.display='none'">
       <div class="member-item-info">
         <div class="member-item-name">${m.name}</div>
         <div class="member-item-role">${m.role}</div>

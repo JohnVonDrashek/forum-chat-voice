@@ -1,4 +1,5 @@
 import { $, plural } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 import store from '../state/store.js';
 import * as data from '../state/data.js';
 
@@ -13,7 +14,7 @@ export function showForum(forumId) {
   if (!forum) return;
   $('forumName').textContent = forum.name;
   $('forumMeta').textContent = `${plural(forum.members, 'member')} · ${plural(forum.threads, 'thread')}`;
-  $('forumAvatar').src = `https://api.dicebear.com/7.x/shapes/svg?seed=${forum.seed}`;
+  $('forumAvatar').src = avatarUrl(forum.seed, 'shapes');
   $('membersBtnCount').textContent = forum.members;
   // Clear unread when visiting
   forum.unread = 0;
@@ -87,7 +88,7 @@ export function renderFilteredThreads(forumId) {
     else if (t.label === 'discussion') labelHtml += '<span class="thread-label thread-label-discussion">Discussion</span>';
     return `
       <div class="thread-item ${t.pinned ? 'thread-pinned' : ''}" data-thread="${t.id}" data-forum="${forumId}" tabindex="0" role="listitem" aria-label="${t.title}, ${plural(t.replies, 'reply')}, ${t.time}">
-        <img class="thread-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=${t.seed}" alt="" onerror="this.style.display='none'">
+        <img class="thread-avatar" src="${avatarUrl(t.seed)}" alt="" onerror="this.style.display='none'">
         <div class="thread-info">
           <div class="thread-title">${labelHtml}${t.title}</div>
           <div class="thread-snippet">${t.snippet}</div>
@@ -128,7 +129,7 @@ export function renderOnlineBar(forumId) {
   if (!bar) return;
 
   const avatarsHtml = online.slice(0, 5).map(m =>
-    `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${m.seed}" alt="${m.name}" title="${m.name}">`
+    `<img src="${avatarUrl(m.seed)}" alt="${m.name}" title="${m.name}">`
   ).join('');
 
   $('onlineAvatars').innerHTML = avatarsHtml;

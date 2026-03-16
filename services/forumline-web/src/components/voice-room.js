@@ -1,4 +1,5 @@
 import { $ } from '../lib/utils.js';
+import { avatarUrl } from '../lib/avatar.js';
 
 let voiceSpeakingInterval = null;
 
@@ -11,7 +12,7 @@ export function renderVoiceParticipants() {
 
   $('voiceParticipants').innerHTML = participants.map(p => `
     <div class="voice-participant ${p.speaking ? 'speaking' : ''}">
-      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${p.seed}" alt="">
+      <img src="${avatarUrl(p.seed)}" alt="">
       <span class="voice-participant-name">${p.name}</span>
     </div>
   `).join('');
