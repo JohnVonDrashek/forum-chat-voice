@@ -37,6 +37,8 @@ packages/*/src/**/*.js
 packages/*/src/**/*.d.ts
 packages/*/src/**/*.d.ts.map
 packages/*/src/**/*.js.map
+# client-sdk is authored in JS (not compiled from TS)
+!packages/client-sdk/src/**/*.js
 
 # Supabase CLI temp
 **/supabase/.temp/
