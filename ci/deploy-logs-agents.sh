@@ -20,10 +20,10 @@ for HOST_LABEL in "${!AGENT_HOSTS[@]}"; do
 
   # Substitute host label in vector.toml
   sed "s/\${LOGS_HOST_LABEL}/$HOST_LABEL/g" \
-    "$REPO_ROOT/deploy/compose/logs-agent/vector.toml" > /tmp/vector.toml
+    "$REPO_ROOT/services/logs/agent/vector.toml" > /tmp/vector.toml
 
   ssh "root@$LXC_IP" "mkdir -p /opt/logs-agent"
-  scp "$REPO_ROOT/deploy/compose/logs-agent/docker-compose.yml" "root@$LXC_IP:/opt/logs-agent/docker-compose.yml"
+  scp "$REPO_ROOT/services/logs/agent/docker-compose.yml" "root@$LXC_IP:/opt/logs-agent/docker-compose.yml"
   scp /tmp/vector.toml "root@$LXC_IP:/opt/logs-agent/vector.toml"
   ssh "root@$LXC_IP" "cd /opt/logs-agent && docker compose pull && docker compose up -d --wait"
 

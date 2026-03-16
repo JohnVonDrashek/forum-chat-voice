@@ -67,12 +67,17 @@ fi
 
 # Upload docker-compose.yml
 echo "Uploading docker-compose.yml..."
-scp "deploy/compose/$SERVICE/docker-compose.yml" "$HOST:$REMOTE/docker-compose.yml"
+if [ "$SERVICE" = "logs" ]; then
+  SRC_COMPOSE="services/logs/server/docker-compose.yml"
+else
+  SRC_COMPOSE="deploy/compose/$SERVICE/docker-compose.yml"
+fi
+scp "$SRC_COMPOSE" "$HOST:$REMOTE/docker-compose.yml"
 
 # Upload extra config files
 if [ "$SERVICE" = "logs" ]; then
-  [ -f deploy/compose/logs/loki-config.yml ] && scp deploy/compose/logs/loki-config.yml "$HOST:$REMOTE/loki-config.yml"
-  [ -f deploy/compose/logs/users.yml ] && scp deploy/compose/logs/users.yml "$HOST:$REMOTE/users.yml"
+  [ -f services/logs/server/loki-config.yml ] && scp services/logs/server/loki-config.yml "$HOST:$REMOTE/loki-config.yml"
+  [ -f services/logs/server/users.yml ] && scp services/logs/server/users.yml "$HOST:$REMOTE/users.yml"
 fi
 if [ "$SERVICE" = "livekit" ]; then
   echo "Uploading livekit.yaml..."

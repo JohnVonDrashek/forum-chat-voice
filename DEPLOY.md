@@ -25,9 +25,9 @@ Workflows in `.github/workflows/`. Runners execute on CT 109 with direct LAN acc
 | `deploy-forumline` | `services/forumline-api/**`, `services/forumline-web/**`, `packages/**` | Deploy Forumline app |
 | `deploy-hosted` | `services/hosted/**`, `packages/backend/**` | Deploy hosted forum platform |
 | `deploy-website` | `services/website/**` | Deploy static website |
-| `deploy-logs` | `deploy/compose/logs/**` | Deploy central VictoriaLogs |
+| `deploy-logs` | `services/logs/server/**` | Deploy central VictoriaLogs |
 | `deploy-auth` | `deploy/compose/auth/**` | Deploy Zitadel auth |
-| `deploy-logs-agents` | `deploy/compose/logs-agent/**` | Deploy Vector agents to all LXCs |
+| `deploy-logs-agents` | `services/logs/agent/**` | Deploy Vector agents to all LXCs |
 | `publish-packages` | `packages/frontend/**` | Publish TS packages to GitHub Packages |
 | `terraform-plan` | PR touching `deploy/terraform/` | Run OpenTofu plan |
 | `terraform-apply` | manual | Run OpenTofu apply |
