@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/forumline/forumline/services/hosted/forum/model"
@@ -89,13 +88,3 @@ func (s *Store) ClearVoicePresence(ctx context.Context, userID string) error {
 	return err
 }
 
-// SendVoiceSignal sends a voice signal via pg_notify.
-func (s *Store) SendVoiceSignal(ctx context.Context, signal map[string]interface{}) error {
-	signalJSON, err := json.Marshal(signal)
-	if err != nil {
-		return err
-	}
-	_, err = s.DB.Exec(ctx,
-		"SELECT pg_notify('voice_signal_changes', $1)", string(signalJSON))
-	return err
-}

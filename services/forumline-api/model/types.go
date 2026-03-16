@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding/json"
 	"time"
 )
 
@@ -150,14 +149,12 @@ type PushDMPayload struct {
 	Content        string   `json:"content"`
 }
 
-// --- Call signal payload ---
+// --- Call signal payload (lifecycle events only — media handled by LiveKit) ---
 
 type CallSignal struct {
-	Type           string          `json:"type"`
-	CallID         string          `json:"call_id,omitempty"`
-	ConversationID string          `json:"conversation_id,omitempty"`
-	CallerID       string          `json:"caller_id,omitempty"`
-	TargetUserID   string          `json:"target_user_id,omitempty"`
-	SenderID       string          `json:"sender_id,omitempty"`
-	Payload        json.RawMessage `json:"payload,omitempty"`
+	Type           string `json:"type"` // incoming_call, call_accepted, call_declined, call_ended
+	CallID         string `json:"call_id,omitempty"`
+	ConversationID string `json:"conversation_id,omitempty"`
+	CallerID       string `json:"caller_id,omitempty"`
+	TargetUserID   string `json:"target_user_id,omitempty"`
 }

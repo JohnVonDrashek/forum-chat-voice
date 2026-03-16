@@ -1,13 +1,12 @@
 /*
  * Voice Room Orchestrator
  *
- * Lets forum members join voice chat rooms for real-time audio conversations, with automatic infrastructure scaling.
+ * Lets forum members join voice chat rooms via LiveKit for real-time audio, screen sharing, and beyond.
  *
  * It must:
- * - Default to peer-to-peer WebRTC for low-latency, zero-cost audio in small rooms (up to 4 participants)
- * - Automatically escalate to LiveKit server infrastructure when screen sharing is requested or 5+ users join
+ * - Connect to LiveKit server infrastructure for all voice room audio
  * - Track who is in each voice room via presence so the sidebar and room pages show live participant counts
- * - Provide mute, deafen, and screen share controls that work seamlessly across both P2P and LiveKit backends
+ * - Provide mute, deafen, and screen share controls
  * - Clean up all audio connections and presence records when a user leaves or navigates away
  */
 
@@ -15,12 +14,6 @@ import { createStore } from '../state.js'
 import { authStore, getAccessToken } from './auth.js'
 import { getConfig } from './config.js'
 import { connectSSE } from './sse.js'
-import {
-  setStoreCallback, setEscalateCallback, sendEscalateSignal,
-  joinRoomP2P, leaveRoomP2P, toggleMuteP2P,
-  toggleDeafenP2P, handlePeerJoined,
-  cleanupP2P,
-} from './voice-p2p.js'
 
 export const voiceStore = createStore({
   isConnected: false,
@@ -38,8 +31,6 @@ export const voiceStore = createStore({
   roomParticipantCounts: {},
 })
 
-// Which backend is currently active: 'p2p' | 'livekit' | null
-let activeBackend = null
 let accessTokenCached = null
 const avatarCache = {}
 let presenceSSECleanup = null
@@ -52,19 +43,6 @@ async function getLivekit() {
   if (!livekitModule) livekitModule = await import('livekit-client')
   return livekitModule
 }
-
-// Wire up P2P store updates
-setStoreCallback((update) => {
-  if (activeBackend === 'p2p') voiceStore.set(update)
-})
-
-// Wire up escalation requests from peers
-setEscalateCallback(() => {
-  if (activeBackend !== 'p2p') return
-  const slug = voiceStore.get().connectedRoomSlug
-  const name = voiceStore.get().connectedRoomName
-  if (slug) escalateToLiveKit(slug, name)
-})
 
 function deletePresence() {
   const token = accessTokenCached
@@ -95,28 +73,6 @@ export async function fetchVoicePresence() {
       }
     }
     voiceStore.set({ roomParticipantCounts: counts })
-
-    // If we're in P2P mode, handle peer join/leave from presence changes
-    if (activeBackend === 'p2p') {
-      const slug = voiceStore.get().connectedRoomSlug
-      if (slug) {
-        const roomPeers = data.filter(r => r.room_slug === slug)
-        const { user } = authStore.get()
-        if (user) {
-          const currentPeerIDs = new Set(roomPeers.map(p => p.user_id).filter(id => id !== user.id))
-
-          // Notify P2P module of joins
-          for (const id of currentPeerIDs) {
-            handlePeerJoined(id)
-          }
-
-          // Check if we need to escalate to LiveKit (5+ participants)
-          if (currentPeerIDs.size + 1 >= 5) {
-            escalateToLiveKit(slug, voiceStore.get().connectedRoomName)
-          }
-        }
-      }
-    }
   } catch {}
 }
 
@@ -138,29 +94,20 @@ export async function joinRoom(slug, name) {
 
     const displayName = user.username || user.user_metadata?.username || user.email.split('@')[0]
 
-    // Default: use P2P
-    activeBackend = 'p2p'
-    await joinRoomP2P(slug, name, user.id, displayName, accessToken)
+    await connectLiveKit(slug, displayName, accessToken)
 
     voiceStore.set({
       isConnected: true, isConnecting: false, isMuted: false, isDeafened: false,
       connectedRoomSlug: slug, connectedRoomName: name,
     })
   } catch (err) {
-    activeBackend = null
     voiceStore.set({ connectError: err instanceof Error ? err.message : 'Failed to connect', isConnecting: false })
   }
 }
 
 export function leaveRoom() {
-  if (activeBackend === 'p2p') {
-    leaveRoomP2P()
-  } else if (activeBackend === 'livekit') {
-    leaveRoomLiveKit()
-  }
-
+  leaveRoomLiveKit()
   deletePresence()
-  activeBackend = null
   voiceStore.set({
     isConnected: false, isConnecting: false, participants: [],
     connectedRoomSlug: null, connectedRoomName: null,
@@ -172,9 +119,7 @@ export function leaveRoom() {
 
 export async function toggleMute() {
   const newMuted = !voiceStore.get().isMuted
-  if (activeBackend === 'p2p') {
-    toggleMuteP2P(newMuted)
-  } else if (activeBackend === 'livekit' && room) {
+  if (room) {
     await room.localParticipant.setMicrophoneEnabled(!newMuted)
   }
   voiceStore.set({ isMuted: newMuted })
@@ -182,9 +127,7 @@ export async function toggleMute() {
 
 export function toggleDeafen() {
   const newDeafened = !voiceStore.get().isDeafened
-  if (activeBackend === 'p2p') {
-    toggleDeafenP2P(newDeafened)
-  } else if (activeBackend === 'livekit' && room && livekitModule) {
+  if (room && livekitModule) {
     const lk = livekitModule
     room.remoteParticipants.forEach(p => {
       p.getTrackPublications().forEach(pub => {
@@ -206,28 +149,7 @@ export function toggleDeafen() {
 }
 
 export async function toggleScreenShare() {
-  // Screen sharing requires LiveKit — escalate if on P2P
-  if (activeBackend === 'p2p') {
-    const slug = voiceStore.get().connectedRoomSlug
-    const name = voiceStore.get().connectedRoomName
-    if (!slug) return
-
-    voiceStore.set({ isConnecting: true })
-    try {
-      // Tell all peers to escalate to LiveKit too
-      await sendEscalateSignal()
-      await escalateToLiveKit(slug, name)
-      // Now on LiveKit, start screen share
-      if (room) {
-        await room.localParticipant.setScreenShareEnabled(true)
-      }
-    } catch {
-      voiceStore.set({ isConnecting: false })
-    }
-    return
-  }
-
-  if (activeBackend === 'livekit' && room) {
+  if (room) {
     try {
       await room.localParticipant.setScreenShareEnabled(!voiceStore.get().isScreenSharing)
     } catch {}
@@ -243,33 +165,23 @@ export function initVoice() {
   presenceSSECleanup = connectSSE('/api/voice-presence/stream', () => fetchVoicePresence(), true)
 
   window.addEventListener('beforeunload', () => {
-    if (activeBackend === 'p2p') leaveRoomP2P()
-    if (activeBackend === 'livekit' && room) room.disconnect()
+    if (room) room.disconnect()
     deletePresence()
   })
 }
 
 export function cleanupVoice() {
   if (presenceSSECleanup) presenceSSECleanup()
-  cleanupP2P()
   if (room) { room.disconnect(); room = null }
 }
 
-// ---- LiveKit backend (for screen sharing and 5+ participant rooms) ----
+// ---- LiveKit connection ----
 
-async function escalateToLiveKit(slug, name) {
+async function connectLiveKit(slug, displayName, accessToken) {
   const livekitUrl = getConfig().livekit_url || import.meta.env.VITE_LIVEKIT_URL
   if (!livekitUrl) {
-    voiceStore.set({ connectError: 'LiveKit not available for screen sharing' })
-    return
+    throw new Error('LiveKit not configured')
   }
-
-  const accessToken = accessTokenCached || await getAccessToken()
-  if (!accessToken) return
-
-  const { user } = authStore.get()
-  if (!user) return
-  const displayName = user.username || user.user_metadata?.username || user.email.split('@')[0]
 
   // Get LiveKit token
   const resp = await fetch('/api/livekit', {
@@ -279,13 +191,11 @@ async function escalateToLiveKit(slug, name) {
   })
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: 'Failed to get LiveKit token' }))
-    voiceStore.set({ connectError: err.error || 'Failed to escalate to LiveKit' })
-    return
+    throw new Error(err.error || 'Failed to connect to voice')
   }
 
   const { token } = await resp.json()
 
-  // Connect to LiveKit while P2P is still active (overlap for seamless audio)
   const lk = await getLivekit()
   room = new lk.Room()
 
@@ -349,21 +259,11 @@ async function escalateToLiveKit(slug, name) {
       isScreenSharing: false, screenShareTrack: null, screenShareParticipant: null,
     })
     room = null
-    activeBackend = null
     deletePresence()
   })
 
   await room.connect(livekitUrl, token)
   await room.localParticipant.setMicrophoneEnabled(true)
-
-  // Now tear down P2P (LiveKit is connected and handling audio)
-  leaveRoomP2P()
-  activeBackend = 'livekit'
-
-  voiceStore.set({
-    isConnected: true, isConnecting: false, isMuted: false, isDeafened: false,
-    connectedRoomSlug: slug, connectedRoomName: name,
-  })
   updateLiveKitParticipants()
 }
 

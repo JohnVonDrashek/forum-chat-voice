@@ -3,18 +3,28 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/forumline/forumline/services/forumline-api/service"
 	shared "github.com/forumline/forumline/shared-go"
+	"github.com/livekit/protocol/auth"
 )
+
+// LiveKitConfig holds connection details for the shared LiveKit server.
+type LiveKitConfig struct {
+	URL       string
+	APIKey    string
+	APISecret string
+}
 
 type CallHandler struct {
 	Service *service.CallService
 	SSEHub  *shared.SSEHub
+	LiveKit *LiveKitConfig
 }
 
-func NewCallHandler(svc *service.CallService, hub *shared.SSEHub) *CallHandler {
-	return &CallHandler{Service: svc, SSEHub: hub}
+func NewCallHandler(svc *service.CallService, hub *shared.SSEHub, lk *LiveKitConfig) *CallHandler {
+	return &CallHandler{Service: svc, SSEHub: hub, LiveKit: lk}
 }
 
 func (h *CallHandler) HandleInitiate(w http.ResponseWriter, r *http.Request) {
@@ -66,31 +76,59 @@ func (h *CallHandler) HandleEnd(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": result.Status})
 }
 
-func (h *CallHandler) HandleSignal(w http.ResponseWriter, r *http.Request) {
+// HandleToken generates a LiveKit access token for a call participant.
+// Both caller and callee call this after the call is accepted to join
+// the shared LiveKit room (room name = "call-{callId}").
+func (h *CallHandler) HandleToken(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())
+	callID := r.PathValue("callId")
 
-	var body struct {
-		TargetUserID string          `json:"target_user_id"`
-		CallID       string          `json:"call_id"`
-		Type         string          `json:"type"`
-		Payload      json.RawMessage `json:"payload"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
+	if h.LiveKit == nil || h.LiveKit.APIKey == "" || h.LiveKit.APISecret == "" || h.LiveKit.URL == "" {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "LiveKit not configured"})
 		return
 	}
-	err := h.Service.Signal(r.Context(), userID, service.SignalInput{
-		TargetUserID: body.TargetUserID,
-		CallID:       body.CallID,
-		Type:         body.Type,
-		Payload:      body.Payload,
-	})
+
+	ok, _ := h.Service.Store.IsCallParticipant(r.Context(), callID, userID)
+	if !ok {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "not a participant of this call"})
+		return
+	}
+
+	profile, _ := h.Service.Store.GetProfile(r.Context(), userID)
+	participantName := userID
+	if profile != nil {
+		if profile.DisplayName != "" {
+			participantName = profile.DisplayName
+		} else {
+			participantName = profile.Username
+		}
+	}
+
+	at := auth.NewAccessToken(h.LiveKit.APIKey, h.LiveKit.APISecret)
+	grant := &auth.VideoGrant{
+		Room:         "call-" + callID,
+		RoomJoin:     true,
+		CanPublish:   boolPtr(true),
+		CanSubscribe: boolPtr(true),
+	}
+	at.SetVideoGrant(grant).
+		SetIdentity(userID).
+		SetName(participantName).
+		SetValidFor(time.Hour)
+
+	token, err := at.ToJWT()
 	if err != nil {
-		writeServiceError(w, err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to generate token"})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"token": token,
+		"url":   h.LiveKit.URL,
+	})
 }
+
+func boolPtr(b bool) *bool { return &b }
 
 func (h *CallHandler) HandleStream(w http.ResponseWriter, r *http.Request) {
 	userID := shared.UserIDFromContext(r.Context())

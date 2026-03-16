@@ -149,10 +149,6 @@ func NewRouter(pool shared.DB, sseHub *shared.SSEHub, cfg *Config) *chi.Mux {
 		r.Delete("/api/voice-presence", h.HandleClearVoicePresence)
 		r.Get("/api/voice-presence/stream", h.HandleVoicePresenceStream)
 
-		// Voice P2P signaling
-		r.Post("/api/voice-signal", h.HandleVoiceSignal)
-		r.Get("/api/voice-signal/stream", h.HandleVoiceSignalStream)
-
 		// Avatars
 		r.Post("/api/avatars/upload", h.HandleAvatarUpload)
 

@@ -69,7 +69,6 @@ func main() {
 	sseHub.Listen(ctx, "chat_message_changes")
 	sseHub.Listen(ctx, "voice_presence_changes")
 	sseHub.Listen(ctx, "post_changes")
-	sseHub.Listen(ctx, "voice_signal_changes")
 	sseHub.StartListening(ctx)
 
 	// Router cache clear function — called after OAuth fix to force router rebuild

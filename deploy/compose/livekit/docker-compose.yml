@@ -1,0 +1,17 @@
+# LiveKit SFU — shared voice/call server for forumline app + hosted forums.
+# Handles all WebRTC media (audio, video, screen share).
+#
+# Ports:
+#   7880 — HTTP API + WebSocket signaling (proxied via Cloudflare Tunnel)
+#   7881 — RTC over TCP (direct, for clients behind restrictive NATs)
+#   50000-60000/udp — WebRTC media (direct, port-forwarded on router)
+
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    command: ["--config", "/etc/livekit.yaml"]

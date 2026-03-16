@@ -1,0 +1,32 @@
+# LiveKit server configuration
+# Docs: https://docs.livekit.io/home/self-hosting/configuration/
+#
+# API keys are NOT in this file — they're passed via LIVEKIT_KEYS env var
+# in docker-compose.yml (sourced from .env / secrets.kdbx).
+
+port: 7880
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 60000
+  # Explicitly set the node IP (LXC LAN address) — external IP is handled
+  # via Cloudflare Tunnel for signaling. For media, clients use ICE with
+  # the node_ip as a candidate after router port forwarding is configured.
+  use_external_ip: false
+  node_ip: 192.168.1.111
+
+room:
+  # Auto-delete rooms when empty (no orphaned call-{uuid} rooms)
+  empty_timeout: 300     # 5 minutes
+  max_participants: 50
+
+logging:
+  level: info
+
+# TURN disabled for now — requires TLS cert + domain.
+# Clients fall back to direct UDP or TCP (port 7881).
+# Enable later with livekit.forumline.net cert for full NAT traversal.
+#turn:
+#  enabled: true
+#  domain: livekit.forumline.net
+#  tls_port: 5349

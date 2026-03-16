@@ -35,6 +35,13 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "forumline" {
       service  = "http://192.168.1.107:3000"
     }
 
+    # LiveKit SFU — livekit.forumline.net (WebSocket signaling only)
+    # UDP media ports are port-forwarded directly on the router
+    ingress_rule {
+      hostname = "livekit.forumline.net"
+      service  = "http://192.168.1.111:7880"
+    }
+
     # SSH access for CI deploys — single bastion on Proxmox host
     # Developer SSH goes through WireGuard VPN instead
     ingress_rule {

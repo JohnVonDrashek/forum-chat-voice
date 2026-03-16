@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/forumline/forumline/services/forumline-api/handler"
@@ -35,7 +36,12 @@ func newRouter(s *store.Store, sseHub *shared.SSEHub) *http.ServeMux {
 	membershipH := handler.NewMembershipHandler(s, forumSvc)
 	forumH := handler.NewForumHandler(s, forumSvc)
 	convoH := handler.NewConversationHandler(convoSvc, sseHub)
-	callH := handler.NewCallHandler(callSvc, sseHub)
+	lkCfg := &handler.LiveKitConfig{
+		URL:       os.Getenv("LIVEKIT_URL"),
+		APIKey:    os.Getenv("LIVEKIT_API_KEY"),
+		APISecret: os.Getenv("LIVEKIT_API_SECRET"),
+	}
+	callH := handler.NewCallHandler(callSvc, sseHub, lkCfg)
 	pushH := handler.NewPushHandler(s, pushSvc)
 	activityH := handler.NewActivityHandler(s)
 	notifH := handler.NewNotificationHandler(s, sseHub)
@@ -120,12 +126,12 @@ func newRouter(s *store.Store, sseHub *shared.SSEHub) *http.ServeMux {
 	// Profile search
 	mux.Handle("GET /api/profiles/search", use(identityH.HandleSearchProfiles, auth))
 
-	// Calls
+	// Calls (lifecycle via SSE, media via LiveKit)
 	mux.Handle("GET /api/calls/stream", use(callH.HandleStream, auth))
 	mux.Handle("POST /api/calls", use(callH.HandleInitiate, auth))
 	mux.Handle("POST /api/calls/{callId}/respond", use(callH.HandleRespond, auth))
 	mux.Handle("POST /api/calls/{callId}/end", use(callH.HandleEnd, auth))
-	mux.Handle("POST /api/calls/signal", use(callH.HandleSignal, auth))
+	mux.Handle("POST /api/calls/{callId}/token", use(callH.HandleToken, auth))
 
 	// Push notifications
 	mux.Handle("POST /api/push", use(pushH.Handle, auth))

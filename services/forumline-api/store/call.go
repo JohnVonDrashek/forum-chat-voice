@@ -117,13 +117,12 @@ func (s *Store) EndCall(ctx context.Context, callID, userID string) (newStatus s
 	return newStatus, otherUserID, nil
 }
 
-func (s *Store) VerifyCallParticipants(ctx context.Context, callID, senderID, targetID string) (bool, error) {
+func (s *Store) IsCallParticipant(ctx context.Context, callID, userID string) (bool, error) {
 	var exists bool
 	err := s.Pool.QueryRow(ctx,
 		`SELECT EXISTS(SELECT 1 FROM forumline_calls
-		 WHERE id = $1 AND status IN ('ringing', 'active')
-		 AND ((caller_id = $2 AND callee_id = $3) OR (caller_id = $3 AND callee_id = $2)))`,
-		callID, senderID, targetID,
+		 WHERE id = $1 AND (caller_id = $2 OR callee_id = $2) AND status IN ('ringing', 'active'))`,
+		callID, userID,
 	).Scan(&exists)
 	return exists, err
 }

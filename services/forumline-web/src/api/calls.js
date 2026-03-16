@@ -1,16 +1,11 @@
-// ========== CALL MANAGER (Voice Calls + WebRTC) ==========
-// Call state machine, WebRTC peer connection, ICE handling,
-// signaling via SSE, ringtone generation, call overlay UI.
+// ========== CALL MANAGER (Voice Calls via LiveKit) ==========
+// Call state machine, LiveKit room connection, ringtone generation,
+// signaling via SSE (lifecycle events only — media handled by LiveKit).
 
 import { ForumlineAPI } from './client.js';
 import { NativeBridge } from './native-bridge.js';
 
-const ICE_SERVERS = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-];
 const RING_TIMEOUT_MS = 30000;
-const WEBRTC_CONNECT_TIMEOUT_MS = 15000;
 
 // --- Call state ---
 const callState = {
@@ -20,17 +15,12 @@ const callState = {
   duration: 0,
 };
 
-let pc = null;
-let localStream = null;
-let remoteAudioEl = null;
+let room = null;
+let livekitModule = null;
 let callSignalSSE = null;
 let callTimer = null;
 let sseReconnectTimer = null;
 let sseReconnectAttempts = 0;
-let pendingCandidates = [];
-let webrtcStarted = false;
-let signalQueue = Promise.resolve();
-let iceRestartAttempted = false;
 let durationInterval = null;
 
 const callStateListeners = [];
@@ -46,22 +36,12 @@ function setCallState(newState, info) {
   notifyCallStateChange();
 }
 
-// --- Microphone with silent fallback ---
-async function acquireMic() {
-  try {
-    return await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const dest = ctx.createMediaStreamDestination();
-    const gain = ctx.createGain();
-    gain.gain.value = 0;
-    osc.connect(gain); gain.connect(dest); osc.start();
-    return dest.stream;
-  }
+async function getLiveKit() {
+  if (!livekitModule) livekitModule = await import('livekit-client');
+  return livekitModule;
 }
 
-// --- SSE for incoming call signals ---
+// --- SSE for call lifecycle events ---
 function connectCallSSE() {
   if (callSignalSSE) return;
   const token = ForumlineAPI.getToken();
@@ -71,12 +51,12 @@ function connectCallSSE() {
   callSignalSSE.onmessage = (event) => {
     try {
       const signal = JSON.parse(event.data);
-      signalQueue = signalQueue.then(() => handleCallSignal(signal)).catch(err => console.error('[Call] signal error:', err));
+      handleCallSignal(signal);
     } catch (err) { console.error('[Call] SSE parse error:', err); }
   };
   callSignalSSE.onerror = () => {
     callSignalSSE?.close(); callSignalSSE = null;
-    if (!ForumlineAPI.getToken()) return; // Don't reconnect if logged out
+    if (!ForumlineAPI.getToken()) return;
     const base = Math.min(1000 * Math.pow(2, sseReconnectAttempts), 30000);
     sseReconnectAttempts++;
     sseReconnectTimer = setTimeout(connectCallSSE, base + Math.random() * base * 0.3);
@@ -109,7 +89,7 @@ async function handleCallSignal(signal) {
     if (callState.state !== 'ringing-outgoing') return;
     setCallState('active');
     NativeBridge.sendCallEvent('accepted', callState.callInfo);
-    await startWebRTC(true);
+    await connectLiveKit();
     return;
   }
   if (type === 'call_declined' || type === 'call_ended') {
@@ -117,35 +97,52 @@ async function handleCallSignal(signal) {
     callCleanup();
     return;
   }
-  // WebRTC signaling
-  if (type === 'offer') {
-    if (!pc) await startWebRTC(false);
-    if (!pc) return;
-    await pc.setRemoteDescription(new RTCSessionDescription(signal.payload));
-    for (const c of pendingCandidates) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
-    pendingCandidates = [];
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    await sendWebRTCSignal('answer', { sdp: pc.localDescription.sdp, type: pc.localDescription.type });
-    return;
-  }
-  if (type === 'answer') {
-    if (!pc) return;
-    await pc.setRemoteDescription(new RTCSessionDescription(signal.payload));
-    for (const c of pendingCandidates) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
-    pendingCandidates = [];
-    return;
-  }
-  if (type === 'ice-candidate') {
-    if (!pc || !pc.remoteDescription) { pendingCandidates.push(signal.payload); return; }
-    await pc.addIceCandidate(new RTCIceCandidate(signal.payload)).catch(() => {});
+}
+
+// --- LiveKit connection ---
+async function connectLiveKit() {
+  if (!callState.callInfo) return;
+
+  try {
+    const resp = await ForumlineAPI.apiFetch('/api/calls/' + callState.callInfo.callId + '/token', { method: 'POST' });
+    const { token, url } = resp;
+
+    const lk = await getLiveKit();
+    room = new lk.Room();
+
+    room.on(lk.RoomEvent.TrackSubscribed, (track) => {
+      if (track.kind === lk.Track.Kind.Audio) {
+        const el = track.attach();
+        el.id = `call-audio-${track.sid}`;
+        document.body.appendChild(el);
+      }
+    });
+
+    room.on(lk.RoomEvent.TrackUnsubscribed, (track) => {
+      track.detach().forEach(el => el.remove());
+    });
+
+    room.on(lk.RoomEvent.Disconnected, () => {
+      if (callState.state === 'active') endCall();
+    });
+
+    room.on(lk.RoomEvent.ParticipantConnected, () => {
+      // Remote party joined — start the duration timer
+      if (!durationInterval) startDurationTimer();
+    });
+
+    await room.connect(url, token);
+    await room.localParticipant.setMicrophoneEnabled(true);
+    startDurationTimer();
+  } catch (err) {
+    console.error('[Call] LiveKit connect failed:', err);
+    endCall();
   }
 }
 
 // --- Call lifecycle ---
 async function initiateCall(conversationId, remoteUserId, remoteDisplayName, remoteAvatarUrl) {
   if (callState.state !== 'idle' || !ForumlineAPI.isAuthenticated()) return;
-  try { localStream = await acquireMic(); } catch { return; }
   try {
     const result = await ForumlineAPI.apiFetch('/api/calls', {
       method: 'POST', body: JSON.stringify({ conversation_id: conversationId, callee_id: remoteUserId }),
@@ -158,21 +155,19 @@ async function initiateCall(conversationId, remoteUserId, remoteDisplayName, rem
     callTimer = setTimeout(() => { if (callState.state === 'ringing-outgoing') endCall(); }, RING_TIMEOUT_MS);
   } catch (err) {
     console.error('[Call] initiate failed:', err);
-    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   }
 }
 
 async function acceptCall() {
   if (callState.state !== 'ringing-incoming' || !callState.callInfo) return;
   if (callTimer) { clearTimeout(callTimer); callTimer = null; }
-  if (!localStream) { try { localStream = await acquireMic(); } catch { callCleanup(); return; } }
   try {
     await ForumlineAPI.apiFetch('/api/calls/' + callState.callInfo.callId + '/respond', {
       method: 'POST', body: JSON.stringify({ action: 'accept' }),
     });
     setCallState('active');
     NativeBridge.sendCallEvent('accepted', callState.callInfo);
-    // Offer arrives via SSE -- don't start WebRTC here
+    await connectLiveKit();
   } catch { callCleanup(); }
 }
 
@@ -193,71 +188,9 @@ async function endCall() {
 
 function toggleCallMute() {
   callState.muted = !callState.muted;
-  if (localStream) localStream.getAudioTracks().forEach(t => { t.enabled = !callState.muted; });
+  if (room) room.localParticipant.setMicrophoneEnabled(!callState.muted);
   notifyCallStateChange();
   return callState.muted;
-}
-
-// --- WebRTC peer connection ---
-async function startWebRTC(isInitiator) {
-  if (!callState.callInfo || webrtcStarted) return;
-  webrtcStarted = true;
-  if (!localStream) { try { localStream = await acquireMic(); } catch { endCall(); return; } }
-  callState.muted = false;
-
-  pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-
-  pc.ontrack = (event) => {
-    const stream = event.streams[0] || new MediaStream([event.track]);
-    if (!remoteAudioEl) {
-      remoteAudioEl = new Audio();
-      remoteAudioEl.autoplay = true;
-      remoteAudioEl.playsInline = true;
-      document.body.appendChild(remoteAudioEl);
-    }
-    remoteAudioEl.srcObject = stream;
-    remoteAudioEl.play().catch(() => {});
-  };
-
-  pc.onicecandidate = (event) => {
-    if (event.candidate) sendWebRTCSignal('ice-candidate', event.candidate.toJSON());
-  };
-
-  pc.oniceconnectionstatechange = () => {
-    if (pc?.iceConnectionState === 'disconnected' && !iceRestartAttempted) {
-      iceRestartAttempted = true;
-      pc.createOffer({ iceRestart: true })
-        .then(offer => pc.setLocalDescription(offer))
-        .then(() => sendWebRTCSignal('offer', { sdp: pc.localDescription.sdp, type: pc.localDescription.type }))
-        .catch(err => console.error('[Call] ICE restart failed:', err));
-    }
-  };
-
-  const connectTimeout = setTimeout(() => {
-    if (pc && pc.connectionState !== 'connected') { console.error('[Call] WebRTC timed out'); endCall(); }
-  }, WEBRTC_CONNECT_TIMEOUT_MS);
-
-  pc.onconnectionstatechange = () => {
-    if (pc?.connectionState === 'connected') { clearTimeout(connectTimeout); startDurationTimer(); }
-    if (pc?.connectionState === 'failed' || pc?.connectionState === 'closed') { clearTimeout(connectTimeout); endCall(); }
-  };
-
-  if (isInitiator) {
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    await sendWebRTCSignal('offer', { sdp: pc.localDescription.sdp, type: pc.localDescription.type });
-  }
-}
-
-async function sendWebRTCSignal(type, payload) {
-  if (!callState.callInfo) return;
-  try {
-    await ForumlineAPI.apiFetch('/api/calls/signal', {
-      method: 'POST', silent: true,
-      body: JSON.stringify({ call_id: callState.callInfo.callId, target_user_id: callState.callInfo.remoteUserId, type, payload }),
-    });
-  } catch (err) { console.error('[Call] signal send failed:', err); }
 }
 
 function startDurationTimer() {
@@ -269,11 +202,10 @@ function startDurationTimer() {
 function callCleanup() {
   if (callTimer) { clearTimeout(callTimer); callTimer = null; }
   if (durationInterval) { clearInterval(durationInterval); durationInterval = null; }
-  if (pc) { pc.close(); pc = null; }
-  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-  if (remoteAudioEl) { remoteAudioEl.remove(); remoteAudioEl = null; }
-  webrtcStarted = false; iceRestartAttempted = false;
-  pendingCandidates = []; signalQueue = Promise.resolve();
+  if (room) {
+    room.disconnect();
+    room = null;
+  }
   setCallState('idle', null);
 }
 
