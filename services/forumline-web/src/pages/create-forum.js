@@ -2,9 +2,7 @@ import { $ } from '../lib/utils.js';
 import { avatarUrl } from '../lib/avatar.js';
 import store from '../state/store.js';
 import * as data from '../state/data.js';
-import { ForumlineAPI } from '../api/client.js';
-import { ForumRegistrationAPI } from '../api/forum-discovery.js';
-import { ForumStore } from '../api/forum-store.js';
+import { ForumlineAPI, ForumRegistrationAPI, ForumStore } from '@forumline/client-sdk';
 
 let _showView, _closeAllDropdowns, _showHome, _showForum, _showToast, _fireConfetti;
 

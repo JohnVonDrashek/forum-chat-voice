@@ -2,8 +2,7 @@ import { $, plural } from '../lib/utils.js';
 import { avatarUrl } from '../lib/avatar.js';
 import store from '../state/store.js';
 import * as data from '../state/data.js';
-import { Identity } from '../api/identity.js';
-import { ForumlineAPI } from '../api/client.js';
+import { Identity, ForumlineAPI } from '@forumline/client-sdk';
 
 let _showView, _renderForumList, _renderDmList, _closeAllDropdowns, _showThread, _showForum, _showSettings;
 

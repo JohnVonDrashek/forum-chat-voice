@@ -44,19 +44,13 @@ import { closeAllDropdowns, initNav } from './components/nav.js';
 
 import { initRouter, pushState, consumePendingRoute } from './router.js';
 
-// API modules
-import { ForumlineAPI } from './api/client.js';
-import { ForumlineAuth } from './api/auth.js';
-import { EventStream } from './api/event-stream.js';
-import { DmStore } from './api/dm-store.js';
-import { PresenceTracker } from './api/presence.js';
-import { ForumStore } from './api/forum-store.js';
-import { ForumDiscoveryAPI } from './api/forum-discovery.js';
-import { CallManager } from './api/calls.js';
-import { Identity } from './api/identity.js';
-import { PushNotifications } from './api/push.js';
+// API modules (from @forumline/client-sdk)
+import { ForumlineAPI, ForumlineAuth, EventStream, DmStore, PresenceTracker, ForumStore, ForumDiscoveryAPI, CallManager, Identity, PushNotifications, NativeBridge } from '@forumline/client-sdk';
+
+// UI modules that extend the SDK with DOM rendering
+import { initCallUI } from './api/call-ui.js';
+import { loginToForum } from './api/forum-webview.js';
 import { parseDeepLink, handleDeepLinkParams, checkUrlParams } from './api/deep-link.js';
-import { NativeBridge } from './api/native-bridge.js';
 
 // ========== CORE VIEW MANAGEMENT ==========
 function showView(viewId) {
@@ -207,7 +201,8 @@ ForumlineAuth.onAuthStateChange((event, session) => {
       ForumStore.loadCache();
       ForumStore.syncFromServer(ForumlineAPI.getToken()).then(() => {
         CallManager.init();
-        PushNotifications.registerServiceWorker();
+        initCallUI();
+        PushNotifications.registerServiceWorker((params) => handleDeepLinkParams(params));
         checkUrlParams({ showDm: wrappedShowDm, showForum: wrappedShowForum, ForumStore, DmStore });
       });
 
@@ -504,11 +499,11 @@ $('webviewMuteBtn')?.addEventListener('click', () => {
 });
 
 $('webviewAuthBtn')?.addEventListener('click', () => {
-  ForumStore.loginToForum();
+  loginToForum();
 });
 
 $('webviewBannerLoginBtn')?.addEventListener('click', () => {
-  ForumStore.loginToForum();
+  loginToForum();
 });
 
 // ========== INITIAL RENDER ==========

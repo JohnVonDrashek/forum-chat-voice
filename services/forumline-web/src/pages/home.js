@@ -1,8 +1,7 @@
 import { $ } from '../lib/utils.js';
 import { avatarUrl } from '../lib/avatar.js';
 import store from '../state/store.js';
-import { ForumlineAPI } from '../api/client.js';
-import { ForumStore } from '../api/forum-store.js';
+import { ForumlineAPI, ForumStore } from '@forumline/client-sdk';
 
 function timeAgo(timestamp) {
   const now = new Date();

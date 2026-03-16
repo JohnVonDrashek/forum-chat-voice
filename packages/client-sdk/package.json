@@ -1,0 +1,35 @@
+{
+  "name": "@forumline/client-sdk",
+  "version": "0.1.0",
+  "description": "Forumline client SDK — API client, auth, real-time, and state management",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./src/client.js",
+    "./auth": "./src/auth.js",
+    "./event-stream": "./src/event-stream.js",
+    "./dm-store": "./src/dm-store.js",
+    "./presence": "./src/presence.js",
+    "./identity": "./src/identity.js",
+    "./push": "./src/push.js",
+    "./forum-discovery": "./src/forum-discovery.js",
+    "./native-bridge": "./src/native-bridge.js",
+    "./calls": "./src/calls.js",
+    "./forum-store": "./src/forum-store.js"
+  },
+  "peerDependencies": {
+    "livekit-client": ">=2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "livekit-client": {
+      "optional": true
+    }
+  },
+  "files": ["src"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/forumline/forumline.git",
+    "directory": "packages/client-sdk"
+  }
+}

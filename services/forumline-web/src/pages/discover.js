@@ -2,9 +2,7 @@ import { $, plural } from '../lib/utils.js';
 import { avatarUrl } from '../lib/avatar.js';
 import { escapeHtml } from '../lib/markdown.js';
 import store from '../state/store.js';
-import { ForumlineAPI } from '../api/client.js';
-import { ForumDiscoveryAPI } from '../api/forum-discovery.js';
-import { ForumStore } from '../api/forum-store.js';
+import { ForumlineAPI, ForumDiscoveryAPI, ForumStore } from '@forumline/client-sdk';
 import { pushState } from '../router.js';
 
 let _showView, _renderForumList, _renderDmList, _showToast;

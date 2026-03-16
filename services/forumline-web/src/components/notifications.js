@@ -1,8 +1,6 @@
 import { $ } from '../lib/utils.js';
 import { avatarUrl } from '../lib/avatar.js';
-import { ForumlineAPI } from '../api/client.js';
-import { ForumStore } from '../api/forum-store.js';
-import { EventStream } from '../api/event-stream.js';
+import { ForumlineAPI, ForumStore, EventStream } from '@forumline/client-sdk';
 
 let _notifications = [];
 let _loading = false;

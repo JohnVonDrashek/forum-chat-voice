@@ -1,5 +1,5 @@
 import { $ } from '../lib/utils.js';
-import { ForumlineAuth } from '../api/auth.js';
+import { ForumlineAuth } from '@forumline/client-sdk';
 
 let _deps = {
   showProfile: () => {},

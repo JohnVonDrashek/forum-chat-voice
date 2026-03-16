@@ -1,7 +1,7 @@
 // ========== DEEP LINKING ==========
 // Parse and handle deep links (forumline:// protocol and URL params).
 
-import { ForumlineAPI } from './client.js';
+import { ForumlineAPI } from '@forumline/client-sdk';
 
 export function parseDeepLink(url) {
   try {

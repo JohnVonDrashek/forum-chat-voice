@@ -1,9 +1,7 @@
 import { $ } from '../lib/utils.js';
 import { avatarUrl } from '../lib/avatar.js';
 import store from '../state/store.js';
-import { ForumlineAPI } from '../api/client.js';
-import { ForumlineAuth } from '../api/auth.js';
-import { Identity } from '../api/identity.js';
+import { ForumlineAPI, ForumlineAuth, Identity } from '@forumline/client-sdk';
 
 let _showView, _closeAllDropdowns, _showLogin, _showToast;
 

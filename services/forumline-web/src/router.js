@@ -1,6 +1,6 @@
 // ========== BROWSER HISTORY MANAGEMENT ==========
 import store from './state/store.js';
-import { ForumStore } from './api/forum-store.js';
+import { ForumStore } from '@forumline/client-sdk';
 
 let nav = {};
 

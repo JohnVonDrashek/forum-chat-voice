@@ -3,11 +3,7 @@ import { avatarUrl } from '../lib/avatar.js';
 import { escapeHtml, renderMarkdown } from '../lib/markdown.js';
 import store from '../state/store.js';
 import * as data from '../state/data.js';
-import { ForumlineAPI } from '../api/client.js';
-import { EventStream } from '../api/event-stream.js';
-import { DmStore } from '../api/dm-store.js';
-import { PresenceTracker } from '../api/presence.js';
-import { CallManager } from '../api/calls.js';
+import { ForumlineAPI, EventStream, DmStore, PresenceTracker, CallManager } from '@forumline/client-sdk';
 
 let _showView, _renderForumList, _renderDmList, _showToast;
 

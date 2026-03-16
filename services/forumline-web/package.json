@@ -12,6 +12,7 @@
     "@dicebear/avataaars": "^9.3.2",
     "@dicebear/core": "^9.3.2",
     "@dicebear/shapes": "^9.3.2",
+    "@forumline/client-sdk": "workspace:*",
     "livekit-client": "^2.17.2"
   },
   "devDependencies": {

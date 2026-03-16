@@ -33,6 +33,8 @@ importers:
         specifier: ^4.0.18
         version: 4.0.18(@types/node@25.3.5)
 
+  packages/client-sdk: {}
+
   packages/protocol:
     dependencies:
       zod:
@@ -70,6 +72,9 @@ importers:
       '@dicebear/shapes':
         specifier: ^9.3.2
         version: 9.4.0(@dicebear/core@9.4.0)
+      '@forumline/client-sdk':
+        specifier: workspace:*
+        version: link:../../packages/client-sdk
       livekit-client:
         specifier: ^2.17.2
         version: 2.17.3(@types/dom-mediacapture-record@1.0.22)
