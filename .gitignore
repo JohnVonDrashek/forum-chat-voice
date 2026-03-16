@@ -29,6 +29,9 @@ package-lock.json
 # TypeScript cache
 *.tsbuildinfo
 
+# Turborepo
+.turbo/
+
 # Package build artifacts (compiled in-place by tsc)
 packages/*/src/**/*.js
 packages/*/src/**/*.d.ts

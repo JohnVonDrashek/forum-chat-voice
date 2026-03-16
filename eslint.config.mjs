@@ -41,6 +41,13 @@ export default tseslint.config(
       'no-unsanitized/property': 'error',
       // Block document.write, insertAdjacentHTML with dynamic content
       'no-unsanitized/method': 'error',
+      // Force @forumline/* workspace imports — no sneaking around with relative paths
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['**/packages/*', '**/packages/**'],
+          message: 'Import from @forumline/* instead of using relative paths into packages/.',
+        }],
+      }],
     },
   },
   // Disable type-checked rules for JS/MJS files not covered by tsconfig

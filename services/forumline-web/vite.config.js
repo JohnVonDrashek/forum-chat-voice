@@ -1,5 +1,4 @@
 import { defineConfig } from 'vite';
-import { resolve } from 'path';
 
 const isServe = process.argv.includes('serve') || process.argv.includes('dev');
 const mode = process.env.VITE_BACKEND;
@@ -18,11 +17,6 @@ const backend = mode === 'prod'
 export default defineConfig({
   root: '.',
   publicDir: 'public',
-  resolve: {
-    alias: {
-      '@forumline/client-sdk': resolve(__dirname, '../../packages/client-sdk/src/index.js'),
-    },
-  },
   build: {
     outDir: 'dist',
   },
