@@ -27,6 +27,7 @@ Workflows in `.github/workflows/`. Runners execute on CT 109 with direct LAN acc
 | `deploy-website` | `services/website/**` | Deploy static website |
 | `deploy-logs` | `deploy/compose/logs/**` | Deploy VictoriaLogs + configure Docker syslog on all LXCs |
 | `deploy-auth` | `deploy/compose/auth/**` | Deploy Zitadel auth |
+| `ensure-fleet-sync` | every push to `main` | Install/update fleet sync on Proxmox (SSH keys + syslog for all LXCs) |
 | `publish-packages` | `packages/**` | Publish TS packages to GitHub Packages |
 | `terraform-plan` | PR touching `deploy/terraform/` | Run OpenTofu plan |
 | `terraform-apply` | manual | Run OpenTofu apply |
@@ -80,22 +81,15 @@ Each service runs on a Proxmox LXC. New LXCs are **automatically configured** by
 5. Add to `ci/deploy.sh` HOSTS/PATHS/SECRET_GROUPS maps
 6. Create `.github/workflows/deploy-<service>.yml`
 
-### Fleet sync (one-time install on Proxmox host)
+### Fleet sync
+
+Fully automatic — the `ensure-fleet-sync` workflow runs on every push to `main` and installs/updates the fleet sync timer on the Proxmox host if needed. No manual setup required. Source in `deploy/proxmox/`, config lives at `/etc/forumline/` on Proxmox.
 
 ```bash
-# From your laptop over VPN:
-ci/install-fleet-sync.sh
-
-# Or directly on Proxmox:
-bash deploy/proxmox/install.sh
-```
-
-Files live in `/etc/forumline/` on the Proxmox host. Source in `deploy/proxmox/`.
-
-```bash
-systemctl status forumline-fleet-sync.timer  # check timer
-systemctl start forumline-fleet-sync         # force sync now
-journalctl -u forumline-fleet-sync           # view logs
+# On Proxmox — check status or force a sync:
+systemctl status forumline-fleet-sync.timer
+systemctl start forumline-fleet-sync
+journalctl -u forumline-fleet-sync
 ```
 
 ## Local Development

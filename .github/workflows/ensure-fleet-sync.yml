@@ -1,0 +1,14 @@
+name: Ensure Fleet Sync
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  ensure:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure fleet sync is installed on Proxmox
+        run: ci/ensure-fleet-sync.sh
