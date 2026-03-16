@@ -78,6 +78,9 @@ scp "$SRC_COMPOSE" "$HOST:$REMOTE/docker-compose.yml"
 if [ "$SERVICE" = "logs" ]; then
   [ -f services/logs/server/loki-config.yml ] && scp services/logs/server/loki-config.yml "$HOST:$REMOTE/loki-config.yml"
   [ -f services/logs/server/users.yml ] && scp services/logs/server/users.yml "$HOST:$REMOTE/users.yml"
+  # Clean up orphaned syslog logging driver config (from reverted a6665b3).
+  # Only restarts Docker if the file actually exists.
+  ssh "$HOST" 'if [ -f /etc/docker/daemon.json ]; then rm /etc/docker/daemon.json && systemctl restart docker && echo "Removed orphaned daemon.json and restarted Docker"; fi'
 fi
 if [ "$SERVICE" = "livekit" ]; then
   echo "Uploading livekit.yaml..."
