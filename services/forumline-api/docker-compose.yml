@@ -29,5 +29,16 @@ services:
       PGPASSWORD: postgres
     entrypoint: ["sh", "-c", "for f in /scripts/*.sql; do psql -h db -U postgres -d postgres -f $$f; done && echo 'DB seeded!'"]
 
+  valkey:
+    image: valkey/valkey:8-alpine
+    ports:
+      - "6379:6379"
+    command: ["valkey-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
 volumes:
   pgdata:

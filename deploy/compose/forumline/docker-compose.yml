@@ -29,6 +29,18 @@ services:
         echo Forumline DB init complete!
       "
 
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    command: ["valkey-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "127.0.0.1:6379:6379"
+
   forumline:
     build:
       context: /opt/forumline/repo
@@ -37,6 +49,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      valkey:
+        condition: service_healthy
     env_file: .env
+    environment:
+      VALKEY_URL: "valkey:6379"
     ports:
       - "3000:3000"

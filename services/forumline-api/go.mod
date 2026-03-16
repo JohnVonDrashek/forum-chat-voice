@@ -7,6 +7,7 @@ require (
 	github.com/forumline/forumline/shared-go v0.0.0-00010101000000-000000000000
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/livekit/protocol v1.45.0
+	github.com/redis/go-redis/v9 v9.18.0
 	github.com/zitadel/zitadel-go/v3 v3.26.1
 )
 
@@ -68,7 +69,6 @@ require (
 	github.com/pion/webrtc/v4 v4.1.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.5.1 // indirect
-	github.com/redis/go-redis/v9 v9.11.0 // indirect
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/stoewer/go-strcase v1.3.1 // indirect

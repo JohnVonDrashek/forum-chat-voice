@@ -2,13 +2,15 @@ package forum
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/forumline/forumline/services/hosted/forum/service"
 	"github.com/forumline/forumline/services/hosted/forum/store"
+	"github.com/redis/go-redis/v9"
 	shared "github.com/forumline/forumline/shared-go"
 )
 
-func NewRouter(pool shared.DB, sseHub *shared.SSEHub, cfg *Config) *http.ServeMux {
+func NewRouter(pool shared.DB, sseHub *shared.SSEHub, cfg *Config, valkey *redis.Client) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	auth := shared.AuthMiddleware
@@ -37,6 +39,7 @@ func NewRouter(pool shared.DB, sseHub *shared.SSEHub, cfg *Config) *http.ServeMu
 		ChatSvc:         chatSvc,
 		AdminSvc:        adminSvc,
 		NotificationSvc: notifSvc,
+		ProfileCache:    NewProfileCache(valkey, pool, 30*time.Second),
 	}
 
 	// Channel follows (authenticated)

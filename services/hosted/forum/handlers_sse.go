@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/forumline/forumline/services/hosted/forum/store"
 	shared "github.com/forumline/forumline/shared-go"
 )
 
@@ -74,10 +73,7 @@ func (h *Handlers) HandleChatStream(w http.ResponseWriter, r *http.Request) {
 
 			authorID, _ := raw["author_id"].(string)
 			if authorID != "" {
-				row := h.Store.DB.QueryRow(ctx,
-					`SELECT `+store.ProfileColumns()+` FROM profiles WHERE id = $1`, authorID)
-				p, err := store.ScanProfile(row.Scan)
-				if err == nil {
+				if p, err := h.ProfileCache.Get(ctx, h.Config.Domain, authorID); err == nil {
 					raw["author"] = p
 				}
 			}
@@ -147,10 +143,7 @@ func (h *Handlers) HandlePostStream(w http.ResponseWriter, r *http.Request) {
 
 			authorID, _ := raw["author_id"].(string)
 			if authorID != "" {
-				row := h.Store.DB.QueryRow(ctx,
-					`SELECT `+store.ProfileColumns()+` FROM profiles WHERE id = $1`, authorID)
-				p, err := store.ScanProfile(row.Scan)
-				if err == nil {
+				if p, err := h.ProfileCache.Get(ctx, h.Config.Domain, authorID); err == nil {
 					raw["author"] = p
 				}
 			}
@@ -219,10 +212,7 @@ func (h *Handlers) HandleVoicePresenceStream(w http.ResponseWriter, r *http.Requ
 
 			userID, _ := raw["user_id"].(string)
 			if userID != "" {
-				row := h.Store.DB.QueryRow(ctx,
-					`SELECT `+store.ProfileColumns()+` FROM profiles WHERE id = $1`, userID)
-				p, err := store.ScanProfile(row.Scan)
-				if err == nil {
+				if p, err := h.ProfileCache.Get(ctx, h.Config.Domain, userID); err == nil {
 					raw["profile"] = p
 				}
 			}

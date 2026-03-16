@@ -34,6 +34,10 @@ func main() {
 	defer rawPool.Close()
 	pool := shared.NewObservablePool(rawPool)
 
+	// Valkey (Redis-compatible cache) — nil if VALKEY_URL not set
+	valkeyClient := shared.NewValkeyClient(ctx)
+	defer shared.CloseValkey(valkeyClient)
+
 	// SSE hub for LISTEN/NOTIFY — uses direct connection (bypasses PgBouncer)
 	listenDSN := os.Getenv("DATABASE_URL_DIRECT")
 	if listenDSN == "" {
@@ -65,7 +69,7 @@ func main() {
 	go pushListener.Start(ctx)
 
 	// Router
-	router := newRouter(s, sseHub)
+	router := newRouter(s, sseHub, valkeyClient)
 
 	// Wrap with global middleware
 	var handler http.Handler = router

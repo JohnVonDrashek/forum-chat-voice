@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 // Use applies middleware to a handler, wrapping in right-to-left order.
@@ -75,6 +77,13 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
 		next.ServeHTTP(w, r)
 	})
+}
+
+// Limiter is the interface for rate limiting implementations.
+// Both in-memory and Valkey-backed limiters satisfy this.
+type Limiter interface {
+	Allow(ip string) bool
+	Stop()
 }
 
 // RateLimiter provides simple in-memory per-IP rate limiting.
@@ -160,9 +169,54 @@ func (rl *RateLimiter) cleanup() {
 	}
 }
 
+// ValkeyRateLimiter uses Valkey INCR + EXPIRE for distributed rate limiting.
+// Falls back to an in-memory limiter if Valkey is unavailable.
+type ValkeyRateLimiter struct {
+	client   *redis.Client
+	limit    int
+	window   time.Duration
+	fallback *RateLimiter
+}
+
+// NewValkeyRateLimiter creates a Valkey-backed rate limiter with in-memory fallback.
+// If client is nil, all calls delegate to the fallback immediately.
+func NewValkeyRateLimiter(client *redis.Client, limit int, window time.Duration) *ValkeyRateLimiter {
+	return &ValkeyRateLimiter{
+		client:   client,
+		limit:    limit,
+		window:   window,
+		fallback: NewRateLimiter(limit, window),
+	}
+}
+
+func (vrl *ValkeyRateLimiter) Allow(ip string) bool {
+	if vrl.client == nil {
+		return vrl.fallback.Allow(ip)
+	}
+
+	ctx := context.Background()
+	key := ValkeyKey("rl", ip)
+
+	count, err := vrl.client.Incr(ctx, key).Result()
+	if err != nil {
+		return vrl.fallback.Allow(ip)
+	}
+
+	// Set expiry only on first increment (count == 1)
+	if count == 1 {
+		vrl.client.Expire(ctx, key, vrl.window)
+	}
+
+	return int(count) <= vrl.limit
+}
+
+func (vrl *ValkeyRateLimiter) Stop() {
+	vrl.fallback.Stop()
+}
+
 // RateLimitMiddleware applies rate limiting per IP.
 // Set TRUST_PROXY=true when running behind a known reverse proxy to use X-Forwarded-For.
-func RateLimitMiddleware(rl *RateLimiter) func(http.Handler) http.Handler {
+func RateLimitMiddleware(rl Limiter) func(http.Handler) http.Handler {
 	trustProxy := os.Getenv("TRUST_PROXY") == "true"
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

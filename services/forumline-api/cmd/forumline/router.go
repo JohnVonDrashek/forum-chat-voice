@@ -9,6 +9,7 @@ import (
 	"github.com/forumline/forumline/services/forumline-api/presence"
 	"github.com/forumline/forumline/services/forumline-api/service"
 	"github.com/forumline/forumline/services/forumline-api/store"
+	"github.com/redis/go-redis/v9"
 	shared "github.com/forumline/forumline/shared-go"
 )
 
@@ -17,7 +18,7 @@ func use(h http.HandlerFunc, mws ...func(http.Handler) http.Handler) http.Handle
 	return shared.Use(h, mws...)
 }
 
-func newRouter(s *store.Store, sseHub *shared.SSEHub) *http.ServeMux {
+func newRouter(s *store.Store, sseHub *shared.SSEHub, valkey *redis.Client) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// Services
@@ -42,13 +43,13 @@ func newRouter(s *store.Store, sseHub *shared.SSEHub) *http.ServeMux {
 	pushH := handler.NewPushHandler(s, pushSvc)
 	activityH := handler.NewActivityHandler(s)
 	notifH := handler.NewNotificationHandler(s)
-	presenceH := handler.NewPresenceHandler(s, presence.NewTracker(90*time.Second))
+	presenceH := handler.NewPresenceHandler(s, presence.NewTracker(90*time.Second, valkey))
 
 	// Middleware
 	auth := shared.AuthMiddleware
 
-	// Rate limiters
-	dmRL := shared.RateLimitMiddleware(shared.NewRateLimiter(30, time.Minute))
+	// Rate limiters — use Valkey when available, in-memory fallback otherwise
+	dmRL := shared.RateLimitMiddleware(shared.NewValkeyRateLimiter(valkey, 30, time.Minute))
 
 	// Auth routes (Zitadel handles login/signup, we just need session + logout)
 	mux.Handle("GET /api/auth/session", use(authH.HandleSession, auth))
@@ -105,7 +106,7 @@ func newRouter(s *store.Store, sseHub *shared.SSEHub) *http.ServeMux {
 
 	// Webhook (forum → forumline push)
 	webhookH := handler.NewWebhookHandler(s)
-	webhookRL := shared.RateLimitMiddleware(shared.NewRateLimiter(100, time.Minute))
+	webhookRL := shared.RateLimitMiddleware(shared.NewValkeyRateLimiter(valkey, 100, time.Minute))
 	mux.Handle("POST /api/webhooks/notification", use(webhookH.HandleNotification, webhookRL))
 	mux.Handle("POST /api/webhooks/notifications", use(webhookH.HandleNotificationBatch, webhookRL))
 

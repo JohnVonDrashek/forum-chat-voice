@@ -49,6 +49,10 @@ func main() {
 	}
 	defer pool.Close()
 
+	// Valkey (Redis-compatible cache) — nil if VALKEY_URL not set
+	valkeyClient := shared.NewValkeyClient(ctx)
+	defer shared.CloseValkey(valkeyClient)
+
 	// Tenant store — loads and caches tenant configs from platform_tenants table
 	store := plat.NewTenantStore(pool)
 	if err := store.Start(ctx); err != nil {
@@ -159,7 +163,7 @@ func main() {
 			R2PublicURL:            os.Getenv("R2_PUBLIC_URL"),
 		}
 
-		forumRouter := forum.NewRouter(tp, sseHub, cfg)
+		forumRouter := forum.NewRouter(tp, sseHub, cfg, valkeyClient)
 
 		routerMu.Lock()
 		routerCache[tenant.Domain] = forumRouter

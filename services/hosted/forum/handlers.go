@@ -22,6 +22,7 @@ type Handlers struct {
 	ChatSvc         *service.ChatService
 	AdminSvc        *service.AdminService
 	NotificationSvc *service.NotificationService
+	ProfileCache    *ProfileCache
 }
 
 // Config holds environment-driven configuration for the forum server.

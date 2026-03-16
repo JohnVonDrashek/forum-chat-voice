@@ -8,6 +8,7 @@ require (
 	github.com/livekit/protocol v1.45.0
 	github.com/livekit/server-sdk-go/v2 v2.15.0
 	github.com/minio/minio-go/v7 v7.0.99
+	github.com/redis/go-redis/v9 v9.18.0
 	github.com/zitadel/oidc/v3 v3.45.1
 )
 
@@ -77,7 +78,6 @@ require (
 	github.com/pion/turn/v4 v4.1.4 // indirect
 	github.com/pion/webrtc/v4 v4.2.6 // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.5.1 // indirect
-	github.com/redis/go-redis/v9 v9.17.2 // indirect
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
