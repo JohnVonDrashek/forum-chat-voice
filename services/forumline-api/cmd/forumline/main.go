@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -109,6 +111,10 @@ func spaHandler(apiHandler http.Handler) http.Handler {
 	distDir := "./dist"
 	fileServer := http.FileServer(http.Dir(distDir))
 
+	// Build index.html with injected runtime config (ZITADEL_CLIENT_ID etc.)
+	// so the frontend can read window.ZITADEL_CLIENT_ID without an extra fetch.
+	indexHTML := buildIndexHTML(distDir)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// API and auth proxy routes go to the router
 		if strings.HasPrefix(r.URL.Path, "/api/") {
@@ -135,10 +141,33 @@ func spaHandler(apiHandler http.Handler) http.Handler {
 			return
 		}
 
-		// SPA fallback — serve index.html (always revalidate so deploys take effect)
+		// SPA fallback — serve index.html with injected config
 		w.Header().Set("Cache-Control", "no-cache")
-		http.ServeFile(w, r, filepath.Join(distDir, "index.html"))
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(indexHTML)
 	})
+}
+
+// buildIndexHTML reads dist/index.html and injects a <script> tag with
+// runtime config (ZITADEL_CLIENT_ID) right before </head>.
+func buildIndexHTML(distDir string) []byte {
+	raw, err := os.ReadFile(filepath.Join(distDir, "index.html"))
+	if err != nil {
+		log.Printf("Warning: could not read index.html for config injection: %v", err)
+		return raw
+	}
+
+	clientID := os.Getenv("ZITADEL_CLIENT_ID")
+	if clientID == "" {
+		return raw // nothing to inject
+	}
+
+	configScript := fmt.Sprintf(
+		`<script>window.ZITADEL_CLIENT_ID=%q;</script>`,
+		clientID,
+	)
+
+	return bytes.Replace(raw, []byte("</head>"), []byte(configScript+"\n</head>"), 1)
 }
 
 // isStaticAssetExt returns true for file extensions that are expected static
