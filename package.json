@@ -14,7 +14,7 @@
     "test:e2e": "playwright test --config tests/playwright.config.ts",
     "test:e2e:ui": "playwright test --config tests/playwright.config.ts --ui",
     "test:e2e:smoke": "playwright test --config tests/playwright.config.ts --project=smoke",
-    "postinstall": "git config core.hooksPath ci/hooks && git config core.excludesFile ci/.gitignore"
+    "postinstall": "git config core.hooksPath ci/hooks"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
