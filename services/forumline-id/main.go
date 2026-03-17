@@ -346,7 +346,9 @@ func handleTokenExchange(codes *codeStore) http.HandlerFunc {
 // GET /userinfo
 // Header: Authorization: Bearer <JWT>
 // Returns: { "forumline_id": "...", "username": "...", ... }
-func handleUserInfo(zitadelURL, clientID string) http.HandlerFunc {
+func handleUserInfo(zitadelURL, _ string) http.HandlerFunc {
+	userinfoURL := strings.TrimRight(zitadelURL, "/") + "/oidc/v1/userinfo"
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := extractBearerToken(r)
 		if token == "" {
@@ -354,40 +356,38 @@ func handleUserInfo(zitadelURL, clientID string) http.HandlerFunc {
 			return
 		}
 
-		// Introspect the token with Zitadel
-		introspectURL := strings.TrimRight(zitadelURL, "/") + "/oauth/v2/introspect"
-		form := url.Values{
-			"token":     {token},
-			"client_id": {clientID},
-		}
-		body := form.Encode()
-		req, err := http.NewRequestWithContext(r.Context(), "POST", introspectURL, strings.NewReader(body))
+		// Validate token via Zitadel's userinfo endpoint (works with public clients,
+		// unlike introspection which requires client authentication).
+		req, err := http.NewRequestWithContext(r.Context(), "GET", userinfoURL, nil)
 		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "failed to build introspection request")
+			writeErr(w, http.StatusInternalServerError, "failed to build userinfo request")
 			return
 		}
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			slog.Error("introspection failed", "error", err)
+			slog.Error("userinfo failed", "error", err)
 			writeErr(w, http.StatusBadGateway, "identity provider unreachable")
 			return
 		}
 		defer func() { _ = resp.Body.Close() }()
 
-		var result struct {
-			Active      bool   `json:"active"`
-			Sub         string `json:"sub"`
-			Username    string `json:"username"`
-			Name        string `json:"name"`
-			GivenName   string `json:"given_name"`
-			FamilyName  string `json:"family_name"`
-			Email       string `json:"email"`
-			Picture     string `json:"picture"`
+		if resp.StatusCode != http.StatusOK {
+			writeErr(w, http.StatusUnauthorized, "invalid or expired token")
+			return
 		}
-		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil || !result.Active {
+
+		var result struct {
+			Sub               string `json:"sub"`
+			Name              string `json:"name"`
+			GivenName         string `json:"given_name"`
+			FamilyName        string `json:"family_name"`
+			PreferredUsername  string `json:"preferred_username"`
+			Email             string `json:"email"`
+			Picture           string `json:"picture"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil || result.Sub == "" {
 			writeErr(w, http.StatusUnauthorized, "invalid or expired token")
 			return
 		}
@@ -396,7 +396,7 @@ func handleUserInfo(zitadelURL, clientID string) http.HandlerFunc {
 		if displayName == "" {
 			displayName = result.Name
 		}
-		username := result.Username
+		username := result.PreferredUsername
 		if username == "" {
 			username = result.Email
 		}
