@@ -45,7 +45,7 @@ services:
         condition: service_healthy
     env_file: .env
     environment:
-      ZITADEL_URL: "http://zitadel:8080"
+      ZITADEL_URL: "https://auth.forumline.net"
       EXTERNAL_URL: "https://id.forumline.net"
     ports:
       - "3000:3000"
