@@ -57,6 +57,9 @@ func main() {
 	// Store + services
 	s := store.New(pool)
 
+	// Validate schema on startup (warns about UUID/TEXT mismatches, missing FKs)
+	s.ValidateSchema(ctx)
+
 	// Clean up stale calls from previous server run (SSE drops on restart
 	// leave calls stuck in ringing/active state, blocking new calls).
 	if tag, err := pool.Exec(ctx,

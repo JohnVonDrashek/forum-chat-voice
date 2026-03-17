@@ -51,4 +51,43 @@ ALTER TABLE forumline_calls ADD CONSTRAINT forumline_calls_callee_id_fkey FOREIG
 -- 5. Drop the entire GoTrue auth schema
 DROP SCHEMA IF EXISTS auth CASCADE;
 
+-- 6. Fix trigger functions that used UUID[] for member_ids
+CREATE OR REPLACE FUNCTION notify_dm_changes() RETURNS TRIGGER AS $$
+DECLARE
+  member_ids TEXT[];
+BEGIN
+  SELECT array_agg(user_id) INTO member_ids
+  FROM forumline_conversation_members
+  WHERE conversation_id = NEW.conversation_id;
+
+  PERFORM pg_notify('dm_changes', json_build_object(
+    'conversation_id', NEW.conversation_id,
+    'sender_id', NEW.sender_id,
+    'member_ids', member_ids,
+    'id', NEW.id,
+    'content', NEW.content,
+    'created_at', NEW.created_at
+  )::text);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION notify_new_dm() RETURNS TRIGGER AS $$
+DECLARE
+  member_ids TEXT[];
+BEGIN
+  SELECT array_agg(user_id) INTO member_ids
+  FROM forumline_conversation_members
+  WHERE conversation_id = NEW.conversation_id;
+
+  PERFORM pg_notify('push_dm', json_build_object(
+    'conversation_id', NEW.conversation_id,
+    'sender_id', NEW.sender_id,
+    'member_ids', member_ids,
+    'content', NEW.content
+  )::text);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 SELECT 'Migration 006 complete: GoTrue removed, Zitadel-compatible schema.' AS status;
