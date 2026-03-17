@@ -3,57 +3,20 @@
   "version": "0.2.0",
   "description": "Forumline client SDK — API client, auth, real-time, and state management",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./client": {
-      "types": "./dist/client.d.ts",
-      "default": "./dist/client.js"
-    },
-    "./auth": {
-      "types": "./dist/auth.d.ts",
-      "default": "./dist/auth.js"
-    },
-    "./event-stream": {
-      "types": "./dist/event-stream.d.ts",
-      "default": "./dist/event-stream.js"
-    },
-    "./dm-store": {
-      "types": "./dist/dm-store.d.ts",
-      "default": "./dist/dm-store.js"
-    },
-    "./presence": {
-      "types": "./dist/presence.d.ts",
-      "default": "./dist/presence.js"
-    },
-    "./identity": {
-      "types": "./dist/identity.d.ts",
-      "default": "./dist/identity.js"
-    },
-    "./push": {
-      "types": "./dist/push.d.ts",
-      "default": "./dist/push.js"
-    },
-    "./forum-discovery": {
-      "types": "./dist/forum-discovery.d.ts",
-      "default": "./dist/forum-discovery.js"
-    },
-    "./native-bridge": {
-      "types": "./dist/native-bridge.d.ts",
-      "default": "./dist/native-bridge.js"
-    },
-    "./calls": {
-      "types": "./dist/calls.d.ts",
-      "default": "./dist/calls.js"
-    },
-    "./forum-store": {
-      "types": "./dist/forum-store.d.ts",
-      "default": "./dist/forum-store.js"
-    }
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./auth": "./src/auth.ts",
+    "./event-stream": "./src/event-stream.ts",
+    "./dm-store": "./src/dm-store.ts",
+    "./presence": "./src/presence.ts",
+    "./identity": "./src/identity.ts",
+    "./push": "./src/push.ts",
+    "./forum-discovery": "./src/forum-discovery.ts",
+    "./native-bridge": "./src/native-bridge.ts",
+    "./calls": "./src/calls.ts",
+    "./forum-store": "./src/forum-store.ts"
   },
   "scripts": {
     "build": "tsc",
@@ -77,6 +40,7 @@
     "typescript": "^5.9.3"
   },
   "files": [
+    "src",
     "dist"
   ],
   "repository": {
