@@ -49,6 +49,8 @@ packages/frontend/server-sdk/src/**/*.js.map
 
 # Test screenshots
 *.png
+# PWA app icons (override *.png ignore)
+!services/forumline-web/public/icons/*.png
 
 # Deploy secrets live in secrets.kdbx, never commit .env files
 **/.env
