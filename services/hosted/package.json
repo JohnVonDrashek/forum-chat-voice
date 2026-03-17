@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src/"
+    "lint": "biome lint src/"
   },
   "dependencies": {
     "@dicebear/avataaars": "^9.3.2",
@@ -19,8 +19,6 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.2.1",
-    "eslint": "^10.0.3",
-    "eslint-plugin-no-unsanitized": "^4.1.5",
     "tailwindcss": "^4.2.1",
     "vite": "^7.3.1"
   }

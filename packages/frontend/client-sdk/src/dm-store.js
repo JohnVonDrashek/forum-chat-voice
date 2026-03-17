@@ -14,12 +14,22 @@ let pollInterval = null;
 let refCount = 0;
 const changeListeners = new Set();
 
-function getConversations() { return conversations; }
-function getUnreadCount() { return unreadCount; }
-function isInitialLoad() { return initialLoad; }
-function hasError() { return loadError; }
+function getConversations() {
+  return conversations;
+}
+function getUnreadCount() {
+  return unreadCount;
+}
+function isInitialLoad() {
+  return initialLoad;
+}
+function hasError() {
+  return loadError;
+}
 
-function _notify() { for (const fn of changeListeners) fn(); }
+function _notify() {
+  for (const fn of changeListeners) fn();
+}
 
 function onChanged(fn) {
   changeListeners.add(fn);
@@ -36,7 +46,11 @@ async function fetchConversations() {
     loadError = false;
     _notify();
   } catch {
-    if (initialLoad) { loadError = true; initialLoad = false; _notify(); }
+    if (initialLoad) {
+      loadError = true;
+      initialLoad = false;
+      _notify();
+    }
   }
 }
 
@@ -55,13 +69,24 @@ function startUpdates() {
     if (refCount === 0) {
       sseUnsub?.();
       sseUnsub = null;
-      if (sseDebounce) { clearTimeout(sseDebounce); sseDebounce = null; }
-      if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+      if (sseDebounce) {
+        clearTimeout(sseDebounce);
+        sseDebounce = null;
+      }
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
     }
   };
 }
 
 export const DmStore = {
-  getConversations, getUnreadCount, isInitialLoad, hasError,
-  fetchConversations, startUpdates, onChanged,
+  getConversations,
+  getUnreadCount,
+  isInitialLoad,
+  hasError,
+  fetchConversations,
+  startUpdates,
+  onChanged,
 };

@@ -7,8 +7,8 @@ import { ForumlineAPI } from './client.js';
 const HEARTBEAT_MS = 30000;
 const POLL_MS = 30000;
 
-let onlineUsers = {};        // userId -> boolean
-let trackedUserIds = [];     // which user IDs to poll
+let onlineUsers = {}; // userId -> boolean
+let trackedUserIds = []; // which user IDs to poll
 let heartbeatTimer = null;
 let pollTimer = null;
 let refCount = 0;
@@ -16,7 +16,11 @@ const updateListeners = new Set();
 
 function _notify() {
   for (const fn of updateListeners) {
-    try { fn(onlineUsers); } catch (e) { console.error('[PresenceTracker]', e); }
+    try {
+      fn(onlineUsers);
+    } catch (e) {
+      console.error('[PresenceTracker]', e);
+    }
   }
 }
 
@@ -60,8 +64,14 @@ function stop() {
   refCount--;
   if (refCount <= 0) {
     refCount = 0;
-    if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
-    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
     onlineUsers = {};
     trackedUserIds = [];
   }
@@ -83,8 +93,14 @@ function onUpdate(callback) {
 }
 
 function pause() {
-  if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+  }
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
 }
 
 function resume() {

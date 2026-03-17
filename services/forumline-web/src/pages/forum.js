@@ -1,7 +1,7 @@
-import { $, plural } from '../lib/utils.js';
 import { avatarUrl } from '../lib/avatar.js';
-import store from '../state/store.js';
+import { $, plural } from '../lib/utils.js';
 import * as data from '../state/data.js';
+import store from '../state/store.js';
 
 let _showView, _renderForumList, _renderDmList, _showThread, _showToast, _showContextMenu;
 
@@ -13,7 +13,8 @@ export function showForum(forumId) {
   const forum = data.forums.find(f => f.id === forumId);
   if (!forum) return;
   $('forumName').textContent = forum.name;
-  $('forumMeta').textContent = `${plural(forum.members, 'member')} · ${plural(forum.threads, 'thread')}`;
+  $('forumMeta').textContent =
+    `${plural(forum.members, 'member')} · ${plural(forum.threads, 'thread')}`;
   $('forumAvatar').src = avatarUrl(forum.seed, 'shapes');
   $('membersBtnCount').textContent = forum.members;
   // Clear unread when visiting
@@ -79,14 +80,19 @@ export function renderFilteredThreads(forumId) {
       sorted.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
   }
 
-  el.innerHTML = sorted.map(t => {
-    let labelHtml = '';
-    if (t.pinned) labelHtml += '<span class="thread-pinned-icon">&#x1F4CC;</span>';
-    if (t.label === 'announcement') labelHtml += '<span class="thread-label thread-label-announcement">Announcement</span>';
-    else if (t.label === 'question' && t.resolved) labelHtml += '<span class="thread-label thread-label-resolved">Resolved</span>';
-    else if (t.label === 'question') labelHtml += '<span class="thread-label thread-label-question">Question</span>';
-    else if (t.label === 'discussion') labelHtml += '<span class="thread-label thread-label-discussion">Discussion</span>';
-    return `
+  el.innerHTML = sorted
+    .map(t => {
+      let labelHtml = '';
+      if (t.pinned) labelHtml += '<span class="thread-pinned-icon">&#x1F4CC;</span>';
+      if (t.label === 'announcement')
+        labelHtml += '<span class="thread-label thread-label-announcement">Announcement</span>';
+      else if (t.label === 'question' && t.resolved)
+        labelHtml += '<span class="thread-label thread-label-resolved">Resolved</span>';
+      else if (t.label === 'question')
+        labelHtml += '<span class="thread-label thread-label-question">Question</span>';
+      else if (t.label === 'discussion')
+        labelHtml += '<span class="thread-label thread-label-discussion">Discussion</span>';
+      return `
       <div class="thread-item ${t.pinned ? 'thread-pinned' : ''}" data-thread="${t.id}" data-forum="${forumId}" tabindex="0" role="listitem" aria-label="${t.title}, ${plural(t.replies, 'reply')}, ${t.time}">
         <img class="thread-avatar" src="${avatarUrl(t.seed)}" alt="" onerror="this.style.display='none'">
         <div class="thread-info">
@@ -99,23 +105,25 @@ export function renderFilteredThreads(forumId) {
         </div>
       </div>
     `;
-  }).join('');
+    })
+    .join('');
 
   if (sorted.length === 0) {
-    el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x1F50D;</div><p>No threads match this filter</p></div>';
+    el.innerHTML =
+      '<div class="empty-state"><div class="empty-icon">&#x1F50D;</div><p>No threads match this filter</p></div>';
   }
 
   el.querySelectorAll('.thread-item').forEach(item => {
-    item.addEventListener('click', (e) => {
+    item.addEventListener('click', e => {
       if (e.button === 0) _showThread(item.dataset.thread);
     });
-    item.addEventListener('keydown', (e) => {
+    item.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         _showThread(item.dataset.thread);
       }
     });
-    item.addEventListener('contextmenu', (e) => {
+    item.addEventListener('contextmenu', e => {
       e.preventDefault();
       _showContextMenu(e.clientX, e.clientY, item.dataset.thread, item.dataset.forum);
     });
@@ -128,13 +136,15 @@ export function renderOnlineBar(forumId) {
   const bar = $('forumOnlineBar');
   if (!bar) return;
 
-  const avatarsHtml = online.slice(0, 5).map(m =>
-    `<img src="${avatarUrl(m.seed)}" alt="${m.name}" title="${m.name}">`
-  ).join('');
+  const avatarsHtml = online
+    .slice(0, 5)
+    .map(m => `<img src="${avatarUrl(m.seed)}" alt="${m.name}" title="${m.name}">`)
+    .join('');
 
   $('onlineAvatars').innerHTML = avatarsHtml;
   const extra = online.length > 5 ? ` +${online.length - 5} more` : '';
-  $('onlineText').innerHTML = `<strong>${online.length}</strong> member${online.length !== 1 ? 's' : ''} online${extra}`;
+  $('onlineText').innerHTML =
+    `<strong>${online.length}</strong> member${online.length !== 1 ? 's' : ''} online${extra}`;
 }
 
 export function initForum(deps) {
@@ -146,7 +156,7 @@ export function initForum(deps) {
   _showContextMenu = deps.showContextMenu;
 
   // Thread sort select change handler
-  $('threadSortSelect').addEventListener('change', (e) => {
+  $('threadSortSelect').addEventListener('change', e => {
     store.currentSort = e.target.value;
     if (store.currentForum) renderFilteredThreads(store.currentForum);
   });

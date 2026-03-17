@@ -11,47 +11,94 @@ export const ForumStore = {
   _unreadCounts: {},
   _subscribers: [],
 
-  get forums() { return this._forums; },
-  get activeForum() { return this._activeForum; },
-  get activePath() { return this._activePath; },
+  get forums() {
+    return this._forums;
+  },
+  get activeForum() {
+    return this._activeForum;
+  },
+  get activePath() {
+    return this._activePath;
+  },
 
-  subscribe(fn) { this._subscribers.push(fn); return () => { this._subscribers = this._subscribers.filter(f => f !== fn); }; },
+  subscribe(fn) {
+    this._subscribers.push(fn);
+    return () => {
+      this._subscribers = this._subscribers.filter(f => f !== fn);
+    };
+  },
   _notify() {
-    for (const fn of this._subscribers) { try { fn(this); } catch (e) { console.error(e); } }
+    for (const fn of this._subscribers) {
+      try {
+        fn(this);
+      } catch (e) {
+        console.error(e);
+      }
+    }
   },
 
   async syncFromServer(accessToken) {
     if (accessToken) this._accessToken = accessToken;
     if (!this._accessToken) return;
     try {
-      const res = await fetch('/api/memberships', { headers: { Authorization: `Bearer ${this._accessToken}` } });
+      const res = await fetch('/api/memberships', {
+        headers: { Authorization: `Bearer ${this._accessToken}` },
+      });
       if (!res.ok) return;
       const memberships = await res.json();
       this._forums = (memberships || []).map(m => ({
-        domain: m.forum_domain, name: m.forum_name, icon_url: m.forum_icon_url || '',
-        web_base: m.web_base, api_base: m.api_base, capabilities: m.capabilities || [],
-        added_at: m.joined_at, id: 'real_' + m.forum_domain.replace(/[^a-z0-9]/g, '_'),
-        seed: m.forum_domain, members: m.member_count || 0, unread: 0, threads: 0, isReal: true,
+        domain: m.forum_domain,
+        name: m.forum_name,
+        icon_url: m.forum_icon_url || '',
+        web_base: m.web_base,
+        api_base: m.api_base,
+        capabilities: m.capabilities || [],
+        added_at: m.joined_at,
+        id: 'real_' + m.forum_domain.replace(/[^a-z0-9]/g, '_'),
+        seed: m.forum_domain,
+        members: m.member_count || 0,
+        unread: 0,
+        threads: 0,
+        isReal: true,
       }));
-      try { localStorage.setItem('forumline-memberships', JSON.stringify(this._forums)); } catch (e) {}
+      try {
+        localStorage.setItem('forumline-memberships', JSON.stringify(this._forums));
+      } catch (e) {}
       this._notify();
-    } catch (e) { console.warn('Failed to sync memberships:', e); }
+    } catch (e) {
+      console.warn('Failed to sync memberships:', e);
+    }
   },
 
   loadCache() {
-    try { const c = localStorage.getItem('forumline-memberships'); if (c) { this._forums = JSON.parse(c); this._notify(); } } catch (e) {}
+    try {
+      const c = localStorage.getItem('forumline-memberships');
+      if (c) {
+        this._forums = JSON.parse(c);
+        this._notify();
+      }
+    } catch (e) {}
   },
 
   async fetchManifest(url) {
-    let n = url.trim(); if (!/^https?:\/\//i.test(n)) n = 'https://' + n;
-    const mu = n.includes('/.well-known/forumline-manifest.json') ? n : n.replace(/\/$/, '') + '/.well-known/forumline-manifest.json';
-    const r = await fetch(mu); if (!r.ok) throw new Error('Forum returned HTTP ' + r.status + ': not a valid Forumline forum');
-    const m = await r.json(); if (m.forumline_version !== '1') throw new Error('Unsupported version: ' + m.forumline_version); return m;
+    let n = url.trim();
+    if (!/^https?:\/\//i.test(n)) n = 'https://' + n;
+    const mu = n.includes('/.well-known/forumline-manifest.json')
+      ? n
+      : n.replace(/\/$/, '') + '/.well-known/forumline-manifest.json';
+    const r = await fetch(mu);
+    if (!r.ok) throw new Error('Forum returned HTTP ' + r.status + ': not a valid Forumline forum');
+    const m = await r.json();
+    if (m.forumline_version !== '1') throw new Error('Unsupported version: ' + m.forumline_version);
+    return m;
   },
 
   async addForum(url) {
     // Extract domain from URL input (strip protocol, path, trailing slash)
-    let domain = url.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+    let domain = url
+      .trim()
+      .replace(/^https?:\/\//i, '')
+      .replace(/\/.*$/, '');
     if (!domain) throw new Error('Please enter a forum URL or domain');
     if (this._forums.some(f => f.domain === domain)) throw new Error('Already joined this forum');
     if (!this._accessToken) throw new Error('You must be signed in to add a forum');
@@ -68,16 +115,26 @@ export const ForumStore = {
     }
     const info = await res.json();
     const mem = {
-      domain: info.domain, name: info.name, icon_url: info.icon_url || '',
-      web_base: info.web_base, api_base: info.api_base,
+      domain: info.domain,
+      name: info.name,
+      icon_url: info.icon_url || '',
+      web_base: info.web_base,
+      api_base: info.api_base,
       capabilities: info.capabilities || [],
       added_at: info.joined_at || new Date().toISOString(),
-      id: 'real_' + info.domain.replace(/[^a-z0-9]/g, '_'), seed: info.domain,
-      members: info.member_count || 1, unread: 0, threads: 0, isReal: true,
+      id: 'real_' + info.domain.replace(/[^a-z0-9]/g, '_'),
+      seed: info.domain,
+      members: info.member_count || 1,
+      unread: 0,
+      threads: 0,
+      isReal: true,
     };
     this._forums.push(mem);
-    try { localStorage.setItem('forumline-memberships', JSON.stringify(this._forums)); } catch (e) {}
-    this._notify(); return mem;
+    try {
+      localStorage.setItem('forumline-memberships', JSON.stringify(this._forums));
+    } catch (e) {}
+    this._notify();
+    return mem;
   },
 
   async joinByDomain(domain, forumInfo) {
@@ -94,23 +151,48 @@ export const ForumStore = {
     }
     const info = forumInfo || {};
     const mem = {
-      domain: domain, name: info.name || domain, icon_url: info.icon_url || '',
-      web_base: info.web_base || 'https://' + domain, api_base: info.api_base || '',
-      capabilities: info.capabilities || [], added_at: new Date().toISOString(),
-      id: 'real_' + domain.replace(/[^a-z0-9]/g, '_'), seed: domain,
-      members: info.member_count || 0, unread: 0, threads: 0, isReal: true,
+      domain: domain,
+      name: info.name || domain,
+      icon_url: info.icon_url || '',
+      web_base: info.web_base || 'https://' + domain,
+      api_base: info.api_base || '',
+      capabilities: info.capabilities || [],
+      added_at: new Date().toISOString(),
+      id: 'real_' + domain.replace(/[^a-z0-9]/g, '_'),
+      seed: domain,
+      members: info.member_count || 0,
+      unread: 0,
+      threads: 0,
+      isReal: true,
     };
     this._forums.push(mem);
-    try { localStorage.setItem('forumline-memberships', JSON.stringify(this._forums)); } catch (e) {}
+    try {
+      localStorage.setItem('forumline-memberships', JSON.stringify(this._forums));
+    } catch (e) {}
     this._notify();
     return mem;
   },
 
   async leaveForum(domain) {
-    if (this._accessToken) { try { await fetch('/api/memberships', { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + this._accessToken }, body: JSON.stringify({ forum_domain: domain }) }); } catch (e) {} }
+    if (this._accessToken) {
+      try {
+        await fetch('/api/memberships', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + this._accessToken,
+          },
+          body: JSON.stringify({ forum_domain: domain }),
+        });
+      } catch (e) {}
+    }
     this._forums = this._forums.filter(f => f.domain !== domain);
-    if (this._activeForum && this._activeForum.domain === domain) { this._activeForum = null; }
-    try { localStorage.setItem('forumline-memberships', JSON.stringify(this._forums)); } catch (e) {}
+    if (this._activeForum && this._activeForum.domain === domain) {
+      this._activeForum = null;
+    }
+    try {
+      localStorage.setItem('forumline-memberships', JSON.stringify(this._forums));
+    } catch (e) {}
     this._notify();
   },
 
@@ -121,7 +203,10 @@ export const ForumStore = {
     try {
       await fetch('/api/memberships', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + this._accessToken },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + this._accessToken,
+        },
         body: JSON.stringify({ forum_domain: domain, muted: newMuted }),
       });
       if (forum) forum.muted = newMuted;
@@ -150,7 +235,13 @@ export const ForumStore = {
   },
 
   clear() {
-    this._accessToken = null; this._forums = []; this._activeForum = null; this._unreadCounts = {};
-    try { localStorage.removeItem('forumline-memberships'); } catch (e) {} this._notify();
+    this._accessToken = null;
+    this._forums = [];
+    this._activeForum = null;
+    this._unreadCounts = {};
+    try {
+      localStorage.removeItem('forumline-memberships');
+    } catch (e) {}
+    this._notify();
   },
 };

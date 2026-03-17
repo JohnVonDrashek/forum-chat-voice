@@ -1,7 +1,7 @@
-import { $ } from '../lib/utils.js';
-import { avatarUrl } from '../lib/avatar.js';
-import store from '../state/store.js';
 import { ForumlineAPI, ForumStore } from '@forumline/client-sdk';
+import { avatarUrl } from '../lib/avatar.js';
+import { $ } from '../lib/utils.js';
+import store from '../state/store.js';
 
 function timeAgo(timestamp) {
   const now = new Date();
@@ -26,10 +26,12 @@ function updateForumsJoinedStat() {
 
 function renderNetworkStats() {
   updateForumsJoinedStat();
-  ForumlineAPI.getConversations().then(convos => {
-    const el = $('statConversations');
-    if (el) el.textContent = (convos || []).length;
-  }).catch(() => {});
+  ForumlineAPI.getConversations()
+    .then(convos => {
+      const el = $('statConversations');
+      if (el) el.textContent = (convos || []).length;
+    })
+    .catch(() => {});
 }
 
 // Update forums count when memberships sync
@@ -46,19 +48,20 @@ export function renderActivityFeed() {
 
   renderNetworkStats();
 
-  ForumlineAPI.getActivity().then(items => {
-    if (!items || items.length === 0) {
-      el.innerHTML = '<div class="activity-empty">No recent activity in your forums yet.</div>';
-      return;
-    }
+  ForumlineAPI.getActivity()
+    .then(items => {
+      if (!items || items.length === 0) {
+        el.innerHTML = '<div class="activity-empty">No recent activity in your forums yet.</div>';
+        return;
+      }
 
-    el.innerHTML = items.map(a => {
-      const itemAvatar = a.avatar_url || avatarUrl(a.author);
-      const actionText = a.action === 'posted'
-        ? `posted "${a.thread_title}"`
-        : `replied in "${a.thread_title}"`;
+      el.innerHTML = items
+        .map(a => {
+          const itemAvatar = a.avatar_url || avatarUrl(a.author);
+          const actionText =
+            a.action === 'posted' ? `posted "${a.thread_title}"` : `replied in "${a.thread_title}"`;
 
-      return `
+          return `
         <div class="activity-item" data-domain="${a.forum_domain || ''}" data-thread="${a.thread_id || ''}">
           <img src="${itemAvatar}" alt="">
           <div>
@@ -67,18 +70,20 @@ export function renderActivityFeed() {
           </div>
         </div>
       `;
-    }).join('');
+        })
+        .join('');
 
-    el.querySelectorAll('.activity-item[data-domain]').forEach(item => {
-      item.addEventListener('click', () => {
-        const domain = item.dataset.domain;
-        const threadId = item.dataset.thread;
-        if (domain) ForumStore.switchForum(domain, threadId ? `/t/${threadId}` : '');
+      el.querySelectorAll('.activity-item[data-domain]').forEach(item => {
+        item.addEventListener('click', () => {
+          const domain = item.dataset.domain;
+          const threadId = item.dataset.thread;
+          if (domain) ForumStore.switchForum(domain, threadId ? `/t/${threadId}` : '');
+        });
       });
+    })
+    .catch(() => {
+      el.innerHTML = '<div class="activity-empty">Could not load activity.</div>';
     });
-  }).catch(() => {
-    el.innerHTML = '<div class="activity-empty">Could not load activity.</div>';
-  });
 }
 
 let _showView, _renderForumList, _renderDmList;

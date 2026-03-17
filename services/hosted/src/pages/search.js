@@ -11,21 +11,21 @@
  * - Show suggested search terms when the search field is empty to encourage discovery
  */
 
-import { api } from '../lib/api.js'
-import { formatRelativeTime } from '../lib/date.js'
+import { api } from '../lib/api.js';
+import { formatRelativeTime } from '../lib/date.js';
 
 export function renderSearch(container) {
-  let debounceTimer = null
-  let filter = 'all'
-  let currentQuery = ''
-  let threadResults = []
-  let postResults = []
+  let debounceTimer = null;
+  let filter = 'all';
+  let currentQuery = '';
+  let threadResults = [];
+  let postResults = [];
 
   // Read initial query from URL
-  const params = new URLSearchParams(location.search)
-  const initialQuery = params.get('q') || ''
-  const initialFilter = params.get('filter') || 'all'
-  filter = initialFilter
+  const params = new URLSearchParams(location.search);
+  const initialQuery = params.get('q') || '';
+  const initialFilter = params.get('filter') || 'all';
+  filter = initialFilter;
 
   // eslint-disable-next-line no-unsanitized/property -- static template, query escaped via escapeAttr()
   container.innerHTML = `
@@ -45,99 +45,103 @@ export function renderSearch(container) {
     <div id="search-results">
       ${!initialQuery ? emptyStateHTML() : ''}
     </div>
-  `
+  `;
 
-  const input = container.querySelector('#search-input')
-  const clearBtn = container.querySelector('#search-clear')
-  const filtersEl = container.querySelector('#search-filters')
+  const input = container.querySelector('#search-input');
+  const clearBtn = container.querySelector('#search-clear');
+  const filtersEl = container.querySelector('#search-filters');
 
   // Run initial search if query in URL
-  if (initialQuery) doSearch(initialQuery)
+  if (initialQuery) doSearch(initialQuery);
 
   function updateURL(q) {
-    const p = new URLSearchParams()
-    if (q) { p.set('q', q); p.set('filter', filter) }
-    const newUrl = p.toString() ? `${location.pathname}?${p}` : location.pathname
-    history.replaceState(null, '', newUrl)
+    const p = new URLSearchParams();
+    if (q) {
+      p.set('q', q);
+      p.set('filter', filter);
+    }
+    const newUrl = p.toString() ? `${location.pathname}?${p}` : location.pathname;
+    history.replaceState(null, '', newUrl);
   }
 
   input.addEventListener('input', () => {
-    const q = input.value.trim()
-    clearBtn.classList.toggle('hidden', !q)
+    const q = input.value.trim();
+    clearBtn.classList.toggle('hidden', !q);
 
-    clearTimeout(debounceTimer)
+    clearTimeout(debounceTimer);
     if (!q) {
-      currentQuery = ''
-      updateURL('')
+      currentQuery = '';
+      updateURL('');
       // eslint-disable-next-line no-unsanitized/property -- static empty state template
-      container.querySelector('#search-results').innerHTML = emptyStateHTML()
-      filtersEl.classList.add('hidden')
-      return
+      container.querySelector('#search-results').innerHTML = emptyStateHTML();
+      filtersEl.classList.add('hidden');
+      return;
     }
 
-    debounceTimer = setTimeout(() => doSearch(q), 300)
-  })
+    debounceTimer = setTimeout(() => doSearch(q), 300);
+  });
 
   clearBtn.addEventListener('click', () => {
-    input.value = ''
-    currentQuery = ''
-    updateURL('')
-    clearBtn.classList.add('hidden')
+    input.value = '';
+    currentQuery = '';
+    updateURL('');
+    clearBtn.classList.add('hidden');
     // eslint-disable-next-line no-unsanitized/property -- static empty state template
-    container.querySelector('#search-results').innerHTML = emptyStateHTML()
-    filtersEl.classList.add('hidden')
-    input.focus()
-  })
+    container.querySelector('#search-results').innerHTML = emptyStateHTML();
+    filtersEl.classList.add('hidden');
+    input.focus();
+  });
 
   // Suggested search term clicks
-  container.addEventListener('click', (e) => {
-    const suggBtn = e.target.closest('.suggest-btn')
+  container.addEventListener('click', e => {
+    const suggBtn = e.target.closest('.suggest-btn');
     if (suggBtn) {
-      input.value = suggBtn.dataset.term
-      clearBtn.classList.remove('hidden')
-      doSearch(suggBtn.dataset.term)
+      input.value = suggBtn.dataset.term;
+      clearBtn.classList.remove('hidden');
+      doSearch(suggBtn.dataset.term);
     }
-  })
+  });
 
   container.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      filter = btn.dataset.filter
-      updateURL(currentQuery)
+      filter = btn.dataset.filter;
+      updateURL(currentQuery);
       container.querySelectorAll('.filter-btn').forEach(b => {
-        b.className = `filter-btn px-3 py-1 rounded-lg text-sm ${b.dataset.filter === filter ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300'}`
-      })
-      renderResults()
-    })
-  })
+        b.className = `filter-btn px-3 py-1 rounded-lg text-sm ${b.dataset.filter === filter ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300'}`;
+      });
+      renderResults();
+    });
+  });
 
   async function doSearch(query) {
-    currentQuery = query
-    updateURL(query)
-    container.querySelector('#search-results').innerHTML = '<div class="animate-pulse"><div class="h-16 bg-slate-800 rounded-xl"></div></div>'
+    currentQuery = query;
+    updateURL(query);
+    container.querySelector('#search-results').innerHTML =
+      '<div class="animate-pulse"><div class="h-16 bg-slate-800 rounded-xl"></div></div>';
     try {
       [threadResults, postResults] = await Promise.all([
         api.searchThreads(query).catch(() => []),
         api.searchPosts(query).catch(() => []),
-      ])
+      ]);
 
-      filtersEl.classList.remove('hidden')
-      container.querySelector('#thread-count').textContent = `(${threadResults.length})`
-      container.querySelector('#post-count').textContent = `(${postResults.length})`
-      renderResults()
+      filtersEl.classList.remove('hidden');
+      container.querySelector('#thread-count').textContent = `(${threadResults.length})`;
+      container.querySelector('#post-count').textContent = `(${postResults.length})`;
+      renderResults();
     } catch {
       container.querySelector('#search-results').innerHTML = `
         <div class="text-center py-8">
           <p class="text-red-400">Failed to search.</p>
           <button class="mt-2 text-sm text-indigo-400 hover:text-indigo-300" onclick="this.closest('[id=search-results]').innerHTML=''">Try again</button>
         </div>
-      `
+      `;
     }
   }
 
   function renderResults() {
-    const resultsEl = container.querySelector('#search-results')
-    const threads = filter !== 'posts' ? threadResults : []
-    const posts = filter !== 'threads' ? postResults : []
+    const resultsEl = container.querySelector('#search-results');
+    const threads = filter !== 'posts' ? threadResults : [];
+    const posts = filter !== 'threads' ? postResults : [];
 
     if (!threads.length && !posts.length) {
       // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
@@ -146,13 +150,15 @@ export function renderSearch(container) {
           <h3 class="text-lg font-medium text-white">No results for "${escapeHTML(currentQuery)}"</h3>
           <p class="mt-2 text-slate-400">Try different keywords or check your spelling.</p>
         </div>
-      `
-      return
+      `;
+      return;
     }
 
-    let html = ''
+    let html = '';
     if (threads.length) {
-      html += threads.map(t => `
+      html += threads
+        .map(
+          t => `
         <a href="/t/${t.id}" class="block bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 hover:bg-slate-800 transition-colors mb-2">
           <div class="flex items-center gap-2 mb-1">
             <span class="text-xs bg-indigo-600/30 text-indigo-400 px-1.5 py-0.5 rounded">Thread</span>
@@ -160,10 +166,14 @@ export function renderSearch(container) {
           </div>
           <div class="text-xs text-slate-400">${escapeHTML(t.author?.display_name || '')} &middot; ${formatRelativeTime(t.created_at)} &middot; ${t.post_count || 0} replies</div>
         </a>
-      `).join('')
+      `,
+        )
+        .join('');
     }
     if (posts.length) {
-      html += posts.map(p => `
+      html += posts
+        .map(
+          p => `
         <a href="/t/${p.thread_id}#post-${p.id}" class="block bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 hover:bg-slate-800 transition-colors mb-2">
           <div class="flex items-center gap-2 mb-1">
             <span class="text-xs bg-green-600/30 text-green-400 px-1.5 py-0.5 rounded">Post</span>
@@ -172,10 +182,12 @@ export function renderSearch(container) {
           </div>
           <div class="text-sm text-slate-300 line-clamp-2">${highlightMatch(escapeHTML(p.content), currentQuery)}</div>
         </a>
-      `).join('')
+      `,
+        )
+        .join('');
     }
     // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
-    resultsEl.innerHTML = html
+    resultsEl.innerHTML = html;
   }
 }
 
@@ -192,26 +204,29 @@ function emptyStateHTML() {
         </div>
       </div>
     </div>
-  `
+  `;
 }
 
 function highlightMatch(text, query) {
-  if (!query.trim()) return text
+  if (!query.trim()) return text;
   try {
-    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const regex = new RegExp(`(${escaped})`, 'gi')
-    return text.replace(regex, '<mark class="bg-indigo-500/30 text-white rounded px-0.5">$1</mark>')
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    return text.replace(
+      regex,
+      '<mark class="bg-indigo-500/30 text-white rounded px-0.5">$1</mark>',
+    );
   } catch {
-    return text
+    return text;
   }
 }
 
 function escapeHTML(str) {
-  const div = document.createElement('div')
-  div.textContent = str || ''
-  return div.innerHTML
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
 }
 
 function escapeAttr(str) {
-  return (str || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return (str || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

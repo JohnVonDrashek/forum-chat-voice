@@ -22,7 +22,7 @@ const onboardingSteps = [
   {
     emoji: '&#x1F680;',
     bg: 'linear-gradient(135deg, #f6d365, #fda085)',
-    title: 'You\'re Ready!',
+    title: "You're Ready!",
     text: 'Start by exploring the Discover page or jump into a forum from the sidebar. The community is waiting for you.',
     final: true,
   },
@@ -37,9 +37,9 @@ export function renderOnboardingStep(step) {
   $('onboardTitle').textContent = stepData.title;
   $('onboardText').textContent = stepData.text;
 
-  $('onboardDots').innerHTML = onboardingSteps.map((_, i) =>
-    `<div class="onboarding-dot ${i === step ? 'active' : ''}"></div>`
-  ).join('');
+  $('onboardDots').innerHTML = onboardingSteps
+    .map((_, i) => `<div class="onboarding-dot ${i === step ? 'active' : ''}"></div>`)
+    .join('');
 
   $('onboardNext').textContent = stepData.final ? 'Get Started' : 'Next';
   $('onboardSkip').style.display = stepData.final ? 'none' : 'block';
@@ -69,7 +69,7 @@ export function initOnboarding() {
   $('onboardSkip')?.addEventListener('click', closeOnboarding);
 
   // Keyboard navigation
-  $('onboardingOverlay')?.addEventListener('keydown', (e) => {
+  $('onboardingOverlay')?.addEventListener('keydown', e => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       e.preventDefault();
       $('onboardNext').click();

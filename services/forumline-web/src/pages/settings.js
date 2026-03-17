@@ -1,7 +1,7 @@
-import { $ } from '../lib/utils.js';
-import { avatarUrl } from '../lib/avatar.js';
-import store from '../state/store.js';
 import { ForumlineAPI, ForumlineAuth, Identity } from '@forumline/client-sdk';
+import { avatarUrl } from '../lib/avatar.js';
+import { $ } from '../lib/utils.js';
+import store from '../state/store.js';
 
 let _showView, _closeAllDropdowns, _showLogin, _showToast;
 
@@ -15,29 +15,31 @@ export function showSettings() {
 
   // Load real profile data from API into settings fields
   if (ForumlineAPI.isAuthenticated()) {
-    Identity.getProfile().then(profile => {
-      const userId = profile.forumline_id || ForumlineAPI.getUserId();
-      const displayName = profile.display_name || profile.username || '';
-      const profileAvatar = profile.avatar_url || avatarUrl(userId);
+    Identity.getProfile()
+      .then(profile => {
+        const userId = profile.forumline_id || ForumlineAPI.getUserId();
+        const displayName = profile.display_name || profile.username || '';
+        const profileAvatar = profile.avatar_url || avatarUrl(userId);
 
-      const nameInput = $('settingsDisplayName');
-      if (nameInput) nameInput.value = displayName;
+        const nameInput = $('settingsDisplayName');
+        if (nameInput) nameInput.value = displayName;
 
-      const emailInput = $('settingsEmail');
-      const session = ForumlineAuth.getSession();
-      if (emailInput && session?.user?.email) emailInput.value = session.user.email;
+        const emailInput = $('settingsEmail');
+        const session = ForumlineAuth.getSession();
+        if (emailInput && session?.user?.email) emailInput.value = session.user.email;
 
-      const bioInput = $('settingsBio');
-      if (bioInput) bioInput.value = profile.bio || profile.status_message || '';
+        const bioInput = $('settingsBio');
+        if (bioInput) bioInput.value = profile.bio || profile.status_message || '';
 
-      const avatarImg = document.querySelector('.settings-avatar');
-      if (avatarImg) avatarImg.src = profileAvatar;
+        const avatarImg = document.querySelector('.settings-avatar');
+        if (avatarImg) avatarImg.src = profileAvatar;
 
-      const onlineSelect = $('onlineStatusSelect');
-      if (onlineSelect && profile.online_status) onlineSelect.value = profile.online_status;
-    }).catch(() => {
-      // Fall through to default HTML values
-    });
+        const onlineSelect = $('onlineStatusSelect');
+        if (onlineSelect && profile.online_status) onlineSelect.value = profile.online_status;
+      })
+      .catch(() => {
+        // Fall through to default HTML values
+      });
   }
 }
 
@@ -87,7 +89,7 @@ export function initSettings(deps) {
       const updates = {};
       if (displayName) updates.username = displayName;
       if (onlineStatus) {
-        const statusMap = { 'online': 'online', 'away': 'away', 'busy': 'away', 'offline': 'offline' };
+        const statusMap = { online: 'online', away: 'away', busy: 'away', offline: 'offline' };
         updates.online_status = statusMap[onlineStatus] || 'online';
       }
 

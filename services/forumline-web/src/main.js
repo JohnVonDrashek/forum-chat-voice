@@ -5,52 +5,79 @@ import './styles/global.css';
 import './styles/layout.css';
 import './styles/components.css';
 
-import { $ } from './lib/utils.js';
-import { avatarUrl } from './lib/avatar.js';
-import { initSafeStorage } from './lib/storage.js';
-import { setTheme, initThemePicker } from './lib/theme.js';
-import { initAccessibility } from './lib/a11y.js';
-import { initKeyboardShortcuts } from './lib/keyboard.js';
-import { initMobile } from './lib/mobile.js';
-
-import store from './state/store.js';
-import * as data from './state/data.js';
-
-import { showHome, renderActivityFeed, initHome } from './pages/home.js';
-import { showForum, renderFilteredThreads, renderOnlineBar, initForum } from './pages/forum.js';
-import { showThread, renderPosts, initThread } from './pages/thread.js';
-import { showDm, renderMessages, initConversation } from './pages/conversation.js';
-import { showDiscover, renderDiscover, initDiscover } from './pages/discover.js';
-import { showProfile, initProfile, clearIdentityProfile, ensureIdentityProfile } from './pages/profile.js';
-import { showSettings, initSettings } from './pages/settings.js';
-import { showCreateForum, initCreateForum } from './pages/create-forum.js';
-import { showNewThread, initNewThread } from './pages/new-thread.js';
-import { showLogin, hideLogin, initLogin } from './pages/login.js';
-
-import { renderForumList, renderDmList, renderBookmarks, addBookmark, removeBookmark, getBookmarks, initSidebar } from './components/sidebar.js';
-import { showToast } from './components/toast.js';
-import { openSearch, closeSearch, initSearch } from './components/search.js';
-import { renderNotifications, initNotifications, startNotificationUpdates } from './components/notifications.js';
-import { renderVoiceParticipants, startVoiceSpeakingAnimation, stopVoiceSpeakingAnimation, initVoiceRoom } from './components/voice-room.js';
-import { renderEmojiPicker, initEmojiPicker } from './components/emoji-picker.js';
-import { initMemberPanel } from './components/member-panel.js';
-import { hideHoverCard, initHoverCard } from './components/hover-card.js';
-import { closeLightbox, initLightbox } from './components/lightbox.js';
-import { showOnboarding, initOnboarding } from './components/onboarding.js';
-import { showContextMenu, initContextMenu } from './components/context-menu.js';
-import { fireConfetti } from './components/confetti.js';
-import { initStatusModal } from './components/status-modal.js';
-import { closeAllDropdowns, initNav } from './components/nav.js';
-
-import { initRouter, pushState, consumePendingRoute } from './router.js';
-
 // API modules (from @forumline/client-sdk)
-import { ForumlineAPI, ForumlineAuth, EventStream, DmStore, PresenceTracker, ForumStore, CallManager, PushNotifications, NativeBridge } from '@forumline/client-sdk';
-
+import {
+  CallManager,
+  DmStore,
+  EventStream,
+  ForumlineAPI,
+  ForumlineAuth,
+  ForumStore,
+  NativeBridge,
+  PresenceTracker,
+  PushNotifications,
+} from '@forumline/client-sdk';
 // UI modules that extend the SDK with DOM rendering
 import { initCallUI } from './api/call-ui.js';
+import { fireConfetti } from './components/confetti.js';
+import { initContextMenu, showContextMenu } from './components/context-menu.js';
+import { initEmojiPicker, renderEmojiPicker } from './components/emoji-picker.js';
+import { hideHoverCard, initHoverCard } from './components/hover-card.js';
+import { closeLightbox, initLightbox } from './components/lightbox.js';
+import { initMemberPanel } from './components/member-panel.js';
+import { closeAllDropdowns, initNav } from './components/nav.js';
+import {
+  initNotifications,
+  renderNotifications,
+  startNotificationUpdates,
+} from './components/notifications.js';
+import { initOnboarding, showOnboarding } from './components/onboarding.js';
+import { closeSearch, initSearch, openSearch } from './components/search.js';
+import {
+  addBookmark,
+  getBookmarks,
+  initSidebar,
+  removeBookmark,
+  renderBookmarks,
+  renderDmList,
+  renderForumList,
+} from './components/sidebar.js';
+import { initStatusModal } from './components/status-modal.js';
+import { showToast } from './components/toast.js';
+import {
+  initVoiceRoom,
+  renderVoiceParticipants,
+  startVoiceSpeakingAnimation,
+  stopVoiceSpeakingAnimation,
+} from './components/voice-room.js';
+import { initAccessibility } from './lib/a11y.js';
+import { avatarUrl } from './lib/avatar.js';
+import { initKeyboardShortcuts } from './lib/keyboard.js';
+import { initMobile } from './lib/mobile.js';
+import { initSafeStorage } from './lib/storage.js';
+import { initThemePicker, setTheme } from './lib/theme.js';
+import { $ } from './lib/utils.js';
+import { initConversation, renderMessages, showDm } from './pages/conversation.js';
+import { initCreateForum, showCreateForum } from './pages/create-forum.js';
+import { initDiscover, renderDiscover, showDiscover } from './pages/discover.js';
+import { initForum, renderFilteredThreads, renderOnlineBar, showForum } from './pages/forum.js';
+import { initHome, renderActivityFeed, showHome } from './pages/home.js';
+import { hideLogin, initLogin, showLogin } from './pages/login.js';
+import { initNewThread, showNewThread } from './pages/new-thread.js';
+import {
+  clearIdentityProfile,
+  ensureIdentityProfile,
+  initProfile,
+  showProfile,
+} from './pages/profile.js';
+import { initSettings, showSettings } from './pages/settings.js';
+import { initThread, renderPosts, showThread } from './pages/thread.js';
+
+import { consumePendingRoute, initRouter, pushState } from './router.js';
+import * as data from './state/data.js';
+import store from './state/store.js';
 import './api/forum-webview.js'; // Side-effect: subscribes to ForumStore to show/hide webview
-import { handleDeepLinkParams, checkUrlParams } from './api/deep-link.js';
+import { checkUrlParams, handleDeepLinkParams } from './api/deep-link.js';
 
 // ========== CORE VIEW MANAGEMENT ==========
 function showView(viewId) {
@@ -59,7 +86,7 @@ function showView(viewId) {
 }
 
 // ========== NAVIGATION WRAPPERS WITH HISTORY ==========
-const wrappedShowHome = (opts) => {
+const wrappedShowHome = opts => {
   showHome();
   ForumStore.goHome();
   if (!opts?.skipHistory) pushState({ view: 'home' });
@@ -89,7 +116,7 @@ const wrappedShowDm = (id, opts) => {
   if (!opts?.skipHistory) pushState({ view: 'dm', dmId: id });
 };
 
-const wrappedShowDiscover = (opts) => {
+const wrappedShowDiscover = opts => {
   showDiscover();
   ForumStore.goHome();
   if (!opts?.skipHistory) pushState({ view: 'discover' });
@@ -100,17 +127,17 @@ const wrappedShowProfile = (username, opts) => {
   if (!opts?.skipHistory) pushState({ view: 'profile', username });
 };
 
-const wrappedShowSettings = (opts) => {
+const wrappedShowSettings = opts => {
   showSettings();
   if (!opts?.skipHistory) pushState({ view: 'settings' });
 };
 
-const wrappedShowCreateForum = (opts) => {
+const wrappedShowCreateForum = opts => {
   showCreateForum();
   if (!opts?.skipHistory) pushState({ view: 'createForum' });
 };
 
-const wrappedShowNewThread = (opts) => {
+const wrappedShowNewThread = opts => {
   showNewThread();
   if (!opts?.skipHistory) pushState({ view: 'newThread', forumId: store.currentForum });
 };
@@ -121,7 +148,8 @@ let _dmStoreStopUpdates = null;
 
 function _updateUserDisplay(session) {
   if (!session || !session.user) return;
-  const username = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user';
+  const username =
+    session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user';
   const email = session.user.email || '';
   // Use user ID as avatar seed per architecture spec (DiceBear avataaars seeded by ID)
   const seed = session.user.id || username;
@@ -176,7 +204,8 @@ ForumlineAuth.restoreSessionFromUrl();
 
 ForumlineAuth.onAuthStateChange((event, session) => {
   if (event === 'TOKEN_REFRESHED') {
-    if (session) ForumlineAPI.configure({ accessToken: session.access_token, userId: session.user.id });
+    if (session)
+      ForumlineAPI.configure({ accessToken: session.access_token, userId: session.user.id });
     if (!_authHasRendered && session) {
       hideLogin();
       wrappedShowHome({ skipHistory: true });
@@ -202,7 +231,7 @@ ForumlineAuth.onAuthStateChange((event, session) => {
       ForumStore.syncFromServer(ForumlineAPI.getToken()).then(() => {
         CallManager.init();
         initCallUI();
-        PushNotifications.registerServiceWorker((params) => handleDeepLinkParams(params));
+        PushNotifications.registerServiceWorker(params => handleDeepLinkParams(params));
         checkUrlParams({ showDm: wrappedShowDm, showForum: wrappedShowForum, ForumStore, DmStore });
       });
 
@@ -257,12 +286,22 @@ initStatusModal();
 
 // Wire up command palette actions
 data.commands[0].action = () => wrappedShowCreateForum();
-data.commands[1].action = () => { if (store.currentForum) wrappedShowNewThread(); else showToast('Open a forum first'); };
+data.commands[1].action = () => {
+  if (store.currentForum) wrappedShowNewThread();
+  else showToast('Open a forum first');
+};
 data.commands[2].action = () => wrappedShowSettings();
 data.commands[3].action = () => wrappedShowProfile('me');
 data.commands[4].action = () => wrappedShowDiscover();
-data.commands[5].action = () => { $('voiceOverlay').classList.remove('hidden'); renderVoiceParticipants(); startVoiceSpeakingAnimation(); };
-data.commands[6].action = () => { const isDark = document.documentElement.getAttribute('data-theme') === 'dark'; setTheme(isDark ? 'light' : 'dark'); };
+data.commands[5].action = () => {
+  $('voiceOverlay').classList.remove('hidden');
+  renderVoiceParticipants();
+  startVoiceSpeakingAnimation();
+};
+data.commands[6].action = () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  setTheme(isDark ? 'light' : 'dark');
+};
 data.commands[7].action = () => wrappedShowHome();
 
 // Components with deps
@@ -526,7 +565,7 @@ $('announcementClose')?.addEventListener('click', () => {
 });
 
 // Post author click -> profile
-document.addEventListener('click', (e) => {
+document.addEventListener('click', e => {
   const authorEl = e.target.closest('.post-author');
   if (authorEl) {
     const name = authorEl.textContent.split(' ')[0].trim();
@@ -537,8 +576,12 @@ document.addEventListener('click', (e) => {
 });
 
 // DiceBear global image error handler
-document.addEventListener('error', (e) => {
-  if (e.target.tagName === 'IMG' && e.target.src.includes('dicebear.com')) {
-    e.target.style.display = 'none';
-  }
-}, true);
+document.addEventListener(
+  'error',
+  e => {
+    if (e.target.tagName === 'IMG' && e.target.src.includes('dicebear.com')) {
+      e.target.style.display = 'none';
+    }
+  },
+  true,
+);

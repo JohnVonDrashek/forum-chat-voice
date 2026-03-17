@@ -2,15 +2,21 @@
 
 export function protectDoubleClick(btn) {
   if (!btn) return;
-  btn.addEventListener('click', (e) => {
-    if (btn.dataset.submitting === 'true') {
-      e.stopImmediatePropagation();
-      e.preventDefault();
-      return;
-    }
-    btn.dataset.submitting = 'true';
-    setTimeout(() => { btn.dataset.submitting = 'false'; }, 1000);
-  }, true);
+  btn.addEventListener(
+    'click',
+    e => {
+      if (btn.dataset.submitting === 'true') {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        return;
+      }
+      btn.dataset.submitting = 'true';
+      setTimeout(() => {
+        btn.dataset.submitting = 'false';
+      }, 1000);
+    },
+    true,
+  );
 }
 
 export function initAccessibility() {
@@ -21,7 +27,9 @@ export function initAccessibility() {
   // Category pills
   document.querySelectorAll('.category-pill').forEach(pill => {
     pill.addEventListener('click', () => {
-      document.querySelectorAll('.category-pill').forEach(p => p.setAttribute('aria-selected', 'false'));
+      document
+        .querySelectorAll('.category-pill')
+        .forEach(p => p.setAttribute('aria-selected', 'false'));
       pill.setAttribute('aria-selected', 'true');
     });
   });
@@ -29,7 +37,9 @@ export function initAccessibility() {
   // Profile tabs
   document.querySelectorAll('.profile-tab').forEach(tab => {
     tab.addEventListener('click', () => {
-      document.querySelectorAll('.profile-tab').forEach(t => t.setAttribute('aria-selected', 'false'));
+      document
+        .querySelectorAll('.profile-tab')
+        .forEach(t => t.setAttribute('aria-selected', 'false'));
       tab.setAttribute('aria-selected', 'true');
     });
   });
@@ -37,7 +47,9 @@ export function initAccessibility() {
   // Login tabs
   document.querySelectorAll('.login-tab').forEach(tab => {
     tab.addEventListener('click', () => {
-      document.querySelectorAll('.login-tab').forEach(t => t.setAttribute('aria-selected', 'false'));
+      document
+        .querySelectorAll('.login-tab')
+        .forEach(t => t.setAttribute('aria-selected', 'false'));
       tab.setAttribute('aria-selected', 'true');
     });
   });
@@ -45,7 +57,9 @@ export function initAccessibility() {
   // Settings nav
   document.querySelectorAll('.settings-nav-item[role="tab"]').forEach(item => {
     item.addEventListener('click', () => {
-      document.querySelectorAll('.settings-nav-item[role="tab"]').forEach(i => i.setAttribute('aria-selected', 'false'));
+      document
+        .querySelectorAll('.settings-nav-item[role="tab"]')
+        .forEach(i => i.setAttribute('aria-selected', 'false'));
       item.setAttribute('aria-selected', 'true');
     });
   });
@@ -53,7 +67,9 @@ export function initAccessibility() {
   // Filter pills
   document.querySelectorAll('.filter-pill').forEach(pill => {
     pill.addEventListener('click', () => {
-      document.querySelectorAll('.filter-pill').forEach(p => p.setAttribute('aria-selected', 'false'));
+      document
+        .querySelectorAll('.filter-pill')
+        .forEach(p => p.setAttribute('aria-selected', 'false'));
       pill.setAttribute('aria-selected', 'true');
     });
   });
@@ -61,7 +77,9 @@ export function initAccessibility() {
   // Density buttons aria-pressed
   document.querySelectorAll('.density-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.density-btn').forEach(b => b.setAttribute('aria-pressed', 'false'));
+      document
+        .querySelectorAll('.density-btn')
+        .forEach(b => b.setAttribute('aria-pressed', 'false'));
       btn.setAttribute('aria-pressed', 'true');
     });
   });
@@ -69,7 +87,9 @@ export function initAccessibility() {
   // Banner swatch aria-checked
   document.querySelectorAll('.banner-swatch').forEach(swatch => {
     swatch.addEventListener('click', () => {
-      document.querySelectorAll('.banner-swatch').forEach(s => s.setAttribute('aria-checked', 'false'));
+      document
+        .querySelectorAll('.banner-swatch')
+        .forEach(s => s.setAttribute('aria-checked', 'false'));
       swatch.setAttribute('aria-checked', 'true');
     });
   });
@@ -77,13 +97,15 @@ export function initAccessibility() {
   // Theme option aria-checked
   document.querySelectorAll('.theme-option').forEach(opt => {
     opt.addEventListener('click', () => {
-      document.querySelectorAll('.theme-option').forEach(o => o.setAttribute('aria-checked', 'false'));
+      document
+        .querySelectorAll('.theme-option')
+        .forEach(o => o.setAttribute('aria-checked', 'false'));
       opt.setAttribute('aria-checked', 'true');
     });
   });
 
   // --- EMOJI PICKER KEYBOARD NAVIGATION ---
-  $('emojiGrid').addEventListener('keydown', (e) => {
+  $('emojiGrid').addEventListener('keydown', e => {
     const emojis = Array.from($('emojiGrid').querySelectorAll('.emoji-pick'));
     const current = document.activeElement;
     const idx = emojis.indexOf(current);
@@ -101,7 +123,7 @@ export function initAccessibility() {
   });
 
   // --- ONBOARDING KEYBOARD NAVIGATION ---
-  $('onboardingOverlay').addEventListener('keydown', (e) => {
+  $('onboardingOverlay').addEventListener('keydown', e => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       e.preventDefault();
       $('onboardNext').click();
@@ -117,5 +139,4 @@ export function initAccessibility() {
   protectDoubleClick($('composerSubmit'));
   protectDoubleClick($('replyBtn'));
   protectDoubleClick($('dmSendBtn'));
-
 }

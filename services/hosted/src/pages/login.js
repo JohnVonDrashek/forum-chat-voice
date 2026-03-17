@@ -13,5 +13,5 @@ export function renderLogin(container) {
       <a href="/api/forumline/auth" class="block w-full py-3 text-center bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors">Sign in with Forumline</a>
       <p class="mt-4 text-sm text-slate-400 text-center">Don't have an account? <a href="https://app.forumline.net" class="text-indigo-400 hover:text-indigo-300">Create a Forumline account</a></p>
     </div>
-  `
+  `;
 }

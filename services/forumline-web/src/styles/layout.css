@@ -2,22 +2,24 @@
 .top-bar {
   background: linear-gradient(180deg, #e8e8e8 0%, #d0d0d0 45%, #c0c0c0 55%, #d4d4d4 100%);
   border-bottom: 1px solid #888;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset, 0 1px 3px rgba(0,0,0,0.2);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 1px 3px rgba(0, 0, 0, 0.2);
   height: 52px;
   flex-shrink: 0;
   position: relative;
 }
 
 .top-bar::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(
     90deg,
     transparent,
     transparent 1px,
-    rgba(255,255,255,0.03) 1px,
-    rgba(255,255,255,0.03) 2px
+    rgba(255, 255, 255, 0.03) 1px,
+    rgba(255, 255, 255, 0.03) 2px
   );
   pointer-events: none;
 }
@@ -50,15 +52,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4);
-  text-shadow: 0 -1px 0 rgba(0,0,0,0.2);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
 
 .logo-text {
   font-size: 17px;
   font-weight: 600;
   color: #333;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
   letter-spacing: -0.3px;
 }
 
@@ -75,13 +79,17 @@
   background: linear-gradient(180deg, #f0f0f0, #fff 3px);
   font-size: 12px;
   color: var(--text-primary);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1), 0 1px 0 rgba(255,255,255,0.5);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.5);
   outline: none;
 }
 
 .search-bar input:focus {
   border-color: #6eb5ff;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1), 0 0 4px rgba(100,170,255,0.5);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.1),
+    0 0 4px rgba(100, 170, 255, 0.5);
 }
 
 .search-bar input::placeholder {
@@ -127,7 +135,7 @@
   padding: 1px 4px;
   min-width: 14px;
   text-align: center;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .avatar-pill {
@@ -139,7 +147,9 @@
   border-radius: 16px;
   background: linear-gradient(180deg, #f8f8f8, #e8e8e8);
   cursor: pointer;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset, var(--shadow-soft);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    var(--shadow-soft);
 }
 
 .avatar-pill:hover {
@@ -197,18 +207,20 @@
       0deg,
       transparent,
       transparent 2px,
-      rgba(0,0,0,0.015) 2px,
-      rgba(0,0,0,0.015) 4px
+      rgba(0, 0, 0, 0.015) 2px,
+      rgba(0, 0, 0, 0.015) 4px
     ),
     repeating-linear-gradient(
       90deg,
       transparent,
       transparent 2px,
-      rgba(0,0,0,0.01) 2px,
-      rgba(0,0,0,0.01) 4px
+      rgba(0, 0, 0, 0.01) 2px,
+      rgba(0, 0, 0, 0.01) 4px
     );
   border-right: 1px solid #b8b0a0;
-  box-shadow: inset -1px 0 0 rgba(255,255,255,0.3), 1px 0 3px rgba(0,0,0,0.1);
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.3),
+    1px 0 3px rgba(0, 0, 0, 0.1);
   padding: 12px 0;
   display: flex;
   flex-direction: column;
@@ -226,10 +238,11 @@
   letter-spacing: 0.8px;
   padding: 0 14px;
   margin-bottom: 6px;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
-.forum-item, .dm-item {
+.forum-item,
+.dm-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -239,27 +252,32 @@
   border-left: 3px solid transparent;
 }
 
-.forum-item:hover, .dm-item:hover {
-  background: rgba(0,0,0,0.05);
+.forum-item:hover,
+.dm-item:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
-.forum-item:focus-visible, .dm-item:focus-visible, .thread-item:focus-visible {
+.forum-item:focus-visible,
+.dm-item:focus-visible,
+.thread-item:focus-visible {
   outline: 2px solid var(--aqua-bottom, #1a8dff);
   outline-offset: -2px;
-  background: rgba(0,0,0,0.05);
+  background: rgba(0, 0, 0, 0.05);
 }
 
-.forum-item.active, .dm-item.active {
-  background: rgba(0,0,0,0.08);
+.forum-item.active,
+.dm-item.active {
+  background: rgba(0, 0, 0, 0.08);
   border-left-color: var(--aqua-bottom);
 }
 
-.forum-item img, .dm-item img {
+.forum-item img,
+.dm-item img {
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  border: 1px solid rgba(0,0,0,0.1);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .dm-item img {
@@ -282,12 +300,14 @@
   border-radius: 50%;
 }
 
-.forum-item-info, .dm-item-info {
+.forum-item-info,
+.dm-item-info {
   flex: 1;
   min-width: 0;
 }
 
-.forum-item-name, .dm-item-name {
+.forum-item-name,
+.dm-item-name {
   font-size: 12px;
   font-weight: 500;
   color: var(--text-primary);
@@ -315,12 +335,18 @@
   border-radius: 50%;
   background: var(--aqua-bottom);
   flex-shrink: 0;
-  box-shadow: 0 0 4px rgba(26,141,255,0.4);
+  box-shadow: 0 0 4px rgba(26, 141, 255, 0.4);
 }
 
 .sidebar-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.1) 20%, rgba(0,0,0,0.1) 80%, transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 0, 0, 0.1) 20%,
+    rgba(0, 0, 0, 0.1) 80%,
+    transparent
+  );
   margin: 8px 14px 12px;
 }
 
@@ -330,19 +356,19 @@
   gap: 8px;
   padding: 7px 14px;
   margin: 2px 10px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.2));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.2));
   font-size: 12px;
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.15s;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .sidebar-btn:hover {
-  background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
   color: var(--text-primary);
   box-shadow: var(--shadow-soft);
 }
@@ -428,12 +454,12 @@
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   margin-bottom: 4px;
 }
 
 [data-theme="dark"] .sidebar-status {
-  border-bottom-color: rgba(255,255,255,0.04);
+  border-bottom-color: rgba(255, 255, 255, 0.04);
 }
 
 .status-info {
@@ -491,7 +517,7 @@
   padding: 16px 24px;
   border-bottom: 1px solid #d0d0d0;
   background: linear-gradient(180deg, #fafafa, #f0f0f0);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
   flex-shrink: 0;
 }
 
@@ -499,7 +525,7 @@
   font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
-  text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 /* ========== BREADCRUMBS ========== */
@@ -552,7 +578,7 @@
 }
 
 .hamburger:active {
-  background: rgba(0,0,0,0.08);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .hamburger span {
@@ -580,7 +606,7 @@
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0, 0, 0, 0.4);
   z-index: 49;
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
@@ -597,7 +623,7 @@
   padding-bottom: env(safe-area-inset-bottom, 0);
   background: linear-gradient(180deg, #f5f5f5, #e0e0e0);
   border-top: 1px solid #bbb;
-  box-shadow: 0 -1px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.1);
   z-index: 50;
   justify-content: space-around;
   align-items: center;
@@ -690,7 +716,8 @@
     gap: 8px;
   }
 
-  .username, .chevron {
+  .username,
+  .chevron {
     display: none;
   }
 
@@ -714,7 +741,7 @@
 
   .sidebar.open {
     transform: translateX(0);
-    box-shadow: 4px 0 16px rgba(0,0,0,0.2);
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.2);
   }
 
   .sidebar-backdrop {
@@ -876,7 +903,8 @@
   }
 
   /* Touch-friendly tap targets */
-  .forum-item, .dm-item {
+  .forum-item,
+  .dm-item {
     padding: 10px 14px;
   }
 
@@ -961,7 +989,8 @@
     padding: 16px;
   }
 
-  .settings-input, .settings-textarea {
+  .settings-input,
+  .settings-textarea {
     max-width: 100%;
   }
 

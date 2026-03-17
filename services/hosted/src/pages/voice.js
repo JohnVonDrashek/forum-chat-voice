@@ -12,33 +12,41 @@
  * - Require authentication to join a room but allow guests to view room status
  */
 
-import { api } from '../lib/api.js'
-import { authStore } from '../lib/auth.js'
-import { voiceStore, joinRoom, leaveRoom, toggleMute, toggleDeafen, toggleScreenShare, getAvatarUrl } from '../lib/voice.js'
-import { avatarHTML } from '../components/avatar.js'
+import { avatarHTML } from '../components/avatar.js';
+import { api } from '../lib/api.js';
+import { authStore } from '../lib/auth.js';
+import {
+  getAvatarUrl,
+  joinRoom,
+  leaveRoom,
+  toggleDeafen,
+  toggleMute,
+  toggleScreenShare,
+  voiceStore,
+} from '../lib/voice.js';
 
 export function renderVoice(container, { roomId } = {}) {
-  const { user } = authStore.get()
+  const { user } = authStore.get();
 
   function render() {
-    const voice = voiceStore.get()
+    const voice = voiceStore.get();
 
     api.getVoiceRooms().then(rooms => {
-      const selectedRoom = roomId ? rooms.find(r => r.id === roomId || r.slug === roomId) : null
+      const selectedRoom = roomId ? rooms.find(r => r.id === roomId || r.slug === roomId) : null;
 
       if (selectedRoom) {
-        renderFocusedRoom(container, selectedRoom, voice, user)
+        renderFocusedRoom(container, selectedRoom, voice, user);
       } else {
-        renderRoomList(container, rooms, voice, user)
+        renderRoomList(container, rooms, voice, user);
       }
 
-      bindEventHandlers(container, voice)
-    })
+      bindEventHandlers(container, voice);
+    });
   }
 
-  render()
-  const unsub = voiceStore.subscribe(render)
-  return () => unsub()
+  render();
+  const unsub = voiceStore.subscribe(render);
+  return () => unsub();
 }
 
 function renderRoomList(container, rooms, voice, user) {
@@ -52,12 +60,12 @@ function renderRoomList(container, rooms, voice, user) {
     <div class="grid gap-3 sm:grid-cols-2">
       ${rooms.map(r => renderRoomCard(r, voice, user)).join('')}
     </div>
-  `
+  `;
 }
 
 function renderFocusedRoom(container, room, voice, user) {
-  const isConnectedToThisRoom = voice.isConnected && voice.connectedRoomSlug === room.slug
-  const info = voice.roomParticipantCounts[room.slug]
+  const isConnectedToThisRoom = voice.isConnected && voice.connectedRoomSlug === room.slug;
+  const info = voice.roomParticipantCounts[room.slug];
 
   // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
   container.innerHTML = `
@@ -73,11 +81,12 @@ function renderFocusedRoom(container, room, voice, user) {
           </div>
           <div>
             <h1 class="text-xl font-bold">${escapeHTML(room.name)}</h1>
-            ${isConnectedToThisRoom
-              ? `<span class="text-sm text-green-400">${voice.participants.length + 1} connected</span>`
-              : info && info.count > 0
-                ? `<span class="text-sm text-slate-400">${info.count} online</span>`
-                : `<span class="text-sm text-slate-500">Empty</span>`
+            ${
+              isConnectedToThisRoom
+                ? `<span class="text-sm text-green-400">${voice.participants.length + 1} connected</span>`
+                : info && info.count > 0
+                  ? `<span class="text-sm text-slate-400">${info.count} online</span>`
+                  : `<span class="text-sm text-slate-500">Empty</span>`
             }
           </div>
         </div>
@@ -87,17 +96,21 @@ function renderFocusedRoom(container, room, voice, user) {
     </div>
 
     ${voice.connectError ? `<div class="mt-4 p-3 bg-red-900/30 border border-red-800/30 rounded-lg text-red-400 text-sm">${escapeHTML(voice.connectError)}</div>` : ''}
-  `
+  `;
 }
 
 function renderConnectedView(voice, user) {
   return `
-    ${voice.screenShareTrack ? `
+    ${
+      voice.screenShareTrack
+        ? `
       <div class="mb-4 bg-black rounded-lg overflow-hidden">
         <div class="text-xs text-slate-400 px-2 py-1">${escapeHTML(voice.screenShareParticipant?.name || '')} is sharing their screen</div>
         <video id="screen-share-video" autoplay playsinline class="w-full"></video>
       </div>
-    ` : ''}
+    `
+        : ''
+    }
 
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-6">
       <div class="bg-slate-900/50 rounded-lg p-3 text-center relative">
@@ -106,14 +119,18 @@ function renderConnectedView(voice, user) {
         ${voice.isSpeaking ? '<div class="absolute inset-0 rounded-lg border-2 border-green-400 animate-pulse pointer-events-none"></div>' : ''}
         ${voice.isMuted ? '<div class="absolute top-1 right-1 w-4 h-4 bg-red-600 rounded-full flex items-center justify-center"><svg class="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6"/></svg></div>' : ''}
       </div>
-      ${voice.participants.map(p => `
+      ${voice.participants
+        .map(
+          p => `
         <div class="bg-slate-900/50 rounded-lg p-3 text-center relative">
           ${avatarHTML({ avatarUrl: p.avatarUrl, size: 40, className: 'mx-auto' })}
           <div class="text-xs mt-1 font-medium">${escapeHTML(p.name)}</div>
           ${p.isSpeaking ? '<div class="absolute inset-0 rounded-lg border-2 border-green-400 animate-pulse pointer-events-none"></div>' : ''}
           ${p.isMuted ? '<div class="absolute top-1 right-1 w-4 h-4 bg-red-600 rounded-full flex items-center justify-center"><svg class="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6"/></svg></div>' : ''}
         </div>
-      `).join('')}
+      `,
+        )
+        .join('')}
     </div>
 
     <div class="flex items-center justify-center gap-2">
@@ -130,35 +147,47 @@ function renderConnectedView(voice, user) {
         Disconnect
       </button>
     </div>
-  `
+  `;
 }
 
 function renderDisconnectedView(room, voice, user, info) {
   return `
-    ${info && info.count > 0 ? `
+    ${
+      info && info.count > 0
+        ? `
       <div class="mb-6">
         <div class="text-sm text-slate-400 mb-2">Currently in this room:</div>
         <div class="flex flex-wrap gap-2">
-          ${info.identities.map((id, i) => `
+          ${info.identities
+            .map(
+              (id, i) => `
             <div class="flex items-center gap-2 bg-slate-900/50 rounded-lg px-3 py-2">
               ${avatarHTML({ avatarUrl: getAvatarUrl(id), size: 24 })}
               <span class="text-sm">${escapeHTML(info.names?.[i] || 'User')}</span>
             </div>
-          `).join('')}
+          `,
+            )
+            .join('')}
         </div>
       </div>
-    ` : `
+    `
+        : `
       <div class="mb-6 text-center py-4">
         <p class="text-slate-500">No one is in this room yet. Be the first to join!</p>
       </div>
-    `}
+    `
+    }
 
-    ${user ? `
+    ${
+      user
+        ? `
       <button class="join-btn w-full py-3 rounded-lg text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white" data-slug="${room.slug}" data-name="${escapeHTML(room.name)}" data-is-active="false">
         ${voice.isConnecting ? 'Connecting...' : 'Join Voice'}
       </button>
-    ` : '<p class="text-center text-slate-500"><a href="/login" class="text-indigo-400">Sign in</a> to join voice rooms</p>'}
-  `
+    `
+        : '<p class="text-center text-slate-500"><a href="/login" class="text-indigo-400">Sign in</a> to join voice rooms</p>'
+    }
+  `;
 }
 
 function renderActiveRoomBar(voice) {
@@ -171,12 +200,12 @@ function renderActiveRoomBar(voice) {
       </div>
       <button id="voice-disconnect" class="text-xs text-red-400 hover:text-red-300 font-medium">Disconnect</button>
     </div>
-  `
+  `;
 }
 
 function renderRoomCard(r, voice, _user) {
-  const info = voice.roomParticipantCounts[r.slug]
-  const isActive = voice.connectedRoomSlug === r.slug
+  const info = voice.roomParticipantCounts[r.slug];
+  const isActive = voice.connectedRoomSlug === r.slug;
   return `
     <a href="/voice/${r.id}" class="block bg-slate-800/50 border ${isActive ? 'border-green-700/50' : 'border-slate-700/50'} rounded-xl p-4 hover:bg-slate-800 transition-colors">
       <div class="flex items-center justify-between mb-2">
@@ -186,52 +215,59 @@ function renderRoomCard(r, voice, _user) {
         </div>
         ${info && info.count > 0 ? `<span class="text-sm text-green-400">${info.count} online</span>` : ''}
       </div>
-      ${info && info.count > 0 ? `
+      ${
+        info && info.count > 0
+          ? `
         <div class="flex flex-wrap gap-1">
-          ${info.identities.slice(0, 5).map(id => avatarHTML({ avatarUrl: getAvatarUrl(id), size: 24 })).join('')}
+          ${info.identities
+            .slice(0, 5)
+            .map(id => avatarHTML({ avatarUrl: getAvatarUrl(id), size: 24 }))
+            .join('')}
           ${info.count > 5 ? `<span class="text-xs text-slate-500 self-center">+${info.count - 5}</span>` : ''}
         </div>
-      ` : `<p class="text-xs text-slate-500">Empty</p>`}
+      `
+          : `<p class="text-xs text-slate-500">Empty</p>`
+      }
     </a>
-  `
+  `;
 }
 
 function bindEventHandlers(container, voice) {
   container.querySelectorAll('.join-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault()
+    btn.addEventListener('click', e => {
+      e.preventDefault();
       if (btn.dataset.isActive === 'true') {
-        leaveRoom()
+        leaveRoom();
       } else {
-        joinRoom(btn.dataset.slug, btn.dataset.name)
+        joinRoom(btn.dataset.slug, btn.dataset.name);
       }
-    })
-  })
+    });
+  });
 
-  const muteBtn = container.querySelector('#voice-mute')
-  if (muteBtn) muteBtn.addEventListener('click', toggleMute)
+  const muteBtn = container.querySelector('#voice-mute');
+  if (muteBtn) muteBtn.addEventListener('click', toggleMute);
 
-  const deafenBtn = container.querySelector('#voice-deafen')
-  if (deafenBtn) deafenBtn.addEventListener('click', toggleDeafen)
+  const deafenBtn = container.querySelector('#voice-deafen');
+  if (deafenBtn) deafenBtn.addEventListener('click', toggleDeafen);
 
-  const shareBtn = container.querySelector('#voice-share')
-  if (shareBtn) shareBtn.addEventListener('click', toggleScreenShare)
+  const shareBtn = container.querySelector('#voice-share');
+  if (shareBtn) shareBtn.addEventListener('click', toggleScreenShare);
 
-  const disconnectBtn = container.querySelector('#voice-disconnect')
-  if (disconnectBtn) disconnectBtn.addEventListener('click', leaveRoom)
+  const disconnectBtn = container.querySelector('#voice-disconnect');
+  if (disconnectBtn) disconnectBtn.addEventListener('click', leaveRoom);
 
   // Screen share video
   if (voice.screenShareTrack) {
-    const video = container.querySelector('#screen-share-video')
+    const video = container.querySelector('#screen-share-video');
     if (video) {
-      const stream = new MediaStream([voice.screenShareTrack])
-      video.srcObject = stream
+      const stream = new MediaStream([voice.screenShareTrack]);
+      video.srcObject = stream;
     }
   }
 }
 
 function escapeHTML(str) {
-  const div = document.createElement('div')
-  div.textContent = str || ''
-  return div.innerHTML
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
 }

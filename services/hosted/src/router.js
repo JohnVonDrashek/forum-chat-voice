@@ -11,83 +11,91 @@
  * - Show a 404 page when users visit a URL that doesn't match any known route
  */
 
-const routes = []
-let currentCleanup = null
-let notFoundHandler = null
-const routeListeners = new Set()
+const routes = [];
+let currentCleanup = null;
+let notFoundHandler = null;
+const routeListeners = new Set();
 
 export function route(pattern, handler) {
-  const keys = []
+  const keys = [];
   const regex = pattern
     .replace(/:(\w+)/g, (_, key) => {
-      keys.push(key)
-      return '([^/]+)'
+      keys.push(key);
+      return '([^/]+)';
     })
-    .replace(/\*/g, '.*')
-  routes.push({ pattern, regex: new RegExp(`^${regex}$`), keys, handler })
+    .replace(/\*/g, '.*');
+  routes.push({ pattern, regex: new RegExp(`^${regex}$`), keys, handler });
 }
 
 export function setNotFound(handler) {
-  notFoundHandler = handler
+  notFoundHandler = handler;
 }
 
 export function navigate(path, replace = false) {
   if (replace) {
-    history.replaceState(null, '', path)
+    history.replaceState(null, '', path);
   } else {
-    history.pushState(null, '', path)
+    history.pushState(null, '', path);
   }
-  resolve()
+  resolve();
 }
 
 export function resolve() {
-  const path = location.pathname
-  window.scrollTo(0, 0)
+  const path = location.pathname;
+  window.scrollTo(0, 0);
 
   // Clean up previous page
   if (currentCleanup) {
-    currentCleanup()
-    currentCleanup = null
+    currentCleanup();
+    currentCleanup = null;
   }
 
   for (const { regex, keys, handler } of routes) {
-    const match = path.match(regex)
+    const match = path.match(regex);
     if (match) {
-      const params = {}
+      const params = {};
       keys.forEach((key, i) => {
-        params[key] = decodeURIComponent(match[i + 1])
-      })
-      currentCleanup = handler(params) || null
-      routeListeners.forEach(fn => fn(path))
-      return
+        params[key] = decodeURIComponent(match[i + 1]);
+      });
+      currentCleanup = handler(params) || null;
+      routeListeners.forEach(fn => fn(path));
+      return;
     }
   }
 
   if (notFoundHandler) {
-    currentCleanup = notFoundHandler() || null
+    currentCleanup = notFoundHandler() || null;
   }
-  routeListeners.forEach(fn => fn(location.pathname))
+  routeListeners.forEach(fn => fn(location.pathname));
 }
 
 export function getCurrentPath() {
-  return location.pathname
+  return location.pathname;
 }
 
 export function onRouteChange(fn) {
-  routeListeners.add(fn)
-  return () => routeListeners.delete(fn)
+  routeListeners.add(fn);
+  return () => routeListeners.delete(fn);
 }
 
 // Handle browser back/forward
-window.addEventListener('popstate', resolve)
+window.addEventListener('popstate', resolve);
 
 // Intercept link clicks for SPA navigation
-document.addEventListener('click', (e) => {
-  const link = e.target.closest('a[href]')
-  if (!link) return
-  const href = link.getAttribute('href')
-  if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('/api/') || href.startsWith('/auth/')) return
-  if (link.target === '_blank') return
-  e.preventDefault()
-  navigate(href)
-})
+document.addEventListener('click', e => {
+  const link = e.target.closest('a[href]');
+  if (!link) return;
+  const href = link.getAttribute('href');
+  if (
+    !href ||
+    href.startsWith('http') ||
+    href.startsWith('#') ||
+    href.startsWith('mailto:') ||
+    href.startsWith('/api/') ||
+    href.startsWith('/auth/')
+  )
+    return;
+  if (link.target === '_blank') return;
+  e.preventDefault();
+  navigate(href);
+});

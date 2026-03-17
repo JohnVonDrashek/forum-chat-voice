@@ -16,7 +16,13 @@ export function plural(count, word) {
 export function highlightMatch(text, query) {
   const idx = text.toLowerCase().indexOf(query.toLowerCase());
   if (idx === -1) return escapeHtml(text);
-  return escapeHtml(text.substring(0, idx)) + '<mark>' + escapeHtml(text.substring(idx, idx + query.length)) + '</mark>' + escapeHtml(text.substring(idx + query.length));
+  return (
+    escapeHtml(text.substring(0, idx)) +
+    '<mark>' +
+    escapeHtml(text.substring(idx, idx + query.length)) +
+    '</mark>' +
+    escapeHtml(text.substring(idx + query.length))
+  );
 }
 
 // Animated counter (ease-out cubic)

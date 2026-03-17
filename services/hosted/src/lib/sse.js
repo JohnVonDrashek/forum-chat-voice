@@ -10,51 +10,51 @@
  * - Return a cleanup function so pages can disconnect when the user navigates away
  */
 
-import { getAccessToken } from './auth.js'
+import { getAccessToken } from './auth.js';
 
 export function connectSSE(url, onMessage, requireAuth = false) {
-  let es = null
-  let reconnectTimer = null
-  let cancelled = false
+  let es = null;
+  let reconnectTimer = null;
+  let cancelled = false;
 
   async function connect() {
-    if (cancelled) return
+    if (cancelled) return;
 
-    let fullUrl = url
+    let fullUrl = url;
     if (requireAuth) {
-      const token = await getAccessToken()
+      const token = await getAccessToken();
       if (!token) {
-        reconnectTimer = setTimeout(connect, 3000)
-        return
+        reconnectTimer = setTimeout(connect, 3000);
+        return;
       }
-      const sep = fullUrl.includes('?') ? '&' : '?'
-      fullUrl = `${fullUrl}${sep}access_token=${encodeURIComponent(token)}`
+      const sep = fullUrl.includes('?') ? '&' : '?';
+      fullUrl = `${fullUrl}${sep}access_token=${encodeURIComponent(token)}`;
     }
 
-    es = new EventSource(fullUrl)
+    es = new EventSource(fullUrl);
 
-    es.onmessage = (event) => {
+    es.onmessage = event => {
       try {
-        const data = JSON.parse(event.data)
-        onMessage(data)
+        const data = JSON.parse(event.data);
+        onMessage(data);
       } catch {
         // Ignore heartbeats
       }
-    }
+    };
 
     es.onerror = () => {
-      if (cancelled) return
-      es?.close()
-      es = null
-      reconnectTimer = setTimeout(connect, 3000)
-    }
+      if (cancelled) return;
+      es?.close();
+      es = null;
+      reconnectTimer = setTimeout(connect, 3000);
+    };
   }
 
-  connect()
+  connect();
 
   return () => {
-    cancelled = true
-    es?.close()
-    if (reconnectTimer) clearTimeout(reconnectTimer)
-  }
+    cancelled = true;
+    es?.close();
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+  };
 }

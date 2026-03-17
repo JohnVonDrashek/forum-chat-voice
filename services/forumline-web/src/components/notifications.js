@@ -1,6 +1,6 @@
-import { $ } from '../lib/utils.js';
+import { EventStream, ForumlineAPI, ForumStore } from '@forumline/client-sdk';
 import { avatarUrl } from '../lib/avatar.js';
-import { ForumlineAPI, ForumStore, EventStream } from '@forumline/client-sdk';
+import { $ } from '../lib/utils.js';
 
 let _notifications = [];
 let _loading = false;
@@ -51,9 +51,10 @@ export function renderNotifications() {
     return;
   }
 
-  list.innerHTML = _notifications.map(n => {
-    const seed = n.title.replace(/<[^>]*>/g, '').split(' ')[0] || 'unknown';
-    return `
+  list.innerHTML = _notifications
+    .map(n => {
+      const seed = n.title.replace(/<[^>]*>/g, '').split(' ')[0] || 'unknown';
+      return `
     <div class="notif-item ${!n.read ? 'unread' : ''}" role="listitem"
          data-id="${n.id}" data-domain="${n.forum_domain}" data-link="${n.link || '/'}">
       <img src="${avatarUrl(seed)}" alt="" onerror="this.style.display='none'">
@@ -63,7 +64,8 @@ export function renderNotifications() {
       </div>
     </div>
   `;
-  }).join('');
+    })
+    .join('');
 
   list.querySelectorAll('.notif-item').forEach(item => {
     item.addEventListener('click', () => {
@@ -107,7 +109,7 @@ async function fetchNotifications() {
 function connectNotifications() {
   if (_notifUnsub) return;
 
-  _notifUnsub = EventStream.subscribeNotification((notif) => {
+  _notifUnsub = EventStream.subscribeNotification(notif => {
     _notifications.unshift({
       id: notif.id,
       type: notif.type,
@@ -128,7 +130,7 @@ function connectNotifications() {
 
 export function initNotifications() {
   // Notification bell click handler
-  $('notifBell')?.addEventListener('click', (e) => {
+  $('notifBell')?.addEventListener('click', e => {
     e.stopPropagation();
     $('userDropdown').classList.add('hidden');
     const dd = $('notifDropdown');
@@ -140,7 +142,7 @@ export function initNotifications() {
 
   // Mark all read handler
   $('markAllRead')?.addEventListener('click', async () => {
-    _notifications.forEach(n => n.read = true);
+    _notifications.forEach(n => (n.read = true));
     updateBadge();
     renderNotifications();
     ForumlineAPI.markAllNotificationsRead().catch(() => {});
@@ -152,9 +154,11 @@ export function startNotificationUpdates() {
   if (!ForumlineAPI.isAuthenticated()) return;
 
   // Fetch unread count for badge
-  ForumlineAPI.getUnreadCount().then(data => {
-    updateBadge(data.count);
-  }).catch(() => {});
+  ForumlineAPI.getUnreadCount()
+    .then(data => {
+      updateBadge(data.count);
+    })
+    .catch(() => {});
 
   // Subscribe to unified event stream for real-time updates
   connectNotifications();

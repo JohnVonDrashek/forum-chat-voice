@@ -10,9 +10,14 @@
  * - Expose the page content container so route handlers can render into it
  */
 
-import { renderHeader, cleanupHeader } from './header.js'
-import { renderSidebar, renderMobileSidebar, loadSidebarData, closeMobileSidebar } from './sidebar.js'
-import { authStore } from '../lib/auth.js'
+import { authStore } from '../lib/auth.js';
+import { cleanupHeader, renderHeader } from './header.js';
+import {
+  closeMobileSidebar,
+  loadSidebarData,
+  renderMobileSidebar,
+  renderSidebar,
+} from './sidebar.js';
 
 export function renderLayout(container) {
   container.innerHTML = `
@@ -24,28 +29,28 @@ export function renderLayout(container) {
       </main>
     </div>
     <div id="mobile-sidebar-container"></div>
-  `
+  `;
 
-  renderHeader(document.getElementById('header-container'))
-  renderSidebar(document.getElementById('sidebar-container'))
-  renderMobileSidebar(document.getElementById('mobile-sidebar-container'))
+  renderHeader(document.getElementById('header-container'));
+  renderSidebar(document.getElementById('sidebar-container'));
+  renderMobileSidebar(document.getElementById('mobile-sidebar-container'));
 
   loadSidebarData().then(() => {
-    renderSidebar(document.getElementById('sidebar-container'))
-    renderMobileSidebar(document.getElementById('mobile-sidebar-container'))
-  })
+    renderSidebar(document.getElementById('sidebar-container'));
+    renderMobileSidebar(document.getElementById('mobile-sidebar-container'));
+  });
 
   // Re-render header when auth changes
   const unsub = authStore.subscribe(() => {
-    renderHeader(document.getElementById('header-container'))
-  })
+    renderHeader(document.getElementById('header-container'));
+  });
 
   return () => {
-    unsub()
-    cleanupHeader()
-  }
+    unsub();
+    cleanupHeader();
+  };
 }
 
 export function getPageContainer() {
-  return document.getElementById('page-content')
+  return document.getElementById('page-content');
 }

@@ -4,10 +4,19 @@
 export function initSafeStorage() {
   const _setItem = localStorage.setItem.bind(localStorage);
   const _getItem = localStorage.getItem.bind(localStorage);
-  localStorage.setItem = function(key, value) {
-    try { _setItem(key, value); } catch(e) { console.warn('localStorage unavailable:', e.message); }
+  localStorage.setItem = function (key, value) {
+    try {
+      _setItem(key, value);
+    } catch (e) {
+      console.warn('localStorage unavailable:', e.message);
+    }
   };
-  localStorage.getItem = function(key) {
-    try { return _getItem(key); } catch(e) { console.warn('localStorage unavailable:', e.message); return null; }
+  localStorage.getItem = function (key) {
+    try {
+      return _getItem(key);
+    } catch (e) {
+      console.warn('localStorage unavailable:', e.message);
+      return null;
+    }
   };
 }

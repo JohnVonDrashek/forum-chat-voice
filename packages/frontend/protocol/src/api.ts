@@ -13,9 +13,9 @@
 // Forumline API Contract — Required & optional endpoints
 // ============================================================================
 
-import type { ForumManifest } from './manifest'
-import type { ForumNotification, UnreadCounts } from './notifications'
-import type { AuthSession, ForumlineIdentity } from './identity'
+import type { AuthSession, ForumlineIdentity } from './identity';
+import type { ForumManifest } from './manifest';
+import type { ForumNotification, UnreadCounts } from './notifications';
 
 /**
  * Required API endpoints every Forumline-compatible forum MUST implement.
@@ -29,16 +29,16 @@ export interface ForumlineApiEndpoints {
    * Returns unread counts for the authenticated user.
    */
   'GET /unread': {
-    response: UnreadCounts
-  }
+    response: UnreadCounts;
+  };
 
   /**
    * GET /notifications
    * Returns the user's recent notifications.
    */
   'GET /notifications': {
-    response: ForumNotification[]
-  }
+    response: ForumNotification[];
+  };
 
   /**
    * GET /notifications/stream
@@ -46,17 +46,17 @@ export interface ForumlineApiEndpoints {
    * Each event is a JSON-encoded ForumNotification.
    */
   'GET /notifications/stream': {
-    response: ForumNotification // SSE event data
-  }
+    response: ForumNotification; // SSE event data
+  };
 
   /**
    * POST /notifications/:id/read
    * Mark a specific notification as read.
    */
   'POST /notifications/:id/read': {
-    params: { id: string }
-    response: { success: boolean }
-  }
+    params: { id: string };
+    response: { success: boolean };
+  };
 }
 
 /**
@@ -69,18 +69,18 @@ export interface ForumlineAuthEndpoints {
    * Redirects to Forumline Forumline OAuth2 authorization.
    */
   'GET /auth': {
-    query: { redirect_uri: string }
-    response: never // 302 redirect
-  }
+    query: { redirect_uri: string };
+    response: never; // 302 redirect
+  };
 
   /**
    * GET /auth/callback
    * Handles OAuth2 callback from Forumline.
    */
   'GET /auth/callback': {
-    query: { code: string; state: string }
-    response: { session: AuthSession }
-  }
+    query: { code: string; state: string };
+    response: { session: AuthSession };
+  };
 
   /**
    * GET /auth/session
@@ -88,8 +88,8 @@ export interface ForumlineAuthEndpoints {
    */
   'GET /auth/session': {
     response: {
-      identity: ForumlineIdentity
-      forum_manifest: ForumManifest
-    } | null
-  }
+      identity: ForumlineIdentity;
+      forum_manifest: ForumManifest;
+    } | null;
+  };
 }

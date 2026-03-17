@@ -1,10 +1,27 @@
 import { $ } from '../lib/utils.js';
 
 const emojiList = [
-  '&#x1F44D;','&#x1F44E;','&#x2764;','&#x1F602;','&#x1F622;','&#x1F60E;',
-  '&#x1F389;','&#x1F525;','&#x1F4A1;','&#x1F64F;','&#x1F44F;','&#x1F914;',
-  '&#x1F4AF;','&#x2705;','&#x1F4F1;','&#x1F3B5;','&#x1F680;','&#x2B50;',
-  '&#x1F440;','&#x1F48E;','&#x26A1;'
+  '&#x1F44D;',
+  '&#x1F44E;',
+  '&#x2764;',
+  '&#x1F602;',
+  '&#x1F622;',
+  '&#x1F60E;',
+  '&#x1F389;',
+  '&#x1F525;',
+  '&#x1F4A1;',
+  '&#x1F64F;',
+  '&#x1F44F;',
+  '&#x1F914;',
+  '&#x1F4AF;',
+  '&#x2705;',
+  '&#x1F4F1;',
+  '&#x1F3B5;',
+  '&#x1F680;',
+  '&#x2B50;',
+  '&#x1F440;',
+  '&#x1F48E;',
+  '&#x26A1;',
 ];
 
 let emojiTargetPost = null;
@@ -13,9 +30,9 @@ export function renderEmojiPicker() {
   const grid = $('emojiGrid');
   if (!grid) return;
 
-  grid.innerHTML = emojiList.map(e =>
-    `<button class="emoji-pick" data-emoji="${e}">${e}</button>`
-  ).join('');
+  grid.innerHTML = emojiList
+    .map(e => `<button class="emoji-pick" data-emoji="${e}">${e}</button>`)
+    .join('');
 
   grid.querySelectorAll('.emoji-pick').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -59,7 +76,7 @@ export function addReactionToPost(postIndex, emoji) {
     c.textContent = newReaction.classList.contains('active') ? count + 1 : Math.max(0, count - 1);
     const em = newReaction.querySelector('.reaction-emoji');
     em.style.transform = 'scale(1.4)';
-    setTimeout(() => em.style.transform = '', 200);
+    setTimeout(() => (em.style.transform = ''), 200);
   });
 }
 
@@ -67,7 +84,7 @@ export function initEmojiPicker() {
   renderEmojiPicker();
 
   // Event delegation for add-reaction buttons
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', e => {
     const addBtn = e.target.closest('.add-reaction-btn');
     if (addBtn) {
       e.stopPropagation();
@@ -75,7 +92,7 @@ export function initEmojiPicker() {
       const picker = $('emojiPicker');
       const rect = addBtn.getBoundingClientRect();
       picker.style.left = Math.min(rect.left, window.innerWidth - 280) + 'px';
-      picker.style.top = (rect.top - 200) + 'px';
+      picker.style.top = rect.top - 200 + 'px';
       picker.classList.remove('hidden');
       return;
     }
@@ -85,7 +102,7 @@ export function initEmojiPicker() {
   });
 
   // Keyboard navigation in emoji grid
-  $('emojiGrid')?.addEventListener('keydown', (e) => {
+  $('emojiGrid')?.addEventListener('keydown', e => {
     const emojis = Array.from($('emojiGrid').querySelectorAll('.emoji-pick'));
     const current = document.activeElement;
     const idx = emojis.indexOf(current);

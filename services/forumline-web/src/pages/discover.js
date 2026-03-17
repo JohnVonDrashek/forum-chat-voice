@@ -1,9 +1,9 @@
-import { $, plural } from '../lib/utils.js';
+import { ForumDiscoveryAPI, ForumlineAPI, ForumStore } from '@forumline/client-sdk';
 import { avatarUrl } from '../lib/avatar.js';
 import { escapeHtml } from '../lib/markdown.js';
-import store from '../state/store.js';
-import { ForumlineAPI, ForumDiscoveryAPI, ForumStore } from '@forumline/client-sdk';
+import { $, plural } from '../lib/utils.js';
 import { pushState } from '../router.js';
+import store from '../state/store.js';
 
 let _showView, _renderForumList, _renderDmList, _showToast;
 
@@ -19,7 +19,9 @@ let discoverySearchTimeout = null;
 function renderDiscoverCard(f, showJoined) {
   const isJoined = ForumStore.forums.some(rf => rf.domain === f.domain);
   const iconUrl = f.icon_url
-    ? (f.icon_url.startsWith('/') ? (f.web_base || '') + f.icon_url : f.icon_url)
+    ? f.icon_url.startsWith('/')
+      ? (f.web_base || '') + f.icon_url
+      : f.icon_url
     : avatarUrl(f.domain || f.seed || 'unknown', 'shapes');
   const banner = f.screenshot_url
     ? `background-image:url(${f.screenshot_url});background-size:cover;background-position:center;`
@@ -34,12 +36,28 @@ function renderDiscoverCard(f, showJoined) {
         <div class="discover-card-name">${escapeHtml(f.name)}</div>
         <div class="discover-card-desc">${escapeHtml(f.description || f.desc || '')}</div>
         <div class="discover-card-footer">
-          <span class="discover-card-members">${f.member_count ? plural(f.member_count, 'member') : (f.members ? plural(f.members, 'member') : '')}${f.shared_member_count ? ' · ' + f.shared_member_count + ' in common' : ''}</span>
-          ${isJoined
-            ? '<button class="aqua-btn join-btn joined" disabled>Joined</button>'
-            : `<button class="aqua-btn join-btn" data-join-domain="${f.domain || ''}">Join</button>`}
+          <span class="discover-card-members">${f.member_count ? plural(f.member_count, 'member') : f.members ? plural(f.members, 'member') : ''}${f.shared_member_count ? ' · ' + f.shared_member_count + ' in common' : ''}</span>
+          ${
+            isJoined
+              ? '<button class="aqua-btn join-btn joined" disabled>Joined</button>'
+              : `<button class="aqua-btn join-btn" data-join-domain="${f.domain || ''}">Join</button>`
+          }
         </div>
-        ${(f.tags && f.tags.length > 0) ? '<div style="margin-top:4px">' + f.tags.slice(0, 3).map(t => '<span class="discover-tag-pill" style="font-size:10px;padding:2px 6px;pointer-events:none">' + escapeHtml(t) + '</span>').join(' ') + '</div>' : ''}
+        ${
+          f.tags && f.tags.length > 0
+            ? '<div style="margin-top:4px">' +
+              f.tags
+                .slice(0, 3)
+                .map(
+                  t =>
+                    '<span class="discover-tag-pill" style="font-size:10px;padding:2px 6px;pointer-events:none">' +
+                    escapeHtml(t) +
+                    '</span>',
+                )
+                .join(' ') +
+              '</div>'
+            : ''
+        }
       </div>
     </div>
   `;
@@ -70,18 +88,29 @@ export function renderDiscover() {
 
     // Recommended section — hide when searching or filtering by tag
     if (discoveryRecommended.length > 0 && !discoveryQuery && !discoveryActiveTag) {
-      html += '<div class="discover-section"><div class="discover-recommended"><h2>Recommended for you</h2><p>Popular with people in your forums</p></div>';
-      html += '<div class="discover-grid-inner">' + discoveryRecommended.map(f => renderDiscoverCard(f, true)).join('') + '</div>';
+      html +=
+        '<div class="discover-section"><div class="discover-recommended"><h2>Recommended for you</h2><p>Popular with people in your forums</p></div>';
+      html +=
+        '<div class="discover-grid-inner">' +
+        discoveryRecommended.map(f => renderDiscoverCard(f, true)).join('') +
+        '</div>';
       html += '<div style="margin:16px 0;border-top:1px solid #ddd"></div></div>';
     }
 
     // Main results (also in a full-width section with inner grid)
     if (discoveryLoading) {
-      html += '<div class="discover-section" style="text-align:center;padding:40px;color:#999">Loading...</div>';
+      html +=
+        '<div class="discover-section" style="text-align:center;padding:40px;color:#999">Loading...</div>';
     } else if (discoveryForumsApi.length === 0) {
-      html += '<div class="discover-section" style="text-align:center;padding:40px;color:#999">' + (discoveryQuery ? 'No forums found' : 'No forums available yet') + '</div>';
+      html +=
+        '<div class="discover-section" style="text-align:center;padding:40px;color:#999">' +
+        (discoveryQuery ? 'No forums found' : 'No forums available yet') +
+        '</div>';
     } else {
-      html += '<div class="discover-section"><div class="discover-grid-inner">' + discoveryForumsApi.map(f => renderDiscoverCard(f)).join('') + '</div></div>';
+      html +=
+        '<div class="discover-section"><div class="discover-grid-inner">' +
+        discoveryForumsApi.map(f => renderDiscoverCard(f)).join('') +
+        '</div></div>';
     }
 
     el.innerHTML = html;
@@ -91,7 +120,7 @@ export function renderDiscover() {
 
   // Bind join buttons
   el.querySelectorAll('.join-btn[data-join-domain]').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
+    btn.addEventListener('click', async e => {
       e.stopPropagation();
       const domain = btn.dataset.joinDomain;
       if (!domain || btn.disabled) return;
@@ -119,7 +148,7 @@ export function renderDiscover() {
 
   // Bind card clicks to navigate to the forum (preview only — does NOT join)
   el.querySelectorAll('.discover-card[data-domain]').forEach(card => {
-    card.addEventListener('click', (e) => {
+    card.addEventListener('click', e => {
       if (e.target.closest('.join-btn')) return;
       const domain = card.dataset.domain;
       if (!domain) return;
@@ -132,9 +161,12 @@ export function renderDiscover() {
         const forumInfo = allForums.find(f => f.domain === domain);
         if (forumInfo && forumInfo.web_base) {
           ForumStore.showWebview({
-            domain, name: forumInfo.name || domain,
-            icon_url: forumInfo.icon_url || '', web_base: forumInfo.web_base,
-            seed: forumInfo.domain || domain, members: forumInfo.member_count || 0,
+            domain,
+            name: forumInfo.name || domain,
+            icon_url: forumInfo.icon_url || '',
+            web_base: forumInfo.web_base,
+            seed: forumInfo.domain || domain,
+            members: forumInfo.member_count || 0,
           });
         }
       }
@@ -157,7 +189,8 @@ async function fetchDiscoveryForums() {
   discoveryLoading = true;
   renderDiscover();
   const results = await ForumDiscoveryAPI.searchForums({
-    query: discoveryQuery, tag: discoveryActiveTag || '',
+    query: discoveryQuery,
+    tag: discoveryActiveTag || '',
   });
   if (results !== null) {
     discoveryForumsApi = results;
@@ -186,7 +219,7 @@ export function initDiscover(deps) {
   // Discover search input
   const searchInput = $('discoverSearchInput');
   if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
+    searchInput.addEventListener('input', e => {
       discoveryQuery = e.target.value.trim();
       if (discoverySearchTimeout) clearTimeout(discoverySearchTimeout);
       discoverySearchTimeout = setTimeout(() => void fetchDiscoveryForums(), 300);
@@ -205,7 +238,10 @@ export function initDiscover(deps) {
       }
       // Update active state on pills
       document.querySelectorAll('#discoverView .category-pill').forEach(p => {
-        p.classList.toggle('active', p === pill || (text === 'All' && p.textContent.trim() === 'All'));
+        p.classList.toggle(
+          'active',
+          p === pill || (text === 'All' && p.textContent.trim() === 'All'),
+        );
       });
       if (discoverySearchTimeout) clearTimeout(discoverySearchTimeout);
       void fetchDiscoveryForums();
@@ -213,9 +249,14 @@ export function initDiscover(deps) {
   });
 
   // Join button click handler (event delegation for mock data fallback)
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', e => {
     const joinBtn = e.target.closest('.join-btn');
-    if (joinBtn && !joinBtn.classList.contains('joined') && !joinBtn.disabled && !joinBtn.dataset.joinDomain) {
+    if (
+      joinBtn &&
+      !joinBtn.classList.contains('joined') &&
+      !joinBtn.disabled &&
+      !joinBtn.dataset.joinDomain
+    ) {
       joinBtn.classList.add('joined');
       joinBtn.textContent = 'Joined';
       _showToast('Forum joined!');

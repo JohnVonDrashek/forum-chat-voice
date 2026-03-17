@@ -1,8 +1,8 @@
-import { $, plural } from '../lib/utils.js';
 import { avatarUrl } from '../lib/avatar.js';
 import { escapeHtml, renderMarkdown } from '../lib/markdown.js';
-import store from '../state/store.js';
+import { $, plural } from '../lib/utils.js';
 import * as data from '../state/data.js';
+import store from '../state/store.js';
 
 let _showView, _showToast, _showForum, _showHome, _addBookmark, _removeBookmark, _bookmarks;
 
@@ -29,7 +29,9 @@ export function showThread(threadId) {
   $('threadTitle').textContent = thread.title;
 
   // Update breadcrumbs
-  const allThreadsFlat = Object.entries(data.threads).flatMap(([fid, ts]) => ts.map(t => ({ ...t, forumId: fid })));
+  const allThreadsFlat = Object.entries(data.threads).flatMap(([fid, ts]) =>
+    ts.map(t => ({ ...t, forumId: fid })),
+  );
   const threadWithForum = allThreadsFlat.find(t => t.id === threadId);
   if (threadWithForum) {
     const forum = data.forums.find(f => f.id === threadWithForum.forumId);
@@ -105,12 +107,17 @@ export function renderPosts(threadId) {
   const threadPosts = data.posts[threadId] || [];
   const bookmarks = _bookmarks();
 
-  el.innerHTML = threadPosts.map((p, i) => {
-    const quoteHtml = p.quote ? `<div class="post-quote">${p.quote}</div>` : '';
-    const contentHtml = p.content ? `<div class="post-content">${renderMarkdown(p.content)}</div>` : '';
-    const imageHtml = p.image ? `<div class="post-image-gallery"><img class="post-image-thumb" src="${p.image}" alt="Attached image"></div>` : '';
+  el.innerHTML = threadPosts
+    .map((p, i) => {
+      const quoteHtml = p.quote ? `<div class="post-quote">${p.quote}</div>` : '';
+      const contentHtml = p.content
+        ? `<div class="post-content">${renderMarkdown(p.content)}</div>`
+        : '';
+      const imageHtml = p.image
+        ? `<div class="post-image-gallery"><img class="post-image-thumb" src="${p.image}" alt="Attached image"></div>`
+        : '';
 
-    return `
+      return `
       <div class="post-item" role="listitem">
         <img class="post-avatar" src="${avatarUrl(p.seed)}" alt="${p.author}'s avatar" onerror="this.style.display='none'">
         <div class="post-body">
@@ -119,19 +126,23 @@ export function renderPosts(threadId) {
           ${contentHtml}
           ${imageHtml}
           <div class="post-footer">
-            ${Object.entries(p.reactions || {}).map(([emoji, d]) =>
-              `<button class="reaction-btn ${d.active ? 'active' : ''}" data-post="${i}" data-emoji="${emoji}" aria-label="React with ${emoji}, ${d.count} reactions" aria-pressed="${d.active}">
+            ${Object.entries(p.reactions || {})
+              .map(
+                ([emoji, d]) =>
+                  `<button class="reaction-btn ${d.active ? 'active' : ''}" data-post="${i}" data-emoji="${emoji}" aria-label="React with ${emoji}, ${d.count} reactions" aria-pressed="${d.active}">
                 <span class="reaction-emoji">${emoji}</span>
                 <span class="reaction-count">${d.count}</span>
-              </button>`
-            ).join('')}
+              </button>`,
+              )
+              .join('')}
             <button class="add-reaction-btn" data-post="${i}" title="Add reaction" aria-label="Add reaction">+</button>
             <button class="post-quote-btn" data-post="${i}" title="Quote reply" aria-label="Quote and reply">&#x21A9; Reply</button>
           </div>
         </div>
       </div>
     `;
-  }).join('');
+    })
+    .join('');
 
   // --- Bind reaction clicks ---
   el.querySelectorAll('.reaction-btn').forEach(btn => {
@@ -146,7 +157,7 @@ export function renderPosts(threadId) {
       }
       const emoji = btn.querySelector('.reaction-emoji');
       emoji.style.transform = 'scale(1.4)';
-      setTimeout(() => emoji.style.transform = '', 200);
+      setTimeout(() => (emoji.style.transform = ''), 200);
     });
   });
 
@@ -226,7 +237,9 @@ export function renderPosts(threadId) {
         } else {
           bookmarkBtn.classList.add('bookmarked');
           bookmarkBtn.innerHTML = '&#x2605;';
-          const thread = Object.values(data.threads).flat().find(t => t.id === store.currentThread);
+          const thread = Object.values(data.threads)
+            .flat()
+            .find(t => t.id === store.currentThread);
           _addBookmark(store.currentThread, thread?.title || 'Untitled');
         }
       });
@@ -245,10 +258,11 @@ export function renderPosts(threadId) {
       pollEl.className = 'poll-container' + (poll.userVoted !== null ? ' poll-voted' : '');
       pollEl.innerHTML = `
         <div class="poll-question">${poll.question}</div>
-        ${poll.options.map((opt, i) => {
-          const pct = Math.round((opt.votes / poll.totalVotes) * 100);
-          const isVoted = poll.userVoted === i;
-          return `
+        ${poll.options
+          .map((opt, i) => {
+            const pct = Math.round((opt.votes / poll.totalVotes) * 100);
+            const isVoted = poll.userVoted === i;
+            return `
             <div class="poll-option ${isVoted ? 'voted' : ''}" data-idx="${i}">
               <div class="poll-option-bar" style="width: ${poll.userVoted !== null ? pct : 0}%"></div>
               <div class="poll-option-check"></div>
@@ -256,7 +270,8 @@ export function renderPosts(threadId) {
               <span class="poll-option-percent">${pct}%</span>
             </div>
           `;
-        }).join('')}
+          })
+          .join('')}
         <div class="poll-meta">
           <span>${poll.totalVotes} votes</span>
           <span>${poll.userVoted !== null ? 'You voted' : 'Click to vote'}</span>
@@ -282,7 +297,8 @@ export function renderPosts(threadId) {
             o.querySelector('.poll-option-percent').textContent = pct + '%';
           });
 
-          pollEl.querySelector('.poll-meta').innerHTML = `<span>${poll.totalVotes} votes</span><span>You voted</span>`;
+          pollEl.querySelector('.poll-meta').innerHTML =
+            `<span>${poll.totalVotes} votes</span><span>You voted</span>`;
         });
       });
     }
@@ -340,9 +356,10 @@ export function renderThreadPresence(threadId) {
   }
   bar.style.display = 'flex';
 
-  $('presenceAvatars').innerHTML = viewers.slice(0, 4).map(v =>
-    `<img src="${avatarUrl(v.seed)}" alt="${v.name}" title="${v.name}">`
-  ).join('');
+  $('presenceAvatars').innerHTML = viewers
+    .slice(0, 4)
+    .map(v => `<img src="${avatarUrl(v.seed)}" alt="${v.name}" title="${v.name}">`)
+    .join('');
 
   const names = viewers.map(v => v.name);
   let text;
@@ -405,7 +422,9 @@ export function initThread(deps) {
       }
 
       let quoteHtml = quoteContent ? `<div class="post-quote">${quoteContent}</div>` : '';
-      let contentHtml = input.value.trim() ? `<div class="post-content">${renderMarkdown(input.value)}</div>` : '';
+      let contentHtml = input.value.trim()
+        ? `<div class="post-content">${renderMarkdown(input.value)}</div>`
+        : '';
       const newPostIndex = data.posts[store.currentThread].length - 1;
 
       newPost.innerHTML = `
@@ -451,7 +470,7 @@ export function initThread(deps) {
   });
 
   // Enter key to send reply
-  $('replyInput')?.addEventListener('keydown', (e) => {
+  $('replyInput')?.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       replyBtn?.click();
@@ -464,25 +483,25 @@ export function initThread(deps) {
   const previewBar = $('imagePreviewBar');
   const previewThumb = $('imagePreviewThumb');
 
-  replyInput?.addEventListener('dragenter', (e) => {
+  replyInput?.addEventListener('dragenter', e => {
     e.preventDefault();
     dropZone?.classList.remove('hidden');
     dropZone?.classList.add('dragover');
   });
 
-  dropZone?.addEventListener('dragover', (e) => {
+  dropZone?.addEventListener('dragover', e => {
     e.preventDefault();
     dropZone.classList.add('dragover');
   });
 
-  dropZone?.addEventListener('dragleave', (e) => {
+  dropZone?.addEventListener('dragleave', e => {
     if (!dropZone.contains(e.relatedTarget)) {
       dropZone.classList.remove('dragover');
       if (!attachedImageData) dropZone.classList.add('hidden');
     }
   });
 
-  dropZone?.addEventListener('drop', (e) => {
+  dropZone?.addEventListener('drop', e => {
     e.preventDefault();
     dropZone.classList.remove('dragover');
     dropZone.classList.add('hidden');
@@ -492,7 +511,7 @@ export function initThread(deps) {
     }
   });
 
-  $('imageFileInput')?.addEventListener('change', (e) => {
+  $('imageFileInput')?.addEventListener('change', e => {
     const file = e.target.files?.[0];
     if (file) handleImageAttach(file, previewThumb, previewBar, dropZone);
   });
@@ -510,7 +529,7 @@ export function initThread(deps) {
 
 function handleImageAttach(file, previewThumb, previewBar, dropZone) {
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = e => {
     attachedImageData = e.target.result;
     previewThumb.style.backgroundImage = `url(${attachedImageData})`;
     previewBar?.classList.remove('hidden');

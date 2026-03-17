@@ -15,7 +15,7 @@ export function initKeyboardShortcuts(deps) {
     getCurrentForum,
   } = deps;
 
-  document.addEventListener('keydown', (e) => {
+  document.addEventListener('keydown', e => {
     // Cmd+K or Ctrl+K -> open search
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault();

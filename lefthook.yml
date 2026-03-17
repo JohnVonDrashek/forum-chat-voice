@@ -14,13 +14,8 @@ pre-commit:
       skip:
         - run: "! command -v gitleaks >/dev/null 2>&1"
 
-    eslint-workspace:
-      glob: "{services/forumline-web,packages/frontend}/**/*.{ts,tsx,js,mjs}"
-      run: pnpm lint
-
-    eslint-forum:
-      root: "services/hosted/"
-      glob: "src/**/*.js"
+    biome:
+      glob: "{services/forumline-web,packages/frontend,services/hosted/src}/**/*.{ts,tsx,js,mjs}"
       run: pnpm lint
 
     golangci-lint:

@@ -11,9 +11,15 @@ function configure({ baseUrl, accessToken, userId }) {
   if (userId !== undefined) _userId = userId;
 }
 
-function getToken() { return _accessToken; }
-function getUserId() { return _userId; }
-function isAuthenticated() { return !!_accessToken; }
+function getToken() {
+  return _accessToken;
+}
+function getUserId() {
+  return _userId;
+}
+function isAuthenticated() {
+  return !!_accessToken;
+}
 
 async function apiFetch(path, options = {}) {
   if (!_accessToken) throw new Error('Not authenticated');
@@ -39,8 +45,12 @@ async function apiFetch(path, options = {}) {
   }
 }
 
-function getConversations() { return apiFetch('/api/conversations'); }
-function getConversation(id) { return apiFetch(`/api/conversations/${id}`); }
+function getConversations() {
+  return apiFetch('/api/conversations');
+}
+function getConversation(id) {
+  return apiFetch(`/api/conversations/${id}`);
+}
 
 function getMessages(id, opts = {}) {
   const params = new URLSearchParams();
@@ -52,7 +62,8 @@ function getMessages(id, opts = {}) {
 
 function sendMessage(id, content) {
   return apiFetch(`/api/conversations/${id}/messages`, {
-    method: 'POST', body: JSON.stringify({ content }),
+    method: 'POST',
+    body: JSON.stringify({ content }),
   });
 }
 
@@ -62,19 +73,22 @@ function markRead(id) {
 
 function getOrCreateDM(userId) {
   return apiFetch('/api/conversations/dm', {
-    method: 'POST', body: JSON.stringify({ userId }),
+    method: 'POST',
+    body: JSON.stringify({ userId }),
   });
 }
 
 function createGroupConversation(memberIds, name) {
   return apiFetch('/api/conversations', {
-    method: 'POST', body: JSON.stringify({ memberIds, name }),
+    method: 'POST',
+    body: JSON.stringify({ memberIds, name }),
   });
 }
 
 function updateConversation(id, updates) {
   return apiFetch(`/api/conversations/${id}`, {
-    method: 'PATCH', body: JSON.stringify(updates),
+    method: 'PATCH',
+    body: JSON.stringify(updates),
   });
 }
 
@@ -90,15 +104,22 @@ function searchIdentity(query) {
   return apiFetch(`/api/identity/search?q=${encodeURIComponent(query)}`);
 }
 
-function getActivity() { return apiFetch('/api/activity'); }
+function getActivity() {
+  return apiFetch('/api/activity');
+}
 
-function getNotifications() { return apiFetch('/api/notifications'); }
+function getNotifications() {
+  return apiFetch('/api/notifications');
+}
 
-function getUnreadCount() { return apiFetch('/api/notifications/unread'); }
+function getUnreadCount() {
+  return apiFetch('/api/notifications/unread');
+}
 
 function markNotificationRead(id) {
   return apiFetch('/api/notifications/read', {
-    method: 'POST', body: JSON.stringify({ id }),
+    method: 'POST',
+    body: JSON.stringify({ id }),
   });
 }
 
@@ -116,9 +137,27 @@ function getPresenceStatus(userIds) {
 }
 
 export const ForumlineAPI = {
-  configure, getToken, getUserId, isAuthenticated, apiFetch,
-  getConversations, getConversation, getMessages, sendMessage, markRead,
-  getOrCreateDM, createGroupConversation, updateConversation, leaveConversation,
-  searchProfiles, searchIdentity, getActivity, presenceHeartbeat, getPresenceStatus,
-  getNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead,
+  configure,
+  getToken,
+  getUserId,
+  isAuthenticated,
+  apiFetch,
+  getConversations,
+  getConversation,
+  getMessages,
+  sendMessage,
+  markRead,
+  getOrCreateDM,
+  createGroupConversation,
+  updateConversation,
+  leaveConversation,
+  searchProfiles,
+  searchIdentity,
+  getActivity,
+  presenceHeartbeat,
+  getPresenceStatus,
+  getNotifications,
+  getUnreadCount,
+  markNotificationRead,
+  markAllNotificationsRead,
 };

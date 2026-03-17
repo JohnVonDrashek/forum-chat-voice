@@ -1,8 +1,8 @@
-import { $ } from '../lib/utils.js';
-import { avatarUrl } from '../lib/avatar.js';
-import store from '../state/store.js';
-import * as data from '../state/data.js';
 import { ForumlineAPI, ForumRegistrationAPI, ForumStore } from '@forumline/client-sdk';
+import { avatarUrl } from '../lib/avatar.js';
+import { $ } from '../lib/utils.js';
+import * as data from '../state/data.js';
+import store from '../state/store.js';
 
 let _showView, _closeAllDropdowns, _showHome, _showForum, _showToast, _fireConfetti;
 
@@ -23,10 +23,13 @@ export function initCreateForum(deps) {
   _fireConfetti = deps.fireConfetti;
 
   // Live preview handlers (name input)
-  $('createForumName').addEventListener('input', (e) => {
+  $('createForumName').addEventListener('input', e => {
     $('previewName').textContent = e.target.value || 'Your Forum';
     // Auto-generate subdomain
-    const subdomain = e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const subdomain = e.target.value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
     $('createForumSubdomain').value = subdomain;
     $('previewAvatar').src = avatarUrl(subdomain || 'new-forum', 'shapes');
 
@@ -38,14 +41,16 @@ export function initCreateForum(deps) {
   });
 
   // Live preview handlers (desc input)
-  $('createForumDesc').addEventListener('input', (e) => {
+  $('createForumDesc').addEventListener('input', e => {
     $('previewDesc').textContent = e.target.value || 'Your forum description will appear here...';
   });
 
   // Category button handlers
   document.querySelectorAll('.create-category-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.create-category-btn').forEach(b => b.classList.remove('selected'));
+      document
+        .querySelectorAll('.create-category-btn')
+        .forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
     });
   });
@@ -80,8 +85,14 @@ export function initCreateForum(deps) {
         try {
           const domain = subdomain + '.forumline.net';
           const result = await ForumRegistrationAPI.registerForum(
-            { name, domain, api_base: 'https://' + domain, web_base: 'https://' + domain, description: desc },
-            ForumlineAPI.getToken()
+            {
+              name,
+              domain,
+              api_base: 'https://' + domain,
+              web_base: 'https://' + domain,
+              description: desc,
+            },
+            ForumlineAPI.getToken(),
           );
           // Also sync memberships to pick up the new forum
           await ForumStore.syncFromServer(ForumlineAPI.getToken());

@@ -15,56 +15,51 @@
 // ============================================================================
 
 /** Types of notifications a forum can emit */
-export type ForumNotificationType =
-  | 'reply'
-  | 'mention'
-  | 'chat_mention'
-  | 'dm'
-  | 'custom'
+export type ForumNotificationType = 'reply' | 'mention' | 'chat_mention' | 'dm' | 'custom';
 
 /** A notification from a specific forum */
 export interface ForumNotification {
   /** Unique notification ID */
-  id: string
+  id: string;
 
   /** Notification type */
-  type: ForumNotificationType
+  type: ForumNotificationType;
 
   /** Short title (e.g. "New reply in your thread") */
-  title: string
+  title: string;
 
   /** Notification body text */
-  body: string
+  body: string;
 
   /** ISO 8601 timestamp */
-  timestamp: string
+  timestamp: string;
 
   /** Whether the user has read this notification */
-  read: boolean
+  read: boolean;
 
   /** Link to the relevant content (relative to the forum's web_base) */
-  link: string
+  link: string;
 
   /** Domain of the forum that sent this notification */
-  forum_domain: string
+  forum_domain: string;
 }
 
 /** Unread counts returned by the /unread endpoint */
 export interface UnreadCounts {
   /** Number of unread notifications */
-  notifications: number
+  notifications: number;
 
   /** Number of unread chat mentions */
-  chat_mentions: number
+  chat_mentions: number;
 
   /** Number of unread DMs */
-  dms: number
+  dms: number;
 }
 
 /** Input for creating a new notification (server-side) */
 export interface NotificationInput {
-  type: ForumNotificationType
-  title: string
-  body: string
-  link: string
+  type: ForumNotificationType;
+  title: string;
+  body: string;
+  link: string;
 }

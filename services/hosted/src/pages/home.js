@@ -10,10 +10,10 @@
  * - Indicate federated Forumline users with a globe icon on their avatar
  */
 
-import { api } from '../lib/api.js'
-import { getConfig } from '../lib/config.js'
-import { avatarHTML } from '../components/avatar.js'
-import { formatRelativeTime } from '../lib/date.js'
+import { avatarHTML } from '../components/avatar.js';
+import { api } from '../lib/api.js';
+import { getConfig } from '../lib/config.js';
+import { formatRelativeTime } from '../lib/date.js';
 
 export function renderHome(container) {
   // eslint-disable-next-line no-unsanitized/property -- static template with skeleton loader
@@ -25,7 +25,9 @@ export function renderHome(container) {
     <h2 class="text-lg font-semibold mb-4">Recent Discussions</h2>
     <div id="thread-list">
       <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden divide-y divide-slate-700/50">
-        ${[1,2,3,4,5].map(() => `
+        ${[1, 2, 3, 4, 5]
+          .map(
+            () => `
           <div class="flex items-start gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4 animate-pulse">
             <div class="h-10 w-10 rounded-full bg-slate-700 shrink-0"></div>
             <div class="flex-1 space-y-2">
@@ -34,21 +36,27 @@ export function renderHome(container) {
               <div class="flex gap-2"><div class="h-3 w-20 bg-slate-700 rounded"></div><div class="h-3 w-12 bg-slate-700 rounded"></div></div>
             </div>
           </div>
-        `).join('')}
+        `,
+          )
+          .join('')}
       </div>
     </div>
-  `
+  `;
 
-  api.getThreads(20).then(threads => {
-    const list = container.querySelector('#thread-list')
-    if (!threads?.length) {
-      list.innerHTML = '<p class="text-slate-400 text-center py-8">No discussions yet.</p>'
-      return
-    }
+  api
+    .getThreads(20)
+    .then(threads => {
+      const list = container.querySelector('#thread-list');
+      if (!threads?.length) {
+        list.innerHTML = '<p class="text-slate-400 text-center py-8">No discussions yet.</p>';
+        return;
+      }
 
-    // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
-    list.innerHTML = `<div class="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden divide-y divide-slate-700/50">
-      ${threads.map(t => `
+      // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
+      list.innerHTML = `<div class="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden divide-y divide-slate-700/50">
+      ${threads
+        .map(
+          t => `
         <a href="/t/${t.id}" class="flex items-start gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4 transition-colors hover:bg-slate-700/30">
           ${avatarHTML({ avatarUrl: t.image_url || t.author?.avatar_url, size: 40 })}
           <div class="flex-1 min-w-0">
@@ -73,21 +81,26 @@ export function renderHome(container) {
             <div class="text-slate-300">${formatRelativeTime(t.last_post_at || t.updated_at)}</div>
           </div>
         </a>
-      `).join('')}
-    </div>`
-  }).catch(() => {
-    container.querySelector('#thread-list').innerHTML = `
+      `,
+        )
+        .join('')}
+    </div>`;
+    })
+    .catch(() => {
+      container.querySelector('#thread-list').innerHTML = `
       <div class="text-center py-8">
         <p class="text-red-400">Failed to load threads.</p>
         <button id="retry-home" class="mt-2 text-sm text-indigo-400 hover:text-indigo-300">Try again</button>
       </div>
-    `
-    container.querySelector('#retry-home')?.addEventListener('click', () => renderHome(container))
-  })
+    `;
+      container
+        .querySelector('#retry-home')
+        ?.addEventListener('click', () => renderHome(container));
+    });
 }
 
 function escapeHTML(str) {
-  const div = document.createElement('div')
-  div.textContent = str || ''
-  return div.innerHTML
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
 }

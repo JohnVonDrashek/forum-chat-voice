@@ -1,6 +1,6 @@
 import { $ } from '../lib/utils.js';
-import store from '../state/store.js';
 import * as data from '../state/data.js';
+import store from '../state/store.js';
 
 let _deps = {
   showToast: () => {},
@@ -29,7 +29,7 @@ export function initContextMenu(deps) {
 
   // Context menu item click handlers
   document.querySelectorAll('.context-menu-item').forEach(item => {
-    item.addEventListener('click', (e) => {
+    item.addEventListener('click', e => {
       e.stopPropagation();
       const action = item.dataset.action;
       $('contextMenu').classList.add('hidden');

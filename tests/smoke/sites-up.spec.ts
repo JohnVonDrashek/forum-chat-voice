@@ -1,9 +1,9 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from '@playwright/test';
 
 const sites = [
-  { name: "Forumline App", url: "https://app.forumline.net" },
-  { name: "Hosted", url: "https://hosted.forumline.net" },
-  { name: "Website", url: "https://forumline.net" },
+  { name: 'Forumline App', url: 'https://app.forumline.net' },
+  { name: 'Hosted', url: 'https://hosted.forumline.net' },
+  { name: 'Website', url: 'https://forumline.net' },
 ];
 
 for (const site of sites) {

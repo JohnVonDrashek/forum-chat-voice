@@ -11,28 +11,30 @@
  * - Validate minimum title and content length before submission
  */
 
-import { api } from '../lib/api.js'
-import { authStore, getAccessToken } from '../lib/auth.js'
-import { uploadAvatar, uploadDefaultAvatar } from '../lib/avatars.js'
-import { navigate } from '../router.js'
-import { showCropModal } from '../components/image-crop-modal.js'
+import { showCropModal } from '../components/image-crop-modal.js';
+import { api } from '../lib/api.js';
+import { authStore, getAccessToken } from '../lib/auth.js';
+import { uploadAvatar, uploadDefaultAvatar } from '../lib/avatars.js';
+import { navigate } from '../router.js';
 
 export function renderNewThread(container, { categorySlug }) {
-  const { user } = authStore.get()
+  const { user } = authStore.get();
   if (!user) {
-    container.innerHTML = '<p class="text-center py-8 text-slate-400"><a href="/login" class="text-indigo-400">Sign in</a> to create a thread.</p>'
-    return
+    container.innerHTML =
+      '<p class="text-center py-8 text-slate-400"><a href="/login" class="text-indigo-400">Sign in</a> to create a thread.</p>';
+    return;
   }
 
-  container.innerHTML = '<div class="animate-pulse"><div class="h-8 w-48 bg-slate-800 rounded"></div></div>'
+  container.innerHTML =
+    '<div class="animate-pulse"><div class="h-8 w-48 bg-slate-800 rounded"></div></div>';
 
   api.getCategory(categorySlug).then(category => {
     if (!category) {
-      container.innerHTML = '<p class="text-center py-8 text-slate-400">Category not found.</p>'
-      return
+      container.innerHTML = '<p class="text-center py-8 text-slate-400">Category not found.</p>';
+      return;
     }
 
-    let imageFile = null
+    let imageFile = null;
 
     // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
     container.innerHTML = `
@@ -66,80 +68,83 @@ export function renderNewThread(container, { categorySlug }) {
           <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors">Create Thread</button>
         </div>
       </form>
-    `
+    `;
 
-    const fileInput = container.querySelector('#thread-image')
-    const preview = container.querySelector('#image-preview')
+    const fileInput = container.querySelector('#thread-image');
+    const preview = container.querySelector('#image-preview');
     fileInput.addEventListener('change', async () => {
-      const file = fileInput.files[0]
-      if (!file) return
-      fileInput.value = ''
+      const file = fileInput.files[0];
+      if (!file) return;
+      fileInput.value = '';
 
-      const imageSrc = URL.createObjectURL(file)
-      const blob = await showCropModal(imageSrc)
-      URL.revokeObjectURL(imageSrc)
-      if (!blob) return
+      const imageSrc = URL.createObjectURL(file);
+      const blob = await showCropModal(imageSrc);
+      URL.revokeObjectURL(imageSrc);
+      if (!blob) return;
 
-      imageFile = blob
+      imageFile = blob;
       // eslint-disable-next-line no-unsanitized/property -- src is a blob URL from URL.createObjectURL()
-      preview.innerHTML = `<img src="${URL.createObjectURL(blob)}" class="h-32 rounded-lg object-cover" />`
-      preview.classList.remove('hidden')
-    })
+      preview.innerHTML = `<img src="${URL.createObjectURL(blob)}" class="h-32 rounded-lg object-cover" />`;
+      preview.classList.remove('hidden');
+    });
 
-    container.querySelector('#new-thread-form').addEventListener('submit', async (e) => {
-      e.preventDefault()
-      const form = e.target
-      const errorEl = container.querySelector('#thread-error')
-      const btn = form.querySelector('button[type=submit]')
+    container.querySelector('#new-thread-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const form = e.target;
+      const errorEl = container.querySelector('#thread-error');
+      const btn = form.querySelector('button[type=submit]');
 
-      btn.disabled = true
-      btn.textContent = 'Creating...'
-      errorEl.classList.add('hidden')
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+      errorEl.classList.add('hidden');
 
       try {
-        const title = form.title.value.trim()
-        const content = form.content.value.trim()
-        const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+        const title = form.title.value.trim();
+        const content = form.content.value.trim();
+        const slug = title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
 
         const result = await api.createThread({
           category_id: category.id,
           author_id: user.id,
           title,
           slug,
-        })
+        });
 
-        if (!result?.id) throw new Error('Failed to create thread')
+        if (!result?.id) throw new Error('Failed to create thread');
 
         // Create first post
         await api.createPost({
           thread_id: result.id,
           author_id: user.id,
           content,
-        })
+        });
 
         // Upload image
-        const token = await getAccessToken()
+        const token = await getAccessToken();
         if (imageFile && token) {
-          const imageUrl = await uploadAvatar(imageFile, `thread/${result.id}/image.png`, token)
-          if (imageUrl) await api.updateThread(result.id, { image_url: imageUrl })
+          const imageUrl = await uploadAvatar(imageFile, `thread/${result.id}/image.png`, token);
+          if (imageUrl) await api.updateThread(result.id, { image_url: imageUrl });
         } else if (token) {
-          const imageUrl = await uploadDefaultAvatar(result.id, 'thread', token)
-          if (imageUrl) await api.updateThread(result.id, { image_url: imageUrl })
+          const imageUrl = await uploadDefaultAvatar(result.id, 'thread', token);
+          if (imageUrl) await api.updateThread(result.id, { image_url: imageUrl });
         }
 
-        navigate(`/t/${result.id}`)
+        navigate(`/t/${result.id}`);
       } catch (err) {
-        errorEl.textContent = err.message || 'Failed to create thread'
-        errorEl.classList.remove('hidden')
-        btn.disabled = false
-        btn.textContent = 'Create Thread'
+        errorEl.textContent = err.message || 'Failed to create thread';
+        errorEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Create Thread';
       }
-    })
-  })
+    });
+  });
 }
 
 function escapeHTML(str) {
-  const div = document.createElement('div')
-  div.textContent = str || ''
-  return div.innerHTML
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
 }

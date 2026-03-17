@@ -16,7 +16,9 @@ function _randomBytes(n) {
 
 function _base64url(bytes) {
   return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }
 
 function _generateCodeVerifier() {
@@ -87,7 +89,9 @@ export const ForumlineAuth = {
     this._refreshTimer = setTimeout(() => this._refreshSession(), refreshIn);
   },
 
-  get isRefreshing() { return this._isRefreshing; },
+  get isRefreshing() {
+    return this._isRefreshing;
+  },
 
   async _refreshSession() {
     if (!this._currentSession?.refresh_token) return false;
@@ -133,7 +137,10 @@ export const ForumlineAuth = {
         email: idPayload.email || '',
         user_metadata: {
           username: idPayload.preferred_username || '',
-          display_name: [idPayload.given_name, idPayload.family_name].filter(Boolean).join(' ') || idPayload.preferred_username || '',
+          display_name:
+            [idPayload.given_name, idPayload.family_name].filter(Boolean).join(' ') ||
+            idPayload.preferred_username ||
+            '',
         },
       },
     };
@@ -141,7 +148,11 @@ export const ForumlineAuth = {
 
   _emit(event, session) {
     for (const cb of this._listeners) {
-      try { cb(event, session); } catch (err) { console.error('[Forumline:Auth] listener error:', err); }
+      try {
+        cb(event, session);
+      } catch (err) {
+        console.error('[Forumline:Auth] listener error:', err);
+      }
     }
   },
 
@@ -266,7 +277,9 @@ export const ForumlineAuth = {
     this._listeners.add(callback);
     const session = this.getSession();
     setTimeout(() => callback('INITIAL_SESSION', session), 0);
-    return () => { this._listeners.delete(callback); };
+    return () => {
+      this._listeners.delete(callback);
+    };
   },
 };
 

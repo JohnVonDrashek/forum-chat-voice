@@ -1,5 +1,5 @@
-import { $ } from '../lib/utils.js';
 import { ForumlineAuth } from '@forumline/client-sdk';
+import { $ } from '../lib/utils.js';
 
 let _deps = {
   showProfile: () => {},
@@ -17,7 +17,7 @@ export function initNav(deps) {
   _deps = { ..._deps, ...deps };
 
   // Click outside to close dropdowns
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', e => {
     if (!e.target.closest('#notifBell') && !e.target.closest('#notifDropdown')) {
       $('notifDropdown').classList.add('hidden');
     }
@@ -27,7 +27,7 @@ export function initNav(deps) {
   });
 
   // User menu click handler
-  $('userMenu')?.addEventListener('click', (e) => {
+  $('userMenu')?.addEventListener('click', e => {
     e.stopPropagation();
     $('notifDropdown').classList.add('hidden');
     $('userDropdown').classList.toggle('hidden');

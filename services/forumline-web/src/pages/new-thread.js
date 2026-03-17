@@ -1,6 +1,6 @@
 import { $ } from '../lib/utils.js';
-import store from '../state/store.js';
 import * as data from '../state/data.js';
+import store from '../state/store.js';
 
 let _showView, _showForum, _showHome, _showToast;
 
@@ -42,10 +42,12 @@ export function initNewThread(deps) {
         seed: 'testcaller',
         snippet: body.substring(0, 80) + '...',
         replies: 0,
-        time: 'just now'
+        time: 'just now',
       };
       data.threads[forumId].unshift(newThread);
-      data.posts[newThread.id] = [{ author: 'testcaller', seed: 'testcaller', time: 'just now', content: body }];
+      data.posts[newThread.id] = [
+        { author: 'testcaller', seed: 'testcaller', time: 'just now', content: body },
+      ];
 
       $('composerTitle').value = '';
       $('composerBody').value = '';

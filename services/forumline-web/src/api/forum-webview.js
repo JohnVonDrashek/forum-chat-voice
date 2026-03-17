@@ -13,7 +13,8 @@ let _webviewState = { loading: false, authSent: false };
 let _currentWebviewDomain = null;
 
 function _postToForum(msg, origin) {
-  if (_webviewIframe && _webviewIframe.contentWindow) _webviewIframe.contentWindow.postMessage(msg, origin);
+  if (_webviewIframe && _webviewIframe.contentWindow)
+    _webviewIframe.contentWindow.postMessage(msg, origin);
 }
 
 export function showWebview(forum, path) {
@@ -26,7 +27,12 @@ export function showWebview(forum, path) {
   const avEl = document.getElementById('webviewAvatar');
   const nmEl = document.getElementById('webviewForumName');
   const mtEl = document.getElementById('webviewForumMeta');
-  if (avEl) avEl.src = forum.icon_url ? (forum.icon_url.startsWith('/') ? forum.web_base + forum.icon_url : forum.icon_url) : avatarUrl(forum.seed, 'shapes');
+  if (avEl)
+    avEl.src = forum.icon_url
+      ? forum.icon_url.startsWith('/')
+        ? forum.web_base + forum.icon_url
+        : forum.icon_url
+      : avatarUrl(forum.seed, 'shapes');
   if (nmEl) nmEl.textContent = forum.name;
   if (mtEl) mtEl.textContent = forum.domain;
   if (spinner) spinner.classList.remove('hidden');
@@ -61,7 +67,7 @@ export function showWebview(forum, path) {
     _webviewState.loading = false;
   });
 
-  _messageHandler = (event) => {
+  _messageHandler = event => {
     if (event.origin !== forumOrigin) return;
     var msg = event.data;
     if (!msg || !msg.type || msg.type.indexOf('forumline:') !== 0) return;
@@ -111,20 +117,30 @@ export function showWebview(forum, path) {
     }
   };
   window.addEventListener('message', _messageHandler);
-  document.querySelectorAll('.view').forEach((v) => { v.classList.add('hidden'); });
+  document.querySelectorAll('.view').forEach(v => {
+    v.classList.add('hidden');
+  });
   view.classList.remove('hidden');
 }
 
 export function destroyWebview() {
   _currentWebviewDomain = null;
-  if (_messageHandler) { window.removeEventListener('message', _messageHandler); _messageHandler = null; }
-  if (_webviewIframe) { _webviewIframe.remove(); _webviewIframe = null; }
-  var b = document.getElementById('webviewBanner'); if (b) b.classList.add('hidden');
-  var s = document.getElementById('webviewSpinner'); if (s) s.classList.add('hidden');
+  if (_messageHandler) {
+    window.removeEventListener('message', _messageHandler);
+    _messageHandler = null;
+  }
+  if (_webviewIframe) {
+    _webviewIframe.remove();
+    _webviewIframe = null;
+  }
+  var b = document.getElementById('webviewBanner');
+  if (b) b.classList.add('hidden');
+  var s = document.getElementById('webviewSpinner');
+  if (s) s.classList.add('hidden');
 }
 
 // Subscribe to ForumStore changes to auto-manage webview
-ForumStore.subscribe((store) => {
+ForumStore.subscribe(store => {
   const active = store.activeForum;
   if (active && active.domain !== _currentWebviewDomain) {
     showWebview(active, store.activePath);

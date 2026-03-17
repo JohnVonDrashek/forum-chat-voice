@@ -33,7 +33,9 @@ export const ForumDiscoveryAPI = {
     if (!accessToken) return [];
     var gen = ++this._recGen;
     try {
-      var r = await fetch('/api/forums/recommended', { headers: { Authorization: 'Bearer ' + accessToken } });
+      var r = await fetch('/api/forums/recommended', {
+        headers: { Authorization: 'Bearer ' + accessToken },
+      });
       if (r.ok && gen === this._recGen) return await r.json();
     } catch (e) {}
     return [];
@@ -53,10 +55,14 @@ export const ForumRegistrationAPI = {
 
   async listOwnedForums(accessToken) {
     try {
-      var r = await fetch('/api/forums/owned', { headers: { Authorization: 'Bearer ' + accessToken } });
+      var r = await fetch('/api/forums/owned', {
+        headers: { Authorization: 'Bearer ' + accessToken },
+      });
       if (!r.ok) return [];
       return await r.json();
-    } catch (e) { return []; }
+    } catch (e) {
+      return [];
+    }
   },
 
   async deleteForum(forumDomain, accessToken) {

@@ -1,5 +1,5 @@
-import { $ } from '../lib/utils.js';
 import { avatarUrl } from '../lib/avatar.js';
+import { $ } from '../lib/utils.js';
 import * as data from '../state/data.js';
 
 let _deps = {
@@ -77,7 +77,7 @@ export function initHoverCard(deps) {
   _deps = { ..._deps, ...deps };
 
   // Listen for hover on post avatars and author names
-  document.addEventListener('mouseover', (e) => {
+  document.addEventListener('mouseover', e => {
     const avatar = e.target.closest('.post-avatar');
     const author = e.target.closest('.post-author');
 
@@ -104,7 +104,7 @@ export function initHoverCard(deps) {
     }
   });
 
-  document.addEventListener('mouseout', (e) => {
+  document.addEventListener('mouseout', e => {
     const isLeavingAvatar = e.target.closest('.post-avatar') || e.target.closest('.post-author');
     if (isLeavingAvatar) {
       clearTimeout(hoverCardTimeout);

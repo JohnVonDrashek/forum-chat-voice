@@ -1,14 +1,16 @@
-import { $ } from '../lib/utils.js';
 import { avatarUrl } from '../lib/avatar.js';
-import store from '../state/store.js';
+import { $ } from '../lib/utils.js';
 import * as data from '../state/data.js';
+import store from '../state/store.js';
 
 let _deps = {
   showProfile: () => {},
 };
 
 export function renderMemberList(members) {
-  $('memberList').innerHTML = members.map(m => `
+  $('memberList').innerHTML = members
+    .map(
+      m => `
     <div class="member-item" data-name="${m.name}" role="listitem" tabindex="0" aria-label="${m.name}, ${m.role}, ${m.online ? 'online' : 'offline'}">
       <img src="${avatarUrl(m.seed)}" alt="" onerror="this.style.display='none'">
       <div class="member-item-info">
@@ -17,17 +19,21 @@ export function renderMemberList(members) {
       </div>
       <div class="member-online-indicator ${m.online ? 'online' : 'offline'}" aria-hidden="true"></div>
     </div>
-  `).join('');
+  `,
+    )
+    .join('');
 
-  $('memberList').querySelectorAll('.member-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const name = item.dataset.name;
-      if (data.profiles[name]) {
-        $('memberPanel').classList.add('hidden');
-        _deps.showProfile(name);
-      }
+  $('memberList')
+    .querySelectorAll('.member-item')
+    .forEach(item => {
+      item.addEventListener('click', () => {
+        const name = item.dataset.name;
+        if (data.profiles[name]) {
+          $('memberPanel').classList.add('hidden');
+          _deps.showProfile(name);
+        }
+      });
     });
-  });
 }
 
 export function renderMemberPanel(forumId) {
@@ -65,7 +71,7 @@ export function initMemberPanel(deps) {
   });
 
   // Member search input handler
-  $('memberSearch')?.addEventListener('input', (e) => {
+  $('memberSearch')?.addEventListener('input', e => {
     const query = e.target.value.trim().toLowerCase();
     const currentForum = store.currentForum;
     const members = data.forumMembers[currentForum] || [];

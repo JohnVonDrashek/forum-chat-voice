@@ -1,6 +1,6 @@
-import { test as setup, expect } from "@playwright/test";
+import { expect, test as setup } from '@playwright/test';
 
-const APP_URL = "https://app.forumline.net";
+const APP_URL = 'https://app.forumline.net';
 
 /**
  * Logs in a test user via Zitadel OIDC and saves the authenticated browser state.
@@ -30,20 +30,20 @@ async function loginAndSave(
     await page.goto(`${APP_URL}/login`);
 
     // Click the sign-in button to start Zitadel OIDC flow
-    await page.getByRole("button", { name: /sign in/i }).click();
+    await page.getByRole('button', { name: /sign in/i }).click();
 
     // Zitadel login form
     await page.waitForURL(/auth\.forumline\.net/);
-    await page.getByRole("textbox", { name: "Login Name" }).fill(email);
-    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByRole('textbox', { name: 'Login Name' }).fill(email);
+    await page.getByRole('button', { name: 'Next' }).click();
 
     // Password page
     await page.waitForURL(/\/password|\/loginname/);
-    await page.getByRole("textbox", { name: "Password" }).fill(password);
-    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByRole('textbox', { name: 'Password' }).fill(password);
+    await page.getByRole('button', { name: 'Next' }).click();
 
     // Wait for redirect back to the app
-    await expect(page).toHaveURL(new RegExp(APP_URL.replace(/\./g, "\\.")));
+    await expect(page).toHaveURL(new RegExp(APP_URL.replace(/\./g, '\\.')));
 
     await page.context().storageState({ path: statePath });
   });
@@ -51,14 +51,14 @@ async function loginAndSave(
 
 void loginAndSave(
   setup,
-  process.env.TESTCALLER_EMAIL ?? "testcaller@forumline.net",
+  process.env.TESTCALLER_EMAIL ?? 'testcaller@forumline.net',
   process.env.TESTCALLER_PASSWORD!,
-  "auth/testcaller.json",
+  'auth/testcaller.json',
 );
 
 void loginAndSave(
   setup,
-  process.env.TESTUSER_DEBUG_EMAIL ?? "testuser_debug@forumline.net",
+  process.env.TESTUSER_DEBUG_EMAIL ?? 'testuser_debug@forumline.net',
   process.env.TESTUSER_DEBUG_PASSWORD!,
-  "auth/testuser_debug.json",
+  'auth/testuser_debug.json',
 );

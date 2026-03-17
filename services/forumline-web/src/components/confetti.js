@@ -45,7 +45,7 @@ export function fireConfetti() {
         alive = true;
         ctx.save();
         ctx.translate(p.x, p.y);
-        ctx.rotate(p.rotation * Math.PI / 180);
+        ctx.rotate((p.rotation * Math.PI) / 180);
         ctx.fillStyle = p.color;
         ctx.globalAlpha = Math.max(0, 1 - frame / 120);
         ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);

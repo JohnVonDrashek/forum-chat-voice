@@ -10,30 +10,32 @@
  * - Highlight pinned and locked threads with visual badges
  */
 
-import { api } from '../lib/api.js'
-import { authStore } from '../lib/auth.js'
-import { avatarHTML } from '../components/avatar.js'
-import { formatRelativeTime } from '../lib/date.js'
-import { toast } from '../lib/toast.js'
+import { avatarHTML } from '../components/avatar.js';
+import { api } from '../lib/api.js';
+import { authStore } from '../lib/auth.js';
+import { formatRelativeTime } from '../lib/date.js';
+import { toast } from '../lib/toast.js';
 
 export function renderCategory(container, { categorySlug }) {
-  container.innerHTML = '<div class="animate-pulse"><div class="h-8 w-48 bg-slate-800 rounded mb-4"></div><div class="h-20 bg-slate-800 rounded-xl"></div></div>'
+  container.innerHTML =
+    '<div class="animate-pulse"><div class="h-8 w-48 bg-slate-800 rounded mb-4"></div><div class="h-20 bg-slate-800 rounded-xl"></div></div>';
 
   Promise.all([
     api.getCategory(categorySlug),
     api.getThreadsByCategory(categorySlug),
     api.getChannelFollows().catch(() => []),
-  ]).then(([category, threads, follows]) => {
-    if (!category) {
-      container.innerHTML = '<p class="text-center py-8 text-slate-400">Category not found.</p>'
-      return
-    }
+  ])
+    .then(([category, threads, follows]) => {
+      if (!category) {
+        container.innerHTML = '<p class="text-center py-8 text-slate-400">Category not found.</p>';
+        return;
+      }
 
-    const { user } = authStore.get()
-    const isFollowing = follows.some(f => f.category_id === category.id)
+      const { user } = authStore.get();
+      const isFollowing = follows.some(f => f.category_id === category.id);
 
-    // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
-    container.innerHTML = `
+      // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
+      container.innerHTML = `
       <div class="mb-6">
         <div class="flex items-center justify-between flex-wrap gap-3">
           <div>
@@ -41,50 +43,59 @@ export function renderCategory(container, { categorySlug }) {
             ${category.description ? `<p class="text-slate-400 mt-1">${escapeHTML(category.description)}</p>` : ''}
           </div>
           <div class="flex items-center gap-2">
-            ${user ? `
+            ${
+              user
+                ? `
               <button id="follow-btn" class="px-3 py-1.5 text-sm rounded-lg border transition-colors ${isFollowing ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-600 text-slate-300 hover:border-indigo-500'}">
                 ${isFollowing ? 'Following' : 'Follow'}
               </button>
               <a href="/c/${categorySlug}/new" class="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">New Thread</a>
-            ` : ''}
+            `
+                : ''
+            }
           </div>
         </div>
       </div>
       <div id="thread-list" class="space-y-2">
         ${threads.length ? threads.map(t => threadCard(t)).join('') : '<p class="text-slate-400 text-center py-8">No threads yet.</p>'}
       </div>
-    `
+    `;
 
-    const followBtn = container.querySelector('#follow-btn')
-    if (followBtn) {
-      let following = isFollowing
-      followBtn.addEventListener('click', async () => {
-        try {
-          if (following) {
-            await api.unfollowCategory(category.id)
-            following = false
-            followBtn.textContent = 'Follow'
-            followBtn.className = 'px-3 py-1.5 text-sm rounded-lg border transition-colors border-slate-600 text-slate-300 hover:border-indigo-500'
-          } else {
-            await api.followCategory(category.id)
-            following = true
-            followBtn.textContent = 'Following'
-            followBtn.className = 'px-3 py-1.5 text-sm rounded-lg border transition-colors bg-indigo-600 border-indigo-600 text-white'
+      const followBtn = container.querySelector('#follow-btn');
+      if (followBtn) {
+        let following = isFollowing;
+        followBtn.addEventListener('click', async () => {
+          try {
+            if (following) {
+              await api.unfollowCategory(category.id);
+              following = false;
+              followBtn.textContent = 'Follow';
+              followBtn.className =
+                'px-3 py-1.5 text-sm rounded-lg border transition-colors border-slate-600 text-slate-300 hover:border-indigo-500';
+            } else {
+              await api.followCategory(category.id);
+              following = true;
+              followBtn.textContent = 'Following';
+              followBtn.className =
+                'px-3 py-1.5 text-sm rounded-lg border transition-colors bg-indigo-600 border-indigo-600 text-white';
+            }
+          } catch {
+            toast.error('Failed to update follow status');
           }
-        } catch {
-          toast.error('Failed to update follow status')
-        }
-      })
-    }
-  }).catch(() => {
-    container.innerHTML = `
+        });
+      }
+    })
+    .catch(() => {
+      container.innerHTML = `
       <div class="text-center py-8">
         <p class="text-red-400">Failed to load category.</p>
         <button id="retry-cat" class="mt-2 text-sm text-indigo-400 hover:text-indigo-300">Try again</button>
       </div>
-    `
-    container.querySelector('#retry-cat')?.addEventListener('click', () => renderCategory(container, { categorySlug }))
-  })
+    `;
+      container
+        .querySelector('#retry-cat')
+        ?.addEventListener('click', () => renderCategory(container, { categorySlug }));
+    });
 }
 
 function threadCard(t) {
@@ -106,11 +117,11 @@ function threadCard(t) {
         </div>
       </div>
     </a>
-  `
+  `;
 }
 
 function escapeHTML(str) {
-  const div = document.createElement('div')
-  div.textContent = str || ''
-  return div.innerHTML
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
 }

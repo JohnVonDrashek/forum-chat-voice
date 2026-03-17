@@ -1,6 +1,7 @@
 // ========== BROWSER HISTORY MANAGEMENT ==========
-import store from './state/store.js';
+
 import { ForumStore } from '@forumline/client-sdk';
+import store from './state/store.js';
 
 let nav = {};
 
@@ -37,7 +38,8 @@ function pathToState(path, search) {
   if (segment === 'create-forum') return { view: 'createForum' };
   if (segment === 'new-thread') return { view: 'newThread', forumId: params.get('forum') || null };
   if (segment === 'forum' && id) return { view: 'forum', forumId: id };
-  if (segment === 'thread' && id) return { view: 'thread', threadId: id, forumId: params.get('forum') || null };
+  if (segment === 'thread' && id)
+    return { view: 'thread', threadId: id, forumId: params.get('forum') || null };
   if (segment === 'dm' && id) return { view: 'dm', dmId: id };
   if (segment === 'profile' && id) return { view: 'profile', username: id };
 
@@ -103,7 +105,7 @@ export function initRouter(navFunctions) {
   // Set initial history state with the current URL
   history.replaceState(initialState, '', stateToPath(initialState));
 
-  window.addEventListener('popstate', (e) => {
+  window.addEventListener('popstate', e => {
     // Restore top bar and sidebar (fixes back-from-login bug)
     nav.hideLogin?.();
 

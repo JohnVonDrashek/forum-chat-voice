@@ -21,22 +21,26 @@ function connect() {
   const url = `/api/events/stream?access_token=${encodeURIComponent(token)}`;
   eventSource = new EventSource(url);
 
-  eventSource.onopen = () => { reconnectAttempts = 0; };
+  eventSource.onopen = () => {
+    reconnectAttempts = 0;
+  };
 
-  eventSource.addEventListener('dm', (e) => {
+  eventSource.addEventListener('dm', e => {
     let parsed = null;
-    try { parsed = JSON.parse(e.data); } catch {}
+    try {
+      parsed = JSON.parse(e.data);
+    } catch {}
     for (const fn of dmListeners) fn(parsed || { conversation_id: '', sender_id: '' });
   });
 
-  eventSource.addEventListener('notification', (e) => {
+  eventSource.addEventListener('notification', e => {
     try {
       const data = JSON.parse(e.data);
       for (const fn of notificationListeners) fn(data);
     } catch {}
   });
 
-  eventSource.addEventListener('call', (e) => {
+  eventSource.addEventListener('call', e => {
     try {
       const data = JSON.parse(e.data);
       for (const fn of callListeners) fn(data);
@@ -68,12 +72,18 @@ function disconnect() {
   destroyed = true;
   eventSource?.close();
   eventSource = null;
-  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
   reconnectAttempts = 0;
 }
 
 function reconnect() {
-  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
   eventSource?.close();
   eventSource = null;
   reconnectAttempts = 0;
@@ -84,19 +94,28 @@ function reconnect() {
 function subscribeDm(fn) {
   dmListeners.add(fn);
   ensureConnected();
-  return () => { dmListeners.delete(fn); if (!hasListeners()) disconnect(); };
+  return () => {
+    dmListeners.delete(fn);
+    if (!hasListeners()) disconnect();
+  };
 }
 
 function subscribeNotification(fn) {
   notificationListeners.add(fn);
   ensureConnected();
-  return () => { notificationListeners.delete(fn); if (!hasListeners()) disconnect(); };
+  return () => {
+    notificationListeners.delete(fn);
+    if (!hasListeners()) disconnect();
+  };
 }
 
 function subscribeCall(fn) {
   callListeners.add(fn);
   ensureConnected();
-  return () => { callListeners.delete(fn); if (!hasListeners()) disconnect(); };
+  return () => {
+    callListeners.delete(fn);
+    if (!hasListeners()) disconnect();
+  };
 }
 
 export const EventStream = {

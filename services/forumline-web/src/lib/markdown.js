@@ -1,7 +1,11 @@
 // ========== MARKDOWN & HTML ESCAPING ==========
 
 export function escapeHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 export function renderMarkdown(text) {
@@ -28,7 +32,10 @@ export function renderMarkdown(text) {
     // Italic
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     // Links — only allow safe protocols (http, https, mailto)
-    .replace(/\[([^\]]+)\]\(((https?:\/\/|mailto:)[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(
+      /\[([^\]]+)\]\(((https?:\/\/|mailto:)[^)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener">$1</a>',
+    )
     // Newlines to <br> (but not inside pre tags)
     .replace(/\n/g, '<br>');
 

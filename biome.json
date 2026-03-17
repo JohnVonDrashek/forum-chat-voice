@@ -1,0 +1,117 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.7/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "packages/frontend/**",
+      "services/forumline-web/**",
+      "services/hosted/src/**",
+      "tests/**"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "semicolons": "always",
+      "quoteStyle": "single",
+      "trailingCommas": "all",
+      "arrowParentheses": "asNeeded"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "noUnusedVariables": "warn",
+        "noUnusedImports": "warn",
+        "useParseIntRadix": "off",
+        "noInnerDeclarations": "off",
+        "noSwitchDeclarations": "off",
+        "noUnusedFunctionParameters": "off"
+      },
+      "a11y": {
+        "recommended": false
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "useIterableCallbackReturn": "off",
+        "noControlCharactersInRegex": "off",
+        "noDuplicateProperties": "off"
+      },
+      "nursery": {
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "error"
+      },
+      "complexity": {
+        "useOptionalChain": "off",
+        "noImportantStyles": "off",
+        "useLiteralKeys": "off",
+        "useArrowFunction": "off"
+      },
+      "style": {
+        "useTemplate": "off",
+        "useConst": "off",
+        "useExponentiationOperator": "off",
+        "noNonNullAssertion": "off",
+        "noDescendingSpecificity": "off",
+        "useNodejsImportProtocol": "off",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {},
+            "patterns": [
+              {
+                "group": ["**/packages/*", "**/packages/**"],
+                "message": "Import from @forumline/* instead of using relative paths into packages/."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.js", "**/*.mjs"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noFloatingPromises": "off",
+            "noMisusedPromises": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["services/forumline-web/src/**/*.js"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noDangerouslySetInnerHtml": "warn"
+          }
+        }
+      }
+    }
+  ],
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
+}

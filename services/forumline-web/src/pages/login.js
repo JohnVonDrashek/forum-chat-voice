@@ -1,5 +1,5 @@
-import { $ } from '../lib/utils.js';
 import { ForumlineAuth } from '@forumline/client-sdk';
+import { $ } from '../lib/utils.js';
 
 let _showView;
 
@@ -20,8 +20,12 @@ export function hideLogin() {
   document.querySelector('.mobile-tab-bar')?.classList.remove('hidden');
 }
 
-export function getAuthIsSignup() { return _authIsSignup; }
-export function setAuthIsSignup(val) { _authIsSignup = val; }
+export function getAuthIsSignup() {
+  return _authIsSignup;
+}
+export function setAuthIsSignup(val) {
+  _authIsSignup = val;
+}
 
 // Show the appropriate login sub-view and hide others
 function showLoginSubView(viewId) {
@@ -42,7 +46,7 @@ export function initLogin(deps) {
   // Sign In button — redirect to Zitadel
   const signinBtn = $('signinSubmitBtn');
   if (signinBtn) {
-    signinBtn.addEventListener('click', async (e) => {
+    signinBtn.addEventListener('click', async e => {
       e.preventDefault();
       signinBtn.disabled = true;
       signinBtn.textContent = 'Redirecting...';
@@ -53,7 +57,7 @@ export function initLogin(deps) {
   // Create Account button — redirect to Zitadel registration
   const signupBtn = $('signupSubmitBtn');
   if (signupBtn) {
-    signupBtn.addEventListener('click', async (e) => {
+    signupBtn.addEventListener('click', async e => {
       e.preventDefault();
       _authIsSignup = true;
       signupBtn.disabled = true;

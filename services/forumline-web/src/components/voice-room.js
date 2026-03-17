@@ -1,5 +1,5 @@
-import { $ } from '../lib/utils.js';
 import { avatarUrl } from '../lib/avatar.js';
+import { $ } from '../lib/utils.js';
 
 let voiceSpeakingInterval = null;
 
@@ -10,12 +10,16 @@ export function renderVoiceParticipants() {
     { name: 'alice_dev', seed: 'alice-dev', speaking: false },
   ];
 
-  $('voiceParticipants').innerHTML = participants.map(p => `
+  $('voiceParticipants').innerHTML = participants
+    .map(
+      p => `
     <div class="voice-participant ${p.speaking ? 'speaking' : ''}">
       <img src="${avatarUrl(p.seed)}" alt="">
       <span class="voice-participant-name">${p.name}</span>
     </div>
-  `).join('');
+  `,
+    )
+    .join('');
 }
 
 export function startVoiceSpeakingAnimation() {
@@ -58,7 +62,7 @@ export function initVoiceRoom() {
     stopVoiceSpeakingAnimation();
   });
 
-  $('voiceOverlay')?.addEventListener('click', (e) => {
+  $('voiceOverlay')?.addEventListener('click', e => {
     if (e.target === $('voiceOverlay')) {
       $('voiceOverlay').classList.add('hidden');
       stopVoiceSpeakingAnimation();

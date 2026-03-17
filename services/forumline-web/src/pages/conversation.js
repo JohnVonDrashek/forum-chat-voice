@@ -1,9 +1,15 @@
-import { $ } from '../lib/utils.js';
+import {
+  CallManager,
+  DmStore,
+  EventStream,
+  ForumlineAPI,
+  PresenceTracker,
+} from '@forumline/client-sdk';
 import { avatarUrl } from '../lib/avatar.js';
 import { escapeHtml, renderMarkdown } from '../lib/markdown.js';
-import store from '../state/store.js';
+import { $ } from '../lib/utils.js';
 import * as data from '../state/data.js';
-import { ForumlineAPI, EventStream, DmStore, PresenceTracker, CallManager } from '@forumline/client-sdk';
+import store from '../state/store.js';
 
 let _showView, _renderForumList, _renderDmList, _showToast;
 
@@ -21,7 +27,9 @@ function isAtBottom(el) {
 }
 
 function smoothScrollToBottom(el) {
-  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+  requestAnimationFrame(() => {
+    el.scrollTop = el.scrollHeight;
+  });
 }
 
 function _formatMsgTime(isoStr) {
@@ -35,9 +43,17 @@ function _formatMsgTime(isoStr) {
   } else if (diffDays === 1) {
     return 'Yesterday ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   } else if (diffDays < 7) {
-    return d.toLocaleDateString([], { weekday: 'short' }) + ' ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return (
+      d.toLocaleDateString([], { weekday: 'short' }) +
+      ' ' +
+      d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    );
   }
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return (
+    d.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
+    ' ' +
+    d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  );
 }
 
 export function showDm(dmId) {
@@ -47,8 +63,14 @@ export function showDm(dmId) {
   store.currentThread = null;
 
   // Clean up previous SSE subscription for message view
-  if (_dmSseUnsub) { _dmSseUnsub(); _dmSseUnsub = null; }
-  if (_dmSseDebounce) { clearTimeout(_dmSseDebounce); _dmSseDebounce = null; }
+  if (_dmSseUnsub) {
+    _dmSseUnsub();
+    _dmSseUnsub = null;
+  }
+  if (_dmSseDebounce) {
+    clearTimeout(_dmSseDebounce);
+    _dmSseDebounce = null;
+  }
 
   if (ForumlineAPI.isAuthenticated()) {
     // Fetch conversation metadata from API
@@ -60,19 +82,22 @@ export function showDm(dmId) {
     if (cached) {
       _currentConvoMeta = cached;
       const others = (cached.members || []).filter(m => m.id !== myId);
-      const displayName = cached.isGroup && cached.name
-        ? cached.name
-        : others.map(m => m.displayName || m.username).join(', ') || 'Chat';
-      const seed = cached.isGroup ? (cached.name || cached.id) : (others[0]?.username || cached.id);
-      const convoAvatar = !cached.isGroup && others[0]?.avatarUrl
-        ? others[0].avatarUrl
-        : avatarUrl(seed, cached.isGroup ? 'shapes' : 'avataaars');
+      const displayName =
+        cached.isGroup && cached.name
+          ? cached.name
+          : others.map(m => m.displayName || m.username).join(', ') || 'Chat';
+      const seed = cached.isGroup ? cached.name || cached.id : others[0]?.username || cached.id;
+      const convoAvatar =
+        !cached.isGroup && others[0]?.avatarUrl
+          ? others[0].avatarUrl
+          : avatarUrl(seed, cached.isGroup ? 'shapes' : 'avataaars');
 
       $('dmName').textContent = displayName;
       $('dmAvatar').src = convoAvatar;
       // Use PresenceTracker to set online indicator for 1:1 conversations
       const otherForPresence = !cached.isGroup && others.length === 1 ? others[0].id : null;
-      $('dmOnline').style.display = otherForPresence && PresenceTracker.isOnline(otherForPresence) ? 'block' : 'none';
+      $('dmOnline').style.display =
+        otherForPresence && PresenceTracker.isOnline(otherForPresence) ? 'block' : 'none';
       // Show call button for 1:1 conversations only
       const callBtn = $('dmCallBtn');
       if (callBtn) callBtn.classList.toggle('hidden', !otherForPresence);
@@ -85,31 +110,37 @@ export function showDm(dmId) {
     }
 
     // Also fetch fresh metadata from API
-    ForumlineAPI.getConversation(dmId).then(convo => {
-      if (store.currentDm !== dmId) return;
-      _currentConvoMeta = convo;
-      const others = (convo.members || []).filter(m => m.id !== myId);
-      const displayName = convo.isGroup && convo.name
-        ? convo.name
-        : others.map(m => m.displayName || m.username).join(', ') || 'Chat';
-      const seed = convo.isGroup ? (convo.name || convo.id) : (others[0]?.username || convo.id);
-      const convoAvatar = !convo.isGroup && others[0]?.avatarUrl
-        ? others[0].avatarUrl
-        : avatarUrl(seed, convo.isGroup ? 'shapes' : 'avataaars');
+    ForumlineAPI.getConversation(dmId)
+      .then(convo => {
+        if (store.currentDm !== dmId) return;
+        _currentConvoMeta = convo;
+        const others = (convo.members || []).filter(m => m.id !== myId);
+        const displayName =
+          convo.isGroup && convo.name
+            ? convo.name
+            : others.map(m => m.displayName || m.username).join(', ') || 'Chat';
+        const seed = convo.isGroup ? convo.name || convo.id : others[0]?.username || convo.id;
+        const convoAvatar =
+          !convo.isGroup && others[0]?.avatarUrl
+            ? others[0].avatarUrl
+            : avatarUrl(seed, convo.isGroup ? 'shapes' : 'avataaars');
 
-      $('dmName').textContent = displayName;
-      $('dmAvatar').src = convoAvatar;
-      // Update presence indicator from PresenceTracker
-      const otherPresence = !convo.isGroup && others.length === 1 ? others[0].id : null;
-      const onlineEl = $('dmOnline');
-      if (onlineEl) onlineEl.style.display = otherPresence && PresenceTracker.isOnline(otherPresence) ? 'block' : 'none';
-      // Show call button for 1:1 conversations
-      const callBtnFresh = $('dmCallBtn');
-      if (callBtnFresh) callBtnFresh.classList.toggle('hidden', !otherPresence);
-    }).catch(err => console.error('[DM] Failed to fetch conversation:', err));
+        $('dmName').textContent = displayName;
+        $('dmAvatar').src = convoAvatar;
+        // Update presence indicator from PresenceTracker
+        const otherPresence = !convo.isGroup && others.length === 1 ? others[0].id : null;
+        const onlineEl = $('dmOnline');
+        if (onlineEl)
+          onlineEl.style.display =
+            otherPresence && PresenceTracker.isOnline(otherPresence) ? 'block' : 'none';
+        // Show call button for 1:1 conversations
+        const callBtnFresh = $('dmCallBtn');
+        if (callBtnFresh) callBtnFresh.classList.toggle('hidden', !otherPresence);
+      })
+      .catch(err => console.error('[DM] Failed to fetch conversation:', err));
 
     // Subscribe to SSE for this conversation
-    _dmSseUnsub = EventStream.subscribeDm((event) => {
+    _dmSseUnsub = EventStream.subscribeDm(event => {
       if (event.conversation_id && event.conversation_id !== dmId) return;
       if (_dmSseDebounce) clearTimeout(_dmSseDebounce);
       _dmSseDebounce = setTimeout(() => {
@@ -155,7 +186,8 @@ export function renderMessages(dmId) {
 
   // If authenticated, fetch from API
   if (ForumlineAPI.isAuthenticated()) {
-    el.innerHTML = '<div class="dm-empty-state"><div class="empty-icon">&#x23F3;</div><p>Loading messages...</p></div>';
+    el.innerHTML =
+      '<div class="dm-empty-state"><div class="empty-icon">&#x23F3;</div><p>Loading messages...</p></div>';
     _dmMessagePaginationCursor = null;
     _dmAllMessagesLoaded = false;
     _dmLoadingOlder = false;
@@ -169,18 +201,23 @@ export function renderMessages(dmId) {
 
   // Check for empty state first
   if (dmMessages.length === 0) {
-    el.innerHTML = '<div class="dm-empty-state"><div class="empty-icon">&#x1F4AC;</div><p>No messages yet. Say hello!</p></div>';
+    el.innerHTML =
+      '<div class="dm-empty-state"><div class="empty-icon">&#x1F4AC;</div><p>No messages yet. Say hello!</p></div>';
     return;
   }
 
   // Render base messages
-  el.innerHTML = dmMessages.map(m => `
+  el.innerHTML = dmMessages
+    .map(
+      m => `
     <div class="message-item ${m.from === 'me' ? 'sent' : ''}">
       ${m.from !== 'me' ? `<img class="avatar-sm" src="${avatarUrl(dm?.seed)}" alt="">` : ''}
       <div class="message-bubble">${renderMarkdown(m.content)}</div>
       <span class="message-time">${m.time}</span>
     </div>
-  `).join('');
+  `,
+    )
+    .join('');
 
   // Add read receipts to sent messages
   const messageItems = el.querySelectorAll('.message-item.sent');
@@ -227,23 +264,26 @@ async function _fetchAndRenderMessages(dmId, el, isInitial) {
     const myId = ForumlineAPI.getUserId();
 
     if (!msgs || msgs.length === 0) {
-      el.innerHTML = '<div class="dm-empty-state"><div class="empty-icon">&#x1F4AC;</div><p>No messages yet. Say hello!</p></div>';
+      el.innerHTML =
+        '<div class="dm-empty-state"><div class="empty-icon">&#x1F4AC;</div><p>No messages yet. Say hello!</p></div>';
       return;
     }
 
     // Store cursor for pagination
     _dmMessagePaginationCursor = msgs[0]?.id || null;
 
-    el.innerHTML = msgs.map(m => {
-      const isMe = m.sender_id === myId;
-      const senderMember = _currentConvoMeta?.members?.find(mem => mem.id === m.sender_id);
-      const senderSeed = senderMember?.username || m.sender_id;
-      const timeStr = _formatMsgTime(m.created_at);
-      const senderLabel = _currentConvoMeta?.isGroup && !isMe
-        ? `<div class="message-sender-label">${escapeHtml(senderMember?.displayName || senderMember?.username || 'User')}</div>`
-        : '';
+    el.innerHTML = msgs
+      .map(m => {
+        const isMe = m.sender_id === myId;
+        const senderMember = _currentConvoMeta?.members?.find(mem => mem.id === m.sender_id);
+        const senderSeed = senderMember?.username || m.sender_id;
+        const timeStr = _formatMsgTime(m.created_at);
+        const senderLabel =
+          _currentConvoMeta?.isGroup && !isMe
+            ? `<div class="message-sender-label">${escapeHtml(senderMember?.displayName || senderMember?.username || 'User')}</div>`
+            : '';
 
-      return `
+        return `
         <div class="message-item ${isMe ? 'sent' : ''}">
           ${!isMe ? `<img class="avatar-sm" src="${senderMember?.avatarUrl || avatarUrl(senderSeed)}" alt="" onerror="this.style.display='none'">` : ''}
           <div>
@@ -253,7 +293,8 @@ async function _fetchAndRenderMessages(dmId, el, isInitial) {
           <span class="message-time">${timeStr}</span>
         </div>
       `;
-    }).join('');
+      })
+      .join('');
 
     if (isInitial) {
       smoothScrollToBottom(el);
@@ -261,12 +302,15 @@ async function _fetchAndRenderMessages(dmId, el, isInitial) {
 
     // Mark as read
     if (msgs.length > 0) {
-      ForumlineAPI.markRead(dmId).then(() => DmStore.fetchConversations()).catch(() => {});
+      ForumlineAPI.markRead(dmId)
+        .then(() => DmStore.fetchConversations())
+        .catch(() => {});
     }
   } catch (err) {
     if (store.currentDm !== dmId) return;
     console.error('[DM] Failed to fetch messages:', err);
-    el.innerHTML = '<div class="dm-empty-state"><div class="empty-icon">&#x26A0;</div><p>Failed to load messages</p></div>';
+    el.innerHTML =
+      '<div class="dm-empty-state"><div class="empty-icon">&#x26A0;</div><p>Failed to load messages</p></div>';
   }
 }
 
@@ -275,26 +319,31 @@ async function _loadOlderMessages(dmId) {
   _dmLoadingOlder = true;
   const el = $('messagesList');
   try {
-    const older = await ForumlineAPI.getMessages(dmId, { before: _dmMessagePaginationCursor, limit: 50 });
+    const older = await ForumlineAPI.getMessages(dmId, {
+      before: _dmMessagePaginationCursor,
+      limit: 50,
+    });
     if (!older || older.length === 0) {
       _dmAllMessagesLoaded = true;
       return;
     }
     _dmMessagePaginationCursor = older[0]?.id || null;
     const myId = ForumlineAPI.getUserId();
-    const olderHtml = older.map(m => {
-      const isMe = m.sender_id === myId;
-      const senderMember = _currentConvoMeta?.members?.find(mem => mem.id === m.sender_id);
-      const senderSeed = senderMember?.username || m.sender_id;
-      const timeStr = _formatMsgTime(m.created_at);
-      return `
+    const olderHtml = older
+      .map(m => {
+        const isMe = m.sender_id === myId;
+        const senderMember = _currentConvoMeta?.members?.find(mem => mem.id === m.sender_id);
+        const senderSeed = senderMember?.username || m.sender_id;
+        const timeStr = _formatMsgTime(m.created_at);
+        return `
         <div class="message-item ${isMe ? 'sent' : ''}">
           ${!isMe ? `<img class="avatar-sm" src="${senderMember?.avatarUrl || avatarUrl(senderSeed)}" alt="" onerror="this.style.display='none'">` : ''}
           <div class="message-bubble">${renderMarkdown(m.content)}</div>
           <span class="message-time">${timeStr}</span>
         </div>
       `;
-    }).join('');
+      })
+      .join('');
     const prevHeight = el.scrollHeight;
     el.insertAdjacentHTML('afterbegin', olderHtml);
     el.scrollTop = el.scrollHeight - prevHeight;
@@ -319,7 +368,12 @@ export function initConversation(deps) {
     if (others.length !== 1) return; // only 1:1 calls
     const remote = others[0];
     const remoteAvatar = remote.avatarUrl || avatarUrl(remote.username || remote.id);
-    CallManager.initiateCall(store.currentDm, remote.id, remote.displayName || remote.username, remoteAvatar);
+    CallManager.initiateCall(
+      store.currentDm,
+      remote.id,
+      remote.displayName || remote.username,
+      remoteAvatar,
+    );
   });
 
   // DM send button handler (with real API optimistic sends + mock fallback)
@@ -416,7 +470,7 @@ export function initConversation(deps) {
   });
 
   // Enter key to send DM
-  $('dmInput')?.addEventListener('keydown', (e) => {
+  $('dmInput')?.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       dmSendBtn?.click();

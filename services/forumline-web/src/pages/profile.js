@@ -1,10 +1,16 @@
-import { $, plural } from '../lib/utils.js';
+import { ForumlineAPI, Identity } from '@forumline/client-sdk';
 import { avatarUrl } from '../lib/avatar.js';
-import store from '../state/store.js';
+import { $, plural } from '../lib/utils.js';
 import * as data from '../state/data.js';
-import { Identity, ForumlineAPI } from '@forumline/client-sdk';
+import store from '../state/store.js';
 
-let _showView, _renderForumList, _renderDmList, _closeAllDropdowns, _showThread, _showForum, _showSettings;
+let _showView,
+  _renderForumList,
+  _renderDmList,
+  _closeAllDropdowns,
+  _showThread,
+  _showForum,
+  _showSettings;
 
 // Cache for the current user's identity profile loaded from the API.
 let _identityProfile = null;
@@ -36,7 +42,8 @@ export function showProfile(username) {
 
   // Determine if viewing own profile
   const currentUserId = ForumlineAPI.getUserId();
-  const isOwnProfile = username === 'me' || username === currentUserId || username === _identityProfile?.username;
+  const isOwnProfile =
+    username === 'me' || username === currentUserId || username === _identityProfile?.username;
 
   // Resolve the profile key for mock data lookups (tabs, badges, etc.)
   // For own profile, try cached API username first, then fall back to session metadata
@@ -75,16 +82,18 @@ export function showProfile(username) {
     }
 
     // Fetch fresh data from API
-    Identity.getProfile().then(profile => {
-      _identityProfile = profile;
-      _renderApiProfileData(profile, currentUserId, profileKey, isOwnProfile);
-    }).catch(() => {
-      // If API fails and we have no cache, fall back to mock data
-      if (!_identityProfile) {
-        const mockProfile = data.profiles[profileKey];
-        if (mockProfile) _renderProfileData(mockProfile, profileKey, isOwnProfile);
-      }
-    });
+    Identity.getProfile()
+      .then(profile => {
+        _identityProfile = profile;
+        _renderApiProfileData(profile, currentUserId, profileKey, isOwnProfile);
+      })
+      .catch(() => {
+        // If API fails and we have no cache, fall back to mock data
+        if (!_identityProfile) {
+          const mockProfile = data.profiles[profileKey];
+          if (mockProfile) _renderProfileData(mockProfile, profileKey, isOwnProfile);
+        }
+      });
   } else {
     // Viewing another user's profile — use mock data
     const mockProfile = data.profiles[profileKey] || null;
@@ -104,9 +113,11 @@ export function clearIdentityProfile() {
 
 /** Eagerly fetch/provision the identity profile (call on sign-in). */
 export function ensureIdentityProfile() {
-  Identity.getProfile().then(profile => {
-    if (profile) _identityProfile = profile;
-  }).catch(() => {});
+  Identity.getProfile()
+    .then(profile => {
+      if (profile) _identityProfile = profile;
+    })
+    .catch(() => {});
 }
 
 function _renderApiProfileData(profile, currentUserId, profileKey, _isOwnProfile) {
@@ -139,7 +150,7 @@ function _renderProfileData(profile, username, isOwnProfile) {
   if (profile) {
     $('profileName').textContent = profile.name || profile.display_name || username;
     $('profileBio').textContent = profile.bio || '';
-    const seed = isOwnProfile && currentUserId ? currentUserId : (profile.seed || username);
+    const seed = isOwnProfile && currentUserId ? currentUserId : profile.seed || username;
     $('profileAvatar').src = avatarUrl(seed);
     $('profileForumCount').textContent = profile.forums || 0;
     $('profileThreadCount').textContent = profile.threads || 0;
@@ -188,9 +199,12 @@ export function renderProfileTab(tab, username) {
 
   if (tab === 'badges') {
     const earned = data.userBadges[username] || [];
-    el.innerHTML = '<div class="badges-grid">' + data.badgeDefinitions.map(b => {
-      const isEarned = earned.includes(b.id);
-      return `
+    el.innerHTML =
+      '<div class="badges-grid">' +
+      data.badgeDefinitions
+        .map(b => {
+          const isEarned = earned.includes(b.id);
+          return `
         <div class="badge-card ${isEarned ? '' : 'locked'}">
           <div class="badge-card-icon">${b.icon}</div>
           <div class="badge-card-name">${b.name}</div>
@@ -198,14 +212,17 @@ export function renderProfileTab(tab, username) {
           <div class="badge-card-status">${isEarned ? 'Earned' : 'Locked'}</div>
         </div>
       `;
-    }).join('') + '</div>';
+        })
+        .join('') +
+      '</div>';
     return;
   }
 
   if (tab === 'activity') {
     el.innerHTML = data.activities
       .filter(a => !username || a.user === username)
-      .map(a => `
+      .map(
+        a => `
         <div class="activity-item">
           <img src="${avatarUrl(a.seed)}" alt="">
           <div>
@@ -213,13 +230,21 @@ export function renderProfileTab(tab, username) {
             <div class="activity-time">${a.time}</div>
           </div>
         </div>
-      `).join('');
+      `,
+      )
+      .join('');
   } else if (tab === 'threads') {
-    const userThreads = Object.values(data.threads).flat().filter(t => t.author === username).slice(0, 5);
+    const userThreads = Object.values(data.threads)
+      .flat()
+      .filter(t => t.author === username)
+      .slice(0, 5);
     if (userThreads.length === 0) {
-      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x1F4DD;</div><p>No threads yet</p></div>';
+      el.innerHTML =
+        '<div class="empty-state"><div class="empty-icon">&#x1F4DD;</div><p>No threads yet</p></div>';
     } else {
-      el.innerHTML = userThreads.map(t => `
+      el.innerHTML = userThreads
+        .map(
+          t => `
         <div class="thread-item" data-thread="${t.id}" tabindex="0" role="button" style="cursor:pointer;">
           <img class="thread-avatar" src="${avatarUrl(t.id, 'shapes')}" alt="">
           <div class="thread-info">
@@ -231,14 +256,18 @@ export function renderProfileTab(tab, username) {
             <div class="thread-replies">${plural(t.replies, 'reply')}</div>
           </div>
         </div>
-      `).join('');
+      `,
+        )
+        .join('');
       // Bind click handlers for threads in profile tab
       el.querySelectorAll('.thread-item').forEach(item => {
         item.addEventListener('click', () => _showThread(item.dataset.thread));
       });
     }
   } else if (tab === 'forums') {
-    el.innerHTML = data.forums.map(f => `
+    el.innerHTML = data.forums
+      .map(
+        f => `
       <div class="forum-item" data-forum="${f.id}" style="border-left:none;padding:10px 0;cursor:pointer;" tabindex="0" role="button">
         <img src="${avatarUrl(f.seed, 'shapes')}" alt="">
         <div class="forum-item-info">
@@ -246,7 +275,9 @@ export function renderProfileTab(tab, username) {
           <div class="forum-item-count">${plural(f.members, 'member')}</div>
         </div>
       </div>
-    `).join('');
+    `,
+      )
+      .join('');
     // Bind click handlers for forums in profile tab
     el.querySelectorAll('.forum-item').forEach(item => {
       item.addEventListener('click', () => _showForum(item.dataset.forum));
@@ -262,11 +293,13 @@ export function renderProfileBadges(username) {
     el.innerHTML = '';
     return;
   }
-  el.innerHTML = badges.map(id => {
-    const b = data.badgeDefinitions.find(d => d.id === id);
-    if (!b) return '';
-    return `<span class="badge-chip ${b.class}"><span class="badge-chip-icon">${b.icon}</span>${b.name}</span>`;
-  }).join('');
+  el.innerHTML = badges
+    .map(id => {
+      const b = data.badgeDefinitions.find(d => d.id === id);
+      if (!b) return '';
+      return `<span class="badge-chip ${b.class}"><span class="badge-chip-icon">${b.icon}</span>${b.name}</span>`;
+    })
+    .join('');
 }
 
 export function initProfile(deps) {

@@ -1,4 +1,4 @@
-import { test as base, type Page } from "@playwright/test";
+import { test as base, type Page } from '@playwright/test';
 
 type TestFixtures = {
   testcallerPage: Page;
@@ -12,7 +12,7 @@ type TestFixtures = {
 export const test = base.extend<TestFixtures>({
   testcallerPage: async ({ browser }, use) => {
     const context = await browser.newContext({
-      storageState: "auth/testcaller.json",
+      storageState: 'auth/testcaller.json',
     });
     const page = await context.newPage();
     await use(page);
@@ -21,7 +21,7 @@ export const test = base.extend<TestFixtures>({
 
   testuser_debugPage: async ({ browser }, use) => {
     const context = await browser.newContext({
-      storageState: "auth/testuser_debug.json",
+      storageState: 'auth/testuser_debug.json',
     });
     const page = await context.newPage();
     await use(page);
@@ -29,4 +29,4 @@ export const test = base.extend<TestFixtures>({
   },
 });
 
-export { expect } from "@playwright/test";
+export { expect } from '@playwright/test';

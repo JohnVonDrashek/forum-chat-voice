@@ -10,46 +10,53 @@
  * - Reserve space for future content moderation and report review tools
  */
 
-import { api } from '../lib/api.js'
-import { authStore } from '../lib/auth.js'
-import { avatarHTML } from '../components/avatar.js'
-import { formatRelativeTime } from '../lib/date.js'
+import { avatarHTML } from '../components/avatar.js';
+import { api } from '../lib/api.js';
+import { authStore } from '../lib/auth.js';
+import { formatRelativeTime } from '../lib/date.js';
 
 export function renderAdmin(container) {
-  const { user } = authStore.get()
+  const { user } = authStore.get();
   if (!user?.is_admin) {
     container.innerHTML = `
       <div class="text-center py-16">
         <h1 class="text-2xl font-bold mb-2">Access Denied</h1>
         <p class="text-slate-400">You don't have permission to view this page.</p>
       </div>
-    `
-    return
+    `;
+    return;
   }
 
-  let tab = 'overview'
+  let tab = 'overview';
 
   async function render() {
     // eslint-disable-next-line no-unsanitized/property -- static template
     container.innerHTML = `
       <h1 class="text-2xl font-bold mb-6">Admin Dashboard</h1>
       <div class="flex gap-2 mb-6">
-        ${['overview', 'users', 'content', 'reports'].map(t => `
+        ${['overview', 'users', 'content', 'reports']
+          .map(
+            t => `
           <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors ${t === tab ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}" data-tab="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</button>
-        `).join('')}
+        `,
+          )
+          .join('')}
       </div>
       <div id="admin-content"></div>
-    `
+    `;
 
     container.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => { tab = btn.dataset.tab; render() })
-    })
+      btn.addEventListener('click', () => {
+        tab = btn.dataset.tab;
+        render();
+      });
+    });
 
-    const content = container.querySelector('#admin-content')
+    const content = container.querySelector('#admin-content');
 
     if (tab === 'overview') {
       try {
-        const stats = await api.getAdminStats()
+        const stats = await api.getAdminStats();
         // eslint-disable-next-line no-unsanitized/property -- static template, values from trusted API
         content.innerHTML = `
           <div class="grid gap-4 sm:grid-cols-3">
@@ -57,19 +64,23 @@ export function renderAdmin(container) {
             ${statCard('Threads', stats.totalThreads, 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z')}
             ${statCard('Posts', stats.totalPosts, 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z')}
           </div>
-        `
+        `;
       } catch {
-        content.innerHTML = '<p class="text-red-400">Failed to load stats.</p>'
+        content.innerHTML = '<p class="text-red-400">Failed to load stats.</p>';
       }
     } else if (tab === 'users') {
       try {
-        const users = await api.getAdminUsers()
-        let searchQuery = ''
+        const users = await api.getAdminUsers();
+        let searchQuery = '';
 
         function renderUsers() {
           const filtered = searchQuery
-            ? users.filter(u => u.username.toLowerCase().includes(searchQuery) || (u.display_name || '').toLowerCase().includes(searchQuery))
-            : users
+            ? users.filter(
+                u =>
+                  u.username.toLowerCase().includes(searchQuery) ||
+                  (u.display_name || '').toLowerCase().includes(searchQuery),
+              )
+            : users;
 
           // eslint-disable-next-line no-unsanitized/property -- user content escaped via escapeHTML()
           content.innerHTML = `
@@ -80,7 +91,9 @@ export function renderAdmin(container) {
               <table class="w-full text-sm">
                 <thead><tr class="border-b border-slate-700"><th class="px-4 py-3 text-left text-slate-400 font-medium">User</th><th class="px-4 py-3 text-left text-slate-400 font-medium hidden sm:table-cell">Role</th><th class="px-4 py-3 text-left text-slate-400 font-medium hidden sm:table-cell">Joined</th></tr></thead>
                 <tbody>
-                  ${filtered.map(u => `
+                  ${filtered
+                    .map(
+                      u => `
                     <tr class="border-b border-slate-700/50 hover:bg-slate-800/50">
                       <td class="px-4 py-3">
                         <div class="flex items-center gap-2">
@@ -96,30 +109,33 @@ export function renderAdmin(container) {
                       </td>
                       <td class="px-4 py-3 text-slate-500 hidden sm:table-cell">${formatRelativeTime(u.created_at)}</td>
                     </tr>
-                  `).join('')}
+                  `,
+                    )
+                    .join('')}
                 </tbody>
               </table>
             </div>
-          `
+          `;
 
-          content.querySelector('#user-search')?.addEventListener('input', (e) => {
-            searchQuery = e.target.value.toLowerCase()
-            renderUsers()
-          })
+          content.querySelector('#user-search')?.addEventListener('input', e => {
+            searchQuery = e.target.value.toLowerCase();
+            renderUsers();
+          });
         }
 
-        renderUsers()
+        renderUsers();
       } catch {
-        content.innerHTML = '<p class="text-red-400">Failed to load users.</p>'
+        content.innerHTML = '<p class="text-red-400">Failed to load users.</p>';
       }
     } else if (tab === 'content') {
-      content.innerHTML = '<p class="text-slate-400 text-center py-8">Content management coming soon.</p>'
+      content.innerHTML =
+        '<p class="text-slate-400 text-center py-8">Content management coming soon.</p>';
     } else if (tab === 'reports') {
-      content.innerHTML = '<p class="text-slate-400 text-center py-8">No reports to review.</p>'
+      content.innerHTML = '<p class="text-slate-400 text-center py-8">No reports to review.</p>';
     }
   }
 
-  render()
+  render();
 }
 
 function statCard(label, value, iconPath) {
@@ -135,11 +151,11 @@ function statCard(label, value, iconPath) {
         </div>
       </div>
     </div>
-  `
+  `;
 }
 
 function escapeHTML(str) {
-  const div = document.createElement('div')
-  div.textContent = str || ''
-  return div.innerHTML
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
 }

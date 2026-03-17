@@ -1,9 +1,9 @@
-import { $, plural } from '../lib/utils.js';
+import { DmStore, ForumlineAPI, ForumStore, PresenceTracker } from '@forumline/client-sdk';
 import { avatarUrl } from '../lib/avatar.js';
 import { escapeHtml } from '../lib/markdown.js';
-import store from '../state/store.js';
-import { ForumlineAPI, DmStore, PresenceTracker, ForumStore } from '@forumline/client-sdk';
+import { $, plural } from '../lib/utils.js';
 import { pushState } from '../router.js';
+import store from '../state/store.js';
 import { showToast } from './toast.js';
 
 // ========== BOOKMARKS ==========
@@ -61,7 +61,7 @@ export function renderBookmarks() {
     item.querySelector('.bookmark-title').addEventListener('click', () => {
       _deps.showThread(b.threadId);
     });
-    item.querySelector('.bookmark-remove').addEventListener('click', (e) => {
+    item.querySelector('.bookmark-remove').addEventListener('click', e => {
       e.stopPropagation();
       removeBookmark(b.threadId);
     });
@@ -77,12 +77,15 @@ export function renderForumList() {
   const forums = ForumStore.forums;
   const currentForum = store.currentForum;
 
-  el.innerHTML = forums.map(f => {
-    const iconUrl = f.icon_url
-      ? (f.icon_url.startsWith('/') ? (f.web_base || '') + f.icon_url : f.icon_url)
-      : avatarUrl(f.seed || f.domain || 'unknown', 'shapes');
-    const forumId = f.id || f.domain;
-    return `
+  el.innerHTML = forums
+    .map(f => {
+      const iconUrl = f.icon_url
+        ? f.icon_url.startsWith('/')
+          ? (f.web_base || '') + f.icon_url
+          : f.icon_url
+        : avatarUrl(f.seed || f.domain || 'unknown', 'shapes');
+      const forumId = f.id || f.domain;
+      return `
     <div class="forum-item ${currentForum === forumId ? 'active' : ''}" data-forum="${forumId}" ${f.isReal ? `data-domain="${f.domain}"` : ''} tabindex="0" role="listitem" aria-label="${f.name}${f.unread > 0 ? ', ' + f.unread + ' unread' : ''}">
       <img src="${iconUrl}" alt="" onerror="this.style.display='none'">
       <div class="forum-item-info">
@@ -92,7 +95,8 @@ export function renderForumList() {
       ${f.unread > 0 ? `<div class="unread-badge" aria-hidden="true">${f.unread}</div>` : ''}
     </div>
   `;
-  }).join('');
+    })
+    .join('');
 
   el.querySelectorAll('.forum-item').forEach(item => {
     item.addEventListener('click', () => {
@@ -104,7 +108,7 @@ export function renderForumList() {
         _deps.showForum(item.dataset.forum);
       }
     });
-    item.addEventListener('keydown', (e) => {
+    item.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         const domain = item.dataset.domain;
@@ -129,7 +133,7 @@ export function initDragAndDrop() {
   forumItems.forEach(item => {
     item.setAttribute('draggable', 'true');
 
-    item.addEventListener('dragstart', (e) => {
+    item.addEventListener('dragstart', e => {
       draggedEl = item;
       item.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
@@ -141,7 +145,7 @@ export function initDragAndDrop() {
       draggedEl = null;
     });
 
-    item.addEventListener('dragover', (e) => {
+    item.addEventListener('dragover', e => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       if (draggedEl && draggedEl !== item) {
@@ -153,7 +157,7 @@ export function initDragAndDrop() {
       item.classList.remove('drag-over');
     });
 
-    item.addEventListener('drop', (e) => {
+    item.addEventListener('drop', e => {
       e.preventDefault();
       item.classList.remove('drag-over');
       if (draggedEl && draggedEl !== item) {
@@ -201,27 +205,33 @@ export function renderDmList() {
     // Track user IDs for presence
     const trackedIds = [];
 
-    el.innerHTML = conversations.map(c => {
-      const others = (c.members || []).filter(m => m.id !== myId);
-      const displayName = c.isGroup && c.name
-        ? c.name
-        : others.map(m => m.displayName || m.username).join(', ') || 'Chat';
-      const seed = c.isGroup ? (c.name || c.id) : (others[0]?.username || c.id);
-      const convoAvatar = !c.isGroup && others[0]?.avatarUrl
-        ? others[0].avatarUrl
-        : avatarUrl(seed, c.isGroup ? 'shapes' : 'avataaars');
-      const preview = escapeHtml(typeof c.lastMessage === 'string' ? c.lastMessage : (c.lastMessage?.content || ''));
-      const hasUnread = (c.unreadCount || 0) > 0;
+    el.innerHTML = conversations
+      .map(c => {
+        const others = (c.members || []).filter(m => m.id !== myId);
+        const displayName =
+          c.isGroup && c.name
+            ? c.name
+            : others.map(m => m.displayName || m.username).join(', ') || 'Chat';
+        const seed = c.isGroup ? c.name || c.id : others[0]?.username || c.id;
+        const convoAvatar =
+          !c.isGroup && others[0]?.avatarUrl
+            ? others[0].avatarUrl
+            : avatarUrl(seed, c.isGroup ? 'shapes' : 'avataaars');
+        const preview = escapeHtml(
+          typeof c.lastMessage === 'string' ? c.lastMessage : c.lastMessage?.content || '',
+        );
+        const hasUnread = (c.unreadCount || 0) > 0;
 
-      // Track 1:1 conversation partner for presence
-      if (!c.isGroup && others.length === 1) {
-        trackedIds.push(others[0].id);
-      }
+        // Track 1:1 conversation partner for presence
+        if (!c.isGroup && others.length === 1) {
+          trackedIds.push(others[0].id);
+        }
 
-      const isOnline = !c.isGroup && others.length === 1 && PresenceTracker.isOnline(others[0].id);
+        const isOnline =
+          !c.isGroup && others.length === 1 && PresenceTracker.isOnline(others[0].id);
 
-      const escapedName = escapeHtml(displayName);
-      return `
+        const escapedName = escapeHtml(displayName);
+        return `
         <div class="dm-item ${currentDm === c.id ? 'active' : ''}" data-dm="${c.id}" tabindex="0" role="listitem" aria-label="${escapedName}${hasUnread ? ', unread message' : ''}">
           <div class="dm-avatar-wrap">
             <img src="${convoAvatar}" alt="" onerror="this.style.display='none'">
@@ -234,7 +244,8 @@ export function renderDmList() {
           ${hasUnread ? `<div class="unread-dot" aria-hidden="true"></div>` : ''}
         </div>
       `;
-    }).join('');
+      })
+      .join('');
 
     // Update presence tracked users
     if (trackedIds.length > 0) {
@@ -244,7 +255,7 @@ export function renderDmList() {
     el.querySelectorAll('.dm-item').forEach(item => {
       if (!item.dataset.dm) return;
       item.addEventListener('click', () => _deps.showDm(item.dataset.dm));
-      item.addEventListener('keydown', (e) => {
+      item.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           _deps.showDm(item.dataset.dm);
@@ -258,7 +269,6 @@ export function renderDmList() {
   el.innerHTML = '<div class="dm-item dm-loading">Sign in to see messages</div>';
 }
 
-
 // ========== NEW DM MODAL ==========
 let _newDmDebounce = null;
 
@@ -269,7 +279,8 @@ function openNewDmModal() {
   if (!modal) return;
 
   modal.classList.remove('hidden');
-  results.innerHTML = '<div class="search-modal-hint">Search by username to start a conversation...</div>';
+  results.innerHTML =
+    '<div class="search-modal-hint">Search by username to start a conversation...</div>';
   input.value = '';
   setTimeout(() => input.focus(), 50);
 }
@@ -296,7 +307,7 @@ function initNewDmModal() {
   backdrop?.addEventListener('click', closeNewDmModal);
   escBtn?.addEventListener('click', closeNewDmModal);
 
-  document.addEventListener('keydown', (e) => {
+  document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !$('newDmModal').classList.contains('hidden')) {
       closeNewDmModal();
     }
@@ -305,7 +316,8 @@ function initNewDmModal() {
   input.addEventListener('input', () => {
     const query = input.value.trim();
     if (query.length < 2) {
-      results.innerHTML = '<div class="search-modal-hint">Search by username to start a conversation...</div>';
+      results.innerHTML =
+        '<div class="search-modal-hint">Search by username to start a conversation...</div>';
       return;
     }
 
@@ -322,11 +334,12 @@ function initNewDmModal() {
           return;
         }
 
-        results.innerHTML = filtered.map(p => {
-          const name = escapeHtml(p.display_name || p.username);
-          const username = escapeHtml(p.username);
-          const userAvatar = p.avatar_url || avatarUrl(p.username);
-          return `
+        results.innerHTML = filtered
+          .map(p => {
+            const name = escapeHtml(p.display_name || p.username);
+            const username = escapeHtml(p.username);
+            const userAvatar = p.avatar_url || avatarUrl(p.username);
+            return `
             <div class="search-modal-result" data-user-id="${p.id}" role="option" tabindex="0" style="display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;">
               <img src="${userAvatar}" alt="" style="width:32px;height:32px;border-radius:50%;" onerror="this.style.display='none'">
               <div>
@@ -335,7 +348,8 @@ function initNewDmModal() {
               </div>
             </div>
           `;
-        }).join('');
+          })
+          .join('');
 
         results.querySelectorAll('.search-modal-result').forEach(el => {
           const handler = async () => {
@@ -351,8 +365,11 @@ function initNewDmModal() {
             }
           };
           el.addEventListener('click', handler);
-          el.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); }
+          el.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handler();
+            }
           });
         });
       } catch (err) {
@@ -372,7 +389,10 @@ function openAddForumModal() {
 
   modal.classList.remove('hidden');
   if (error) error.classList.add('hidden');
-  if (input) { input.value = ''; setTimeout(() => input.focus(), 50); }
+  if (input) {
+    input.value = '';
+    setTimeout(() => input.focus(), 50);
+  }
 }
 
 function closeAddForumModal() {
@@ -394,11 +414,11 @@ function initAddForumModal() {
 
   cancelBtn?.addEventListener('click', closeAddForumModal);
 
-  modal.addEventListener('click', (e) => {
+  modal.addEventListener('click', e => {
     if (e.target === modal) closeAddForumModal();
   });
 
-  document.addEventListener('keydown', (e) => {
+  document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
       closeAddForumModal();
     }
@@ -407,12 +427,18 @@ function initAddForumModal() {
   const doSubmit = async () => {
     const url = input?.value.trim();
     if (!url) {
-      if (error) { error.textContent = 'Please enter a forum URL'; error.classList.remove('hidden'); }
+      if (error) {
+        error.textContent = 'Please enter a forum URL';
+        error.classList.remove('hidden');
+      }
       return;
     }
 
     if (error) error.classList.add('hidden');
-    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Adding...'; }
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Adding...';
+    }
 
     try {
       await ForumStore.addForum(url);
@@ -420,16 +446,25 @@ function initAddForumModal() {
       closeAddForumModal();
       showToast('Forum added successfully!');
     } catch (err) {
-      if (error) { error.textContent = err.message || 'Failed to add forum'; error.classList.remove('hidden'); }
+      if (error) {
+        error.textContent = err.message || 'Failed to add forum';
+        error.classList.remove('hidden');
+      }
     } finally {
-      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add Forum'; }
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add Forum';
+      }
     }
   };
 
   submitBtn?.addEventListener('click', doSubmit);
 
-  input?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); doSubmit(); }
+  input?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      doSubmit();
+    }
   });
 }
 

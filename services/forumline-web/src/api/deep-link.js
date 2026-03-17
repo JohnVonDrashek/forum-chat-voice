@@ -9,7 +9,9 @@ export function parseDeepLink(url) {
     if (dm) return { dm: dm[1] };
     const m = url.match(/^forumline:\/\/forum\/([^/]+)(.*)$/);
     return m ? { domain: m[1], path: m[2] || '/' } : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 export function handleDeepLinkParams(params) {
@@ -18,8 +20,9 @@ export function handleDeepLinkParams(params) {
   if (params.dm) {
     // Handle forumline://dm/userId -- find conversation by participant userId
     if (typeof window.DmStore !== 'undefined' && typeof window.showDm === 'function') {
-      const convo = window.DmStore.getConversations().find(c =>
-        c.participants && c.participants.some(p => p.id === params.dm || p.user_id === params.dm)
+      const convo = window.DmStore.getConversations().find(
+        c =>
+          c.participants && c.participants.some(p => p.id === params.dm || p.user_id === params.dm),
       );
       if (convo) window.showDm(convo.id);
     }
@@ -28,11 +31,16 @@ export function handleDeepLinkParams(params) {
   // Try ForumStore real forums first (match by domain)
   if (typeof window.ForumStore !== 'undefined') {
     const real = window.ForumStore.forums.find(f => f.domain === params.forum);
-    if (real) { window.ForumStore.switchForum(real.domain); return; }
+    if (real) {
+      window.ForumStore.switchForum(real.domain);
+      return;
+    }
   }
   // Fall back to mock forums list
   if (typeof window.forums !== 'undefined' && typeof window.showForum === 'function') {
-    const forum = window.forums.find(f => f.seed === params.forum || f.name.toLowerCase().replace(/\s+/g, '-') === params.forum);
+    const forum = window.forums.find(
+      f => f.seed === params.forum || f.name.toLowerCase().replace(/\s+/g, '-') === params.forum,
+    );
     if (forum) window.showForum(forum.id);
   }
 }
