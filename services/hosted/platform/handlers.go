@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -17,8 +18,9 @@ import (
 // PlatformHandlers holds dependencies for platform-level API endpoints
 // (forum provisioning, listing, export). These run outside tenant context.
 type PlatformHandlers struct {
-	Pool  *pgxpool.Pool
-	Store *TenantStore
+	Pool             *pgxpool.Pool
+	Store            *TenantStore
+	TenantMigrations fs.FS // goose migration files for tenant schemas (nil to skip)
 }
 
 // HandleProvision creates a new hosted forum.
@@ -68,7 +70,7 @@ func (ph *PlatformHandlers) HandleProvision(w http.ResponseWriter, r *http.Reque
 		Description:      body.Description,
 		OwnerForumlineID: forumlineID,
 		BaseDomain:       baseDomain,
-	})
+	}, ph.TenantMigrations)
 	if err != nil {
 		// Check for validation errors vs internal errors
 		errMsg := err.Error()

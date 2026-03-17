@@ -68,6 +68,15 @@ func main() {
 		log.Fatalf("failed to start tenant store: %v", err)
 	}
 
+	// Run pending tenant schema migrations (goose, per-tenant)
+	tenantSchemas := make([]string, 0, len(store.All()))
+	for _, t := range store.All() {
+		tenantSchemas = append(tenantSchemas, t.SchemaName)
+	}
+	if err := db.RunTenantMigrations(ctx, os.Getenv("DATABASE_URL"), localdb.TenantMigrations, tenantSchemas); err != nil {
+		log.Fatalf("failed to run tenant migrations: %v", err)
+	}
+
 	// Tenant-aware pool wrapper
 	tp := &plat.TenantPool{Pool: pool}
 
@@ -91,8 +100,9 @@ func main() {
 
 	// Platform API (provisioning, forum listing) — no tenant context
 	platformHandlers := &plat.PlatformHandlers{
-		Pool:  pool,
-		Store: store,
+		Pool:             pool,
+		Store:            store,
+		TenantMigrations: localdb.TenantMigrations,
 	}
 
 	// Site management API (custom frontend file CRUD)

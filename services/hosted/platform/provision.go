@@ -4,10 +4,13 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"io/fs"
 	"log"
+	"os"
 	"regexp"
 	"strings"
 
+	"github.com/forumline/forumline/backend/db"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -44,8 +47,12 @@ type ProvisionResult struct {
 // 1. Validates the slug
 // 2. Creates a PostgreSQL schema with forum tables
 // 3. Inserts a row in platform_tenants
-// 4. Refreshes the tenant store cache
-func Provision(ctx context.Context, pool *pgxpool.Pool, store *TenantStore, req *ProvisionRequest) (*ProvisionResult, error) {
+// 4. Runs tenant migrations (goose) on the new schema
+// 5. Refreshes the tenant store cache
+//
+// tenantMigrations is the embedded FS of goose migration files for tenant schemas.
+// Pass nil to skip tenant migrations (e.g. in tests).
+func Provision(ctx context.Context, pool *pgxpool.Pool, store *TenantStore, req *ProvisionRequest, tenantMigrations fs.FS) (*ProvisionResult, error) {
 	// Validate slug
 	if !validSlug.MatchString(req.Slug) {
 		return nil, fmt.Errorf("invalid slug: must be 1-40 lowercase alphanumeric characters or hyphens, cannot start/end with hyphen")
@@ -114,6 +121,14 @@ func Provision(ctx context.Context, pool *pgxpool.Pool, store *TenantStore, req 
 	if _, err := pool.Exec(ctx, "SELECT citus_schema_distribute($1)", schemaName); err != nil {
 		// Non-fatal: Citus may not be installed (e.g. single-tenant dev mode)
 		log.Printf("citus_schema_distribute(%s): %v (non-fatal)", schemaName, err)
+	}
+
+	// Run tenant migrations on the new schema so it's fully up to date
+	if tenantMigrations != nil {
+		dsn := os.Getenv("DATABASE_URL")
+		if err := db.RunTenantMigration(ctx, dsn, tenantMigrations, schemaName); err != nil {
+			log.Printf("warning: tenant migration for %s failed: %v", schemaName, err)
+		}
 	}
 
 	// Refresh tenant store so the new forum is immediately routable
