@@ -66,6 +66,8 @@ CLAUDE.md
 .playwright-cli/
 playwright-report/
 test-results/
+tests/playwright-report/
+tests/test-results/
 auth/
 tests/auth/
 services/forumline-id/forumline-id

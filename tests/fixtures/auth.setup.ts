@@ -1,5 +1,7 @@
+import path from 'node:path';
 import { expect, test as setup } from '@playwright/test';
 
+const __dirname = path.dirname(new URL(import.meta.url).pathname);
 const APP_URL = 'https://app.forumline.net';
 
 /**
@@ -53,12 +55,12 @@ void loginAndSave(
   setup,
   process.env.TESTCALLER_EMAIL ?? 'testcaller@forumline.net',
   process.env.TESTCALLER_PASSWORD!,
-  'auth/testcaller.json',
+  path.join(__dirname, '../auth/testcaller.json'),
 );
 
 void loginAndSave(
   setup,
   process.env.TESTUSER_DEBUG_EMAIL ?? 'testuser_debug@forumline.net',
   process.env.TESTUSER_DEBUG_PASSWORD!,
-  'auth/testuser_debug.json',
+  path.join(__dirname, '../auth/testuser_debug.json'),
 );

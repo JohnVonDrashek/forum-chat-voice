@@ -1,4 +1,7 @@
+import path from 'node:path';
 import { test as base, type Page } from '@playwright/test';
+
+const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 type TestFixtures = {
   testcallerPage: Page;
@@ -12,7 +15,7 @@ type TestFixtures = {
 export const test = base.extend<TestFixtures>({
   testcallerPage: async ({ browser }, use) => {
     const context = await browser.newContext({
-      storageState: 'auth/testcaller.json',
+      storageState: path.join(__dirname, '../auth/testcaller.json'),
     });
     const page = await context.newPage();
     await use(page);
@@ -21,7 +24,7 @@ export const test = base.extend<TestFixtures>({
 
   testuser_debugPage: async ({ browser }, use) => {
     const context = await browser.newContext({
-      storageState: 'auth/testuser_debug.json',
+      storageState: path.join(__dirname, '../auth/testuser_debug.json'),
     });
     const page = await context.newPage();
     await use(page);

@@ -1,4 +1,7 @@
+import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+
+const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 const BASE_URLS = {
   app: 'https://app.forumline.net',
@@ -9,13 +12,14 @@ const BASE_URLS = {
 export default defineConfig({
   testDir: '.',
   testMatch: ['smoke/**/*.spec.ts', 'e2e/**/*.spec.ts'],
+  outputDir: path.join(__dirname, 'test-results'),
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI
-    ? [['html', { open: 'never' }], ['github']]
-    : [['html', { open: 'on-failure' }]],
+    ? [['html', { open: 'never', outputFolder: path.join(__dirname, 'playwright-report') }], ['github']]
+    : [['html', { open: 'on-failure', outputFolder: path.join(__dirname, 'playwright-report') }]],
   use: {
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
@@ -43,7 +47,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         baseURL: BASE_URLS.app,
-        storageState: 'auth/testcaller.json',
+        storageState: path.join(__dirname, 'auth/testcaller.json'),
       },
     },
 
@@ -55,7 +59,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         baseURL: BASE_URLS.hosted,
-        storageState: 'auth/testcaller.json',
+        storageState: path.join(__dirname, 'auth/testcaller.json'),
       },
     },
 
