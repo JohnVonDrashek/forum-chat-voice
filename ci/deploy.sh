@@ -70,7 +70,8 @@ echo "Uploading docker-compose.yml..."
 if [ "$SERVICE" = "logs" ]; then
   SRC_COMPOSE="services/logs/server/docker-compose.yml"
 else
-  SRC_COMPOSE="deploy/compose/$SERVICE/docker-compose.yml"
+  SRC_COMPOSE="services/$SERVICE/docker-compose.yml"
+  [ ! -f "$SRC_COMPOSE" ] && SRC_COMPOSE="deploy/compose/$SERVICE/docker-compose.yml"
 fi
 scp "$SRC_COMPOSE" "$HOST:$REMOTE/docker-compose.yml"
 
@@ -84,7 +85,7 @@ if [ "$SERVICE" = "logs" ]; then
 fi
 if [ "$SERVICE" = "livekit" ]; then
   echo "Uploading livekit.yaml..."
-  scp deploy/compose/livekit/livekit.yaml "$HOST:$REMOTE/livekit.yaml"
+  scp services/livekit/livekit.yaml "$HOST:$REMOTE/livekit.yaml"
 fi
 
 # Pull latest code (skip for infrastructure-only LXCs — no repo)
