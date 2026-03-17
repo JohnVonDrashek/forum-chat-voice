@@ -81,7 +81,6 @@ func (h *ForumHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		Capabilities []string `json:"capabilities"`
 		Description  *string  `json:"description"`
 		Tags         []string `json:"tags"`
-		RedirectURIs []string `json:"redirect_uris"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
@@ -96,20 +95,14 @@ func (h *ForumHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		Capabilities: body.Capabilities,
 		Description:  body.Description,
 		Tags:         body.Tags,
-		RedirectURIs: body.RedirectURIs,
 	})
 	if err != nil {
 		writeServiceError(w, err)
 		return
 	}
 
-	status := http.StatusCreated
-	if result.Approved {
-		status = http.StatusOK
-	}
-	writeJSON(w, status, map[string]interface{}{
-		"forum_id": result.ForumID, "client_id": result.ClientID, "client_secret": result.ClientSecret,
-		"approved": result.Approved, "message": result.Message,
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"forum_id": result.ForumID, "approved": result.Approved, "message": result.Message,
 	})
 }
 
@@ -260,35 +253,6 @@ func (h *ForumHandler) HandleListAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, forums)
-}
-
-// HandleEnsureOAuth creates OAuth credentials for an existing forum that doesn't have them.
-// Requires service role key authentication.
-// POST /api/forums/ensure-oauth
-// Body: {"domain": "example.forumline.net"}
-func (h *ForumHandler) HandleEnsureOAuth(w http.ResponseWriter, r *http.Request) {
-	if !h.authenticateServiceKey(w, r) {
-		return
-	}
-
-	var body struct {
-		Domain string `json:"domain"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Domain == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "domain is required"})
-		return
-	}
-
-	creds, err := h.ForumService.EnsureOAuth(r.Context(), body.Domain)
-	if err != nil {
-		writeServiceError(w, err)
-		return
-	}
-
-	log.Printf("ensure-oauth: created OAuth for %s: client_id=%s", body.Domain, creds.ClientID)
-	writeJSON(w, http.StatusCreated, map[string]interface{}{
-		"client_id": creds.ClientID, "client_secret": creds.ClientSecret,
-	})
 }
 
 func (h *ForumHandler) authenticateServiceKey(w http.ResponseWriter, r *http.Request) bool {

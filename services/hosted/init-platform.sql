@@ -24,9 +24,6 @@ CREATE TABLE IF NOT EXISTS platform_tenants (
   description TEXT,
   icon_url TEXT,
   theme TEXT NOT NULL DEFAULT 'default', -- frontend theme
-  -- forumline federation credentials (returned from central identity service)
-  forumline_client_id TEXT,
-  forumline_client_secret TEXT,
   -- status
   active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -44,8 +41,10 @@ ALTER TABLE platform_tenants ADD COLUMN IF NOT EXISTS site_storage_bytes BIGINT 
 ALTER TABLE platform_tenants ADD COLUMN IF NOT EXISTS site_storage_limit BIGINT NOT NULL DEFAULT 52428800; -- 50MB
 
 -- Auth is now handled by id.forumline.net — per-forum OAuth credentials are no longer needed.
--- Drop the legacy columns (safe: they were nullable and are no longer read by the app).
+-- Drop legacy columns (both naming conventions, safe: they were nullable and unused).
 ALTER TABLE platform_tenants DROP COLUMN IF EXISTS forumline_client_id;
 ALTER TABLE platform_tenants DROP COLUMN IF EXISTS forumline_client_secret;
+ALTER TABLE platform_tenants DROP COLUMN IF EXISTS zitadel_client_id;
+ALTER TABLE platform_tenants DROP COLUMN IF EXISTS zitadel_client_secret;
 
 SELECT 'Platform tables created!' AS status;
