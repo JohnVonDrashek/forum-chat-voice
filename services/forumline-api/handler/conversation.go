@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -22,6 +23,7 @@ func (h *ConversationHandler) HandleList(w http.ResponseWriter, r *http.Request)
 	userID := auth.UserIDFromContext(r.Context())
 	convos, err := h.Service.List(r.Context(), userID)
 	if err != nil {
+		log.Printf("[Conversations] list failed for user %s: %v", userID, err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to fetch conversations"})
 		return
 	}

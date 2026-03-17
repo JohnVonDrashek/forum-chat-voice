@@ -18,6 +18,7 @@ ALTER TABLE forumline_profiles DROP CONSTRAINT IF EXISTS forumline_profiles_id_f
 ALTER TABLE forumline_conversation_members DROP CONSTRAINT IF EXISTS forumline_conversation_members_user_id_fkey;
 ALTER TABLE forumline_memberships DROP CONSTRAINT IF EXISTS forumline_memberships_user_id_fkey;
 ALTER TABLE forumline_direct_messages DROP CONSTRAINT IF EXISTS forumline_direct_messages_sender_id_fkey;
+ALTER TABLE forumline_direct_messages DROP CONSTRAINT IF EXISTS hub_direct_messages_sender_id_fkey;
 ALTER TABLE forumline_notifications DROP CONSTRAINT IF EXISTS forumline_notifications_user_id_fkey;
 ALTER TABLE push_subscriptions DROP CONSTRAINT IF EXISTS push_subscriptions_user_id_fkey;
 ALTER TABLE forumline_conversations DROP CONSTRAINT IF EXISTS forumline_conversations_created_by_fkey;
