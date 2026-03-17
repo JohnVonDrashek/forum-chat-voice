@@ -11,9 +11,12 @@ import (
 )
 
 // pgUUID converts a UUID string to pgtype.UUID.
+// Panics if s is not a valid UUID — this is a programming error, not a runtime condition.
 func pgUUID(s string) pgtype.UUID {
 	var u pgtype.UUID
-	_ = u.Scan(s)
+	if err := u.Scan(s); err != nil {
+		panic(fmt.Sprintf("pgUUID: invalid UUID %q: %v", s, err))
+	}
 	return u
 }
 

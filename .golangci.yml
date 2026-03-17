@@ -1,0 +1,24 @@
+version: "2"
+
+linters:
+  enable:
+    - bodyclose       # HTTP response body must be closed
+    - errcheck        # Check for unchecked errors (default: on)
+    - govet           # Go vet checks (default: on)
+    - staticcheck     # Comprehensive static analysis (default: on)
+    - unused          # Unused code detection (default: on)
+    - ineffassign     # Detect useless assignments (default: on)
+    - nilerr          # Return nil where error should be returned
+    - reassign        # Detect reassignment of package-level variables
+
+linters-settings:
+  errcheck:
+    # Don't flag blank identifier error discards globally — too noisy
+    # with deferred closes. Instead we enforce via pgUUID panic + code review.
+    check-blank: false
+    # But DO check that errors aren't completely dropped (no assignment at all)
+    exclude-functions:
+      - (*github.com/jackc/pgx/v5/pgpool.Pool).Close
+      - (net/http.ResponseWriter).Write
+      - fmt.Fprintf
+      - fmt.Fprint

@@ -1,6 +1,8 @@
 package store
 
 import (
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -26,9 +28,12 @@ func optTextToPgtext(s *string) pgtype.Text {
 }
 
 // pgUUID converts a UUID string to pgtype.UUID for sqlc queries.
+// Panics if s is not a valid UUID — this is a programming error, not a runtime condition.
 func pgUUID(s string) pgtype.UUID {
 	var u pgtype.UUID
-	_ = u.Scan(s)
+	if err := u.Scan(s); err != nil {
+		panic(fmt.Sprintf("pgUUID: invalid UUID %q: %v", s, err))
+	}
 	return u
 }
 
