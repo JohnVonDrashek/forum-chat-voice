@@ -1,6 +1,6 @@
 import './style.css'
 import { route, setNotFound, resolve, navigate } from './router.js'
-import { initAuth, authStore } from './lib/auth.js'
+import { initAuth, authStore, tokenExchange } from './lib/auth.js'
 import { initVoice } from './lib/voice.js'
 import { renderLayout, getPageContainer } from './components/layout.js'
 import { closeMobileSidebar } from './components/sidebar.js'
@@ -113,9 +113,18 @@ if (window.parent !== window) {
     window.parent.postMessage({ type: 'forumline:auth_state', signedIn: !!user }, '*')
   }
 
-  window.addEventListener('message', (e) => {
+  window.addEventListener('message', async (e) => {
     if (e.data?.type === 'forumline:request_auth_state') {
       sendAuthState()
+    }
+    // Invisible handshake: parent sends a Forumline JWT, we exchange it
+    // for a local session without any user interaction.
+    if (e.data?.type === 'forumline:token_exchange' && e.data.token) {
+      const ok = await tokenExchange(e.data.token)
+      sendAuthState()
+      if (ok) {
+        window.parent.postMessage({ type: 'forumline:auth_complete' }, '*')
+      }
     }
   })
 

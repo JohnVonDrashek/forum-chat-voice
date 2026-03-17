@@ -88,26 +88,31 @@ if [ "$SERVICE" = "livekit" ]; then
 fi
 
 # Pull latest code (skip for infrastructure-only LXCs — no repo)
-if [ "$SERVICE" != "logs" ] && [ "$SERVICE" != "auth" ] && [ "$SERVICE" != "livekit" ]; then
+if [ "$SERVICE" != "logs" ] && [ "$SERVICE" != "livekit" ]; then
   echo "Pulling latest code..."
-  ssh "$HOST" "cd $REMOTE/repo && git fetch origin main && git reset --hard origin/main"
+  # Auth LXC needs repo for building forumline-id from source
+  ssh "$HOST" "if [ -d $REMOTE/repo ]; then cd $REMOTE/repo && git fetch origin main && git reset --hard origin/main; else git clone https://github.com/forumline/forumline.git $REMOTE/repo && cd $REMOTE/repo && git checkout main; fi"
 fi
 
-# Run migrations for forumline
+# Run migrations
 if [ "$SERVICE" = "forumline" ]; then
   echo "Running migrations..."
   ssh "$HOST" "cd $REMOTE && for f in repo/services/forumline-api/migrations/*.sql; do echo \"Applying: \$f\" && docker compose exec -T postgres psql -U postgres -d postgres < \"\$f\"; done"
 fi
+if [ "$SERVICE" = "hosted" ]; then
+  echo "Running platform migrations..."
+  ssh "$HOST" "cd $REMOTE && docker compose exec -T postgres psql -U postgres -d postgres < repo/services/hosted/init-platform.sql"
+fi
 
 # Rebuild and restart
-if [ "$SERVICE" = "auth" ] || [ "$SERVICE" = "logs" ] || [ "$SERVICE" = "livekit" ]; then
+if [ "$SERVICE" = "auth" ]; then
+  echo "Pulling images and building forumline-id..."
+  ssh "$HOST" "cd $REMOTE && docker compose pull postgres zitadel && docker compose up -d --build --force-recreate --wait && docker compose ps"
+  echo "Running Zitadel post-deploy configuration..."
+  "$SCRIPT_DIR/configure-zitadel.sh"
+elif [ "$SERVICE" = "logs" ] || [ "$SERVICE" = "livekit" ]; then
   echo "Pulling and restarting..."
   ssh "$HOST" "cd $REMOTE && docker compose pull && docker compose up -d --force-recreate --wait && docker compose ps"
-  # Post-provision configuration (SMTP, etc.)
-  if [ "$SERVICE" = "auth" ]; then
-    echo "Running Zitadel post-deploy configuration..."
-    "$SCRIPT_DIR/configure-zitadel.sh"
-  fi
 else
   echo "Building and restarting..."
   ssh "$HOST" "cd $REMOTE && docker compose up -d --build $SERVICE && docker compose ps"

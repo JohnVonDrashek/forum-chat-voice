@@ -35,6 +35,23 @@ services:
     networks:
       - zitadel
 
+  forumline-id:
+    build:
+      context: /opt/auth/repo
+      dockerfile: deploy/docker/Dockerfile.go-id
+    restart: unless-stopped
+    depends_on:
+      zitadel:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      ZITADEL_URL: "http://zitadel:8080"
+      EXTERNAL_URL: "https://id.forumline.net"
+    ports:
+      - "3000:3000"
+    networks:
+      - zitadel
+
 networks:
   zitadel:
 

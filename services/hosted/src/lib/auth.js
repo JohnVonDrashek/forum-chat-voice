@@ -1,13 +1,12 @@
 /*
  * User Authentication
  *
- * Manages the user authentication lifecycle via Zitadel OIDC.
- * All authentication goes through Zitadel — no local email/password.
- *
- * It must:
- * - Persist sessions in localStorage
- * - Create a user profile with a generated default avatar on first sign-in
- * - Expose the current user and profile to the rest of the app via a reactive auth store
+ * Two auth flows:
+ * 1. In-app (iframe): Forumline app passes JWT via postMessage, we exchange
+ *    it for a local session via POST /api/forumline/auth/token-exchange.
+ *    This is the "invisible handshake" — zero user interaction.
+ * 2. Direct visit: User clicks "Sign in with Forumline" which redirects to
+ *    id.forumline.net, then back with an access token in the URL hash.
  */
 
 import { createStore } from '../state.js'
@@ -148,6 +147,47 @@ async function restoreSessionFromUrl() {
   }
 }
 
+/**
+ * Token exchange: accepts a Forumline JWT (from the parent app via postMessage)
+ * and exchanges it for a local forum session. This is the "invisible handshake"
+ * that makes in-app forum browsing seamless.
+ */
+export async function tokenExchange(forumlineToken) {
+  try {
+    const resp = await fetch('/api/forumline/auth/token-exchange', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: forumlineToken }),
+    })
+    if (!resp.ok) return false
+
+    const data = await resp.json()
+    if (!data.access_token || !data.user) return false
+
+    const payload = JSON.parse(atob(data.access_token.split('.')[1]))
+    const session = {
+      access_token: data.access_token,
+      expires_in: (payload.exp - payload.iat) || 86400,
+      expires_at: payload.exp || Math.floor(Date.now() / 1000) + 86400,
+      user: {
+        id: data.user.id,
+        user_metadata: {
+          username: data.user.username,
+          display_name: data.user.display_name,
+        },
+      },
+    }
+    saveSession(session)
+
+    const prof = await ensureProfile(session.user)
+    authStore.set({ user: toAppUser(session.user, prof), loading: false })
+    return true
+  } catch (err) {
+    console.error('[Auth] token exchange failed:', err)
+    return false
+  }
+}
+
 // --- Init ---
 
 export async function initAuth() {
@@ -162,7 +202,7 @@ export async function initAuth() {
   }
   if (currentSession) scheduleExpiryCheck(currentSession)
 
-  // Check URL hash for OAuth tokens
+  // Check URL hash for OAuth tokens (direct visit flow)
   await restoreSessionFromUrl()
 
   // Strip ?forumline_auth=success

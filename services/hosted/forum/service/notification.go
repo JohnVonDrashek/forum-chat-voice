@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -20,9 +21,7 @@ var mentionRe = regexp.MustCompile(`@(\w+)`)
 
 // NotificationConfig holds config needed for notification push.
 type NotificationConfig struct {
-	ForumlineURL          string
-	ForumlineClientID     string
-	ForumlineClientSecret string
+	ForumlineURL string
 }
 
 // NotificationService handles notification business logic.
@@ -116,8 +115,14 @@ func (ns *NotificationService) GeneratePostNotifications(threadID, postID, autho
 }
 
 // pushToForumline sends a batch of notifications to the forumline API webhook.
+// Authenticates using the ZITADEL_SERVICE_USER_PAT service key.
 func (ns *NotificationService) pushToForumline(items []model.ForumlinePushItem) {
-	if ns.Config.ForumlineURL == "" || ns.Config.ForumlineClientID == "" || ns.Config.ForumlineClientSecret == "" {
+	if ns.Config.ForumlineURL == "" {
+		return
+	}
+
+	serviceKey := os.Getenv("ZITADEL_SERVICE_USER_PAT")
+	if serviceKey == "" {
 		return
 	}
 
@@ -126,21 +131,17 @@ func (ns *NotificationService) pushToForumline(items []model.ForumlinePushItem) 
 	if len(items) == 1 {
 		endpoint = ns.Config.ForumlineURL + "/api/webhooks/notification"
 		wrapper := map[string]interface{}{
-			"client_id":        ns.Config.ForumlineClientID,
-			"client_secret":    ns.Config.ForumlineClientSecret,
 			"forumline_user_id": items[0].ForumlineUserID,
-			"type":             items[0].Type,
-			"title":            items[0].Title,
-			"body":             items[0].Body,
-			"link":             items[0].Link,
+			"type":              items[0].Type,
+			"title":             items[0].Title,
+			"body":              items[0].Body,
+			"link":              items[0].Link,
 		}
 		payload, _ = json.Marshal(wrapper)
 	} else {
 		endpoint = ns.Config.ForumlineURL + "/api/webhooks/notifications"
 		wrapper := map[string]interface{}{
-			"client_id":     ns.Config.ForumlineClientID,
-			"client_secret": ns.Config.ForumlineClientSecret,
-			"items":         items,
+			"items": items,
 		}
 		payload, _ = json.Marshal(wrapper)
 	}
@@ -154,6 +155,7 @@ func (ns *NotificationService) pushToForumline(items []model.ForumlinePushItem) 
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+serviceKey)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

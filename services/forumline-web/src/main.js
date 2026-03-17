@@ -49,7 +49,7 @@ import { ForumlineAPI, ForumlineAuth, EventStream, DmStore, PresenceTracker, For
 
 // UI modules that extend the SDK with DOM rendering
 import { initCallUI } from './api/call-ui.js';
-import { loginToForum } from './api/forum-webview.js';
+// loginToForum removed — auth is now automatic via invisible handshake
 import { handleDeepLinkParams, checkUrlParams } from './api/deep-link.js';
 
 // ========== CORE VIEW MANAGEMENT ==========
@@ -498,13 +498,10 @@ $('webviewMuteBtn')?.addEventListener('click', () => {
   showToast(willMute ? `Muted ${forum.name}` : `Unmuted ${forum.name}`);
 });
 
-$('webviewAuthBtn')?.addEventListener('click', () => {
-  loginToForum();
-});
-
-$('webviewBannerLoginBtn')?.addEventListener('click', () => {
-  loginToForum();
-});
+// Auth buttons no longer needed — invisible handshake handles auth automatically
+// Keeping listeners as no-ops in case the DOM elements still exist
+$('webviewAuthBtn')?.addEventListener('click', () => {});
+$('webviewBannerLoginBtn')?.addEventListener('click', () => {});
 
 // ========== INITIAL RENDER ==========
 renderForumList();

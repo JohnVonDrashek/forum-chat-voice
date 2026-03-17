@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/forumline/forumline/services/forumline-api/store"
 )
@@ -16,10 +18,27 @@ func NewWebhookHandler(s *store.Store) *WebhookHandler {
 	return &WebhookHandler{Store: s}
 }
 
+// authenticateWebhook validates the service key from the Authorization header.
+// Forums authenticate webhook calls using the shared ZITADEL_SERVICE_USER_PAT.
+func authenticateWebhook(r *http.Request) bool {
+	auth := r.Header.Get("Authorization")
+	if !strings.HasPrefix(auth, "Bearer ") {
+		return false
+	}
+	token := strings.TrimPrefix(auth, "Bearer ")
+	serviceKey := os.Getenv("ZITADEL_SERVICE_USER_PAT")
+	return serviceKey != "" && token == serviceKey
+}
+
 // HandleNotification handles POST /api/webhooks/notification.
 // Forums call this to push notifications to forumline when they are created.
-// Auth: forum_domain in the request body — the forum is identified by its registered domain.
+// Auth: Bearer token with ZITADEL_SERVICE_USER_PAT service key.
 func (h *WebhookHandler) HandleNotification(w http.ResponseWriter, r *http.Request) {
+	if !authenticateWebhook(r) {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid authorization"})
+		return
+	}
+
 	var body struct {
 		ForumDomain     string `json:"forum_domain"`
 		ForumlineUserID string `json:"forumline_user_id"`
@@ -62,7 +81,13 @@ func (h *WebhookHandler) HandleNotification(w http.ResponseWriter, r *http.Reque
 }
 
 // HandleNotificationBatch handles POST /api/webhooks/notifications (batch).
+// Auth: Bearer token with ZITADEL_SERVICE_USER_PAT service key.
 func (h *WebhookHandler) HandleNotificationBatch(w http.ResponseWriter, r *http.Request) {
+	if !authenticateWebhook(r) {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid authorization"})
+		return
+	}
+
 	var body struct {
 		ForumDomain string `json:"forum_domain"`
 		ForumName   string `json:"forum_name"`

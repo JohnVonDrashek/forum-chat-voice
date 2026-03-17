@@ -27,22 +27,20 @@ type Handlers struct {
 
 // Config holds environment-driven configuration for the forum server.
 type Config struct {
-	SiteURL                  string
-	Domain                   string
-	ForumName                string
-	IconURL                  string
-	ForumlineURL             string
-	ZitadelURL               string
-	ZitadelClientID          string
-	ZitadelClientSecret      string
-	LiveKitURL               string
-	LiveKitAPIKey            string
-	LiveKitAPISecret         string
-	R2AccountID              string
-	R2AccessKeyID            string
-	R2SecretAccessKey        string
-	R2BucketName             string
-	R2PublicURL              string
+	SiteURL              string
+	Domain               string
+	ForumName            string
+	IconURL              string
+	ForumlineURL         string
+	IdentityURL          string // https://id.forumline.net — "Sign in with Forumline" service
+	LiveKitURL           string
+	LiveKitAPIKey        string
+	LiveKitAPISecret     string
+	R2AccountID          string
+	R2AccessKeyID        string
+	R2SecretAccessKey    string
+	R2BucketName         string
+	R2PublicURL          string
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {

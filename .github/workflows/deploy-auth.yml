@@ -1,4 +1,4 @@
-name: Deploy Auth (Zitadel)
+name: Deploy Auth (Zitadel + Identity Service)
 
 on:
   workflow_dispatch:
@@ -6,6 +6,9 @@ on:
     branches: [main]
     paths:
       - 'deploy/compose/auth/**'
+      - 'deploy/docker/Dockerfile.go-id'
+      - 'services/forumline-id/**'
+      - 'packages/backend/**'
       - 'secrets.kdbx'
 
 jobs:

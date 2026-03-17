@@ -9,7 +9,6 @@ require (
 	github.com/livekit/server-sdk-go/v2 v2.15.0
 	github.com/minio/minio-go/v7 v7.0.99
 	github.com/redis/go-redis/v9 v9.18.0
-	github.com/zitadel/oidc/v3 v3.45.1
 )
 
 require (
@@ -86,6 +85,7 @@ require (
 	github.com/wlynxg/anet v0.0.5 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	github.com/zitadel/logging v0.6.2 // indirect
+	github.com/zitadel/oidc/v3 v3.45.1 // indirect
 	github.com/zitadel/schema v1.3.1 // indirect
 	github.com/zitadel/zitadel-go/v3 v3.26.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect

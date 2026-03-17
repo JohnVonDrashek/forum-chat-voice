@@ -1,13 +1,15 @@
 // ========== FORUM WEBVIEW (iframe management) ==========
-// Handles webview iframe embedding, postMessage bridge, and login flow.
-// Subscribes to ForumStore from @forumline/client-sdk for data.
+// Handles webview iframe embedding and the "invisible handshake" auth flow.
+// When a user opens a forum in the app, their Forumline JWT is passed to the
+// forum via postMessage. The forum exchanges it for a local session — zero
+// clicks, zero redirects, seamless.
 
 import { ForumStore } from '@forumline/client-sdk';
 import { avatarUrl } from '../lib/avatar.js';
 
 let _webviewIframe = null;
 let _messageHandler = null;
-let _webviewState = { loading: false, loggingIn: false, hasCalledAuthed: false, loginAttempted: false, authUrl: null };
+let _webviewState = { loading: false, authSent: false };
 let _currentWebviewDomain = null;
 
 function _postToForum(msg, origin) {
@@ -43,41 +45,69 @@ export function showWebview(forum, path) {
 
   const accessToken = ForumStore._accessToken;
   const iframe = document.createElement('iframe');
-  iframe.src = forum.web_base + (path || ''); iframe.title = forum.name + ' forum';
+  iframe.src = forum.web_base + (path || '');
+  iframe.title = forum.name + ' forum';
   iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
   iframe.setAttribute('allow', 'clipboard-read; clipboard-write; microphone; display-capture');
   iframe.style.cssText = 'width:100%;height:100%;border:none;';
-  container.appendChild(iframe); _webviewIframe = iframe;
+  container.appendChild(iframe);
+  _webviewIframe = iframe;
 
-  _webviewState = { loading: true, loggingIn: false, hasCalledAuthed: false, loginAttempted: false, authUrl: accessToken ? forum.web_base + '/api/forumline/auth?forumline_token=' + encodeURIComponent(accessToken) : null };
+  _webviewState = { loading: true, authSent: false };
   const forumOrigin = new URL(forum.web_base).origin;
+
   iframe.addEventListener('load', () => {
     if (spinner) spinner.classList.add('hidden');
     _webviewState.loading = false;
-    if (_webviewState.loggingIn) {
-      try { var u = new URL(iframe.contentWindow.location.href); var e = u.searchParams.get('error'); if (e) { var m = { auth_failed: 'Forum login failed.', email_exists: 'Account already exists.' }; if (typeof showToast === 'function') showToast(m[e] || 'Login error: ' + e); } } catch (ex) {}
-      _webviewState.loggingIn = false; _webviewState.loginAttempted = false;
-      setTimeout(() => { if (!_webviewState.hasCalledAuthed) { _webviewState.loginAttempted = true; _postToForum({ type: 'forumline:request_auth_state' }, forumOrigin); } }, 1500);
-      return;
-    }
-    _postToForum({ type: 'forumline:request_auth_state' }, forumOrigin);
   });
 
   _messageHandler = (event) => {
     if (event.origin !== forumOrigin) return;
-    var msg = event.data; if (!msg || !msg.type || msg.type.indexOf('forumline:') !== 0) return;
+    var msg = event.data;
+    if (!msg || !msg.type || msg.type.indexOf('forumline:') !== 0) return;
+
     switch (msg.type) {
       case 'forumline:ready':
-        _postToForum({ type: 'forumline:request_auth_state' }, forumOrigin);
+        // Forum iframe loaded — send the invisible handshake if we have a token
+        if (accessToken && !_webviewState.authSent) {
+          _webviewState.authSent = true;
+          _postToForum({ type: 'forumline:token_exchange', token: accessToken }, forumOrigin);
+        } else {
+          _postToForum({ type: 'forumline:request_auth_state' }, forumOrigin);
+        }
         _postToForum({ type: 'forumline:request_unread_counts' }, forumOrigin);
         break;
+
       case 'forumline:auth_state':
-        if (msg.signedIn) { if (!_webviewState.hasCalledAuthed) { _webviewState.hasCalledAuthed = true; _webviewState.loginAttempted = false; var b = document.getElementById('webviewBanner'); if (b) b.classList.add('hidden'); } }
-        else { if (_webviewState.loginAttempted && !_webviewState.hasCalledAuthed && !_webviewState.loggingIn && typeof showToast === 'function') showToast('Login to ' + forum.name + ' did not complete.'); _webviewState.loginAttempted = false; _webviewState.hasCalledAuthed = false; if (_webviewState.authUrl) { var bn = document.getElementById('webviewBanner'); if (bn) bn.classList.remove('hidden'); } }
+        if (msg.signedIn) {
+          // User is authenticated in the forum — hide any login banners
+          var b = document.getElementById('webviewBanner');
+          if (b) b.classList.add('hidden');
+        } else if (!_webviewState.authSent && accessToken) {
+          // Forum says not signed in but we have a token — try the handshake
+          _webviewState.authSent = true;
+          _postToForum({ type: 'forumline:token_exchange', token: accessToken }, forumOrigin);
+        }
         break;
-      case 'forumline:unread_counts': ForumStore.setUnreadCounts(forum.domain, msg.counts); break;
-      case 'forumline:notification': if (msg.notification && msg.notification.title && typeof showToast === 'function') showToast(forum.name + ': ' + msg.notification.title); break;
-      case 'forumline:navigate': break;
+
+      case 'forumline:auth_complete':
+        // Invisible handshake succeeded
+        var bn = document.getElementById('webviewBanner');
+        if (bn) bn.classList.add('hidden');
+        break;
+
+      case 'forumline:unread_counts':
+        ForumStore.setUnreadCounts(forum.domain, msg.counts);
+        break;
+
+      case 'forumline:notification':
+        if (msg.notification && msg.notification.title && typeof showToast === 'function') {
+          showToast(forum.name + ': ' + msg.notification.title);
+        }
+        break;
+
+      case 'forumline:navigate':
+        break;
     }
   };
   window.addEventListener('message', _messageHandler);
@@ -91,14 +121,6 @@ export function destroyWebview() {
   if (_webviewIframe) { _webviewIframe.remove(); _webviewIframe = null; }
   var b = document.getElementById('webviewBanner'); if (b) b.classList.add('hidden');
   var s = document.getElementById('webviewSpinner'); if (s) s.classList.add('hidden');
-}
-
-export function loginToForum() {
-  if (!_webviewState.authUrl || !_webviewIframe) return;
-  _webviewState.loggingIn = true; _webviewState.loginAttempted = true; _webviewState.loading = true;
-  var s = document.getElementById('webviewSpinner'); if (s) s.classList.remove('hidden');
-  var b = document.getElementById('webviewBanner'); if (b) b.classList.add('hidden');
-  _webviewIframe.src = _webviewState.authUrl;
 }
 
 // Subscribe to ForumStore changes to auto-manage webview

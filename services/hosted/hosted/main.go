@@ -32,7 +32,6 @@ import (
 	"github.com/forumline/forumline/backend/httpkit"
 	"github.com/forumline/forumline/backend/sse"
 	"github.com/forumline/forumline/backend/valkey"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/forumline/forumline/services/hosted/forum"
 	plat "github.com/forumline/forumline/services/hosted/platform"
 	"github.com/minio/minio-go/v7"
@@ -78,17 +77,8 @@ func main() {
 	sseHub.Listen(ctx, "post_changes")
 	sseHub.StartListening(ctx)
 
-	// Router cache clear function — called after OAuth fix to force router rebuild
 	var routerMu sync.RWMutex
 	routerCache := make(map[string]http.Handler) // domain -> cached router
-	clearRouterCache := func() {
-		routerMu.Lock()
-		routerCache = make(map[string]http.Handler)
-		routerMu.Unlock()
-	}
-
-	// Fix tenants missing OAuth credentials (best-effort, runs in background)
-	go fixMissingOAuth(ctx, pool, store, clearRouterCache)
 
 	// Site cache for custom frontends (256MB, 5-minute TTL)
 	siteCache := plat.NewSiteCache(256, 5*time.Minute)
@@ -150,21 +140,19 @@ func main() {
 		}
 
 		cfg := &forum.Config{
-			SiteURL:                "https://" + tenant.Domain,
-			Domain:                 tenant.Domain,
-			ForumName:              tenant.Name,
-			ForumlineURL:           os.Getenv("FORUMLINE_APP_URL"),
-			ZitadelURL:             os.Getenv("ZITADEL_URL"),
-			ZitadelClientID:        tenant.ZitadelClientID,
-			ZitadelClientSecret:    tenant.ZitadelClientSecret,
-			LiveKitURL:             os.Getenv("LIVEKIT_URL"),
-			LiveKitAPIKey:          os.Getenv("LIVEKIT_API_KEY"),
-			LiveKitAPISecret:       os.Getenv("LIVEKIT_API_SECRET"),
-			R2AccountID:            os.Getenv("R2_ACCOUNT_ID"),
-			R2AccessKeyID:          os.Getenv("R2_ACCESS_KEY_ID"),
-			R2SecretAccessKey:      os.Getenv("R2_SECRET_ACCESS_KEY"),
-			R2BucketName:           os.Getenv("R2_BUCKET_NAME"),
-			R2PublicURL:            os.Getenv("R2_PUBLIC_URL"),
+			SiteURL:           "https://" + tenant.Domain,
+			Domain:            tenant.Domain,
+			ForumName:         tenant.Name,
+			ForumlineURL:      os.Getenv("FORUMLINE_APP_URL"),
+			IdentityURL:       os.Getenv("IDENTITY_URL"),
+			LiveKitURL:        os.Getenv("LIVEKIT_URL"),
+			LiveKitAPIKey:     os.Getenv("LIVEKIT_API_KEY"),
+			LiveKitAPISecret:  os.Getenv("LIVEKIT_API_SECRET"),
+			R2AccountID:       os.Getenv("R2_ACCOUNT_ID"),
+			R2AccessKeyID:     os.Getenv("R2_ACCESS_KEY_ID"),
+			R2SecretAccessKey: os.Getenv("R2_SECRET_ACCESS_KEY"),
+			R2BucketName:      os.Getenv("R2_BUCKET_NAME"),
+			R2PublicURL:       os.Getenv("R2_PUBLIC_URL"),
 		}
 
 		forumRouter := forum.NewRouter(tp, sseHub, cfg, valkeyClient)
@@ -223,80 +211,6 @@ func main() {
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 		log.Fatalf("server error: %v", err)
 	}
-}
-
-// fixMissingOAuth registers OAuth credentials for tenants that don't have them.
-// This handles the case where provisioning succeeded but OAuth registration failed.
-// Uses the service-level /api/forums/ensure-oauth endpoint on the Forumline API.
-func fixMissingOAuth(ctx context.Context, pool *pgxpool.Pool, store *plat.TenantStore, clearRouterCache func()) {
-	// Wait a moment for the Forumline API to be ready after deploy
-	time.Sleep(5 * time.Second)
-
-	forumlineURL := os.Getenv("FORUMLINE_APP_URL")
-	serviceKey := os.Getenv("ZITADEL_SERVICE_USER_PAT")
-	if forumlineURL == "" || serviceKey == "" {
-		return
-	}
-
-	for _, tenant := range store.All() {
-		if tenant.ZitadelClientID != "" {
-			continue
-		}
-
-		log.Printf("tenant %s (%s) missing OAuth credentials, attempting registration...", tenant.Slug, tenant.Domain)
-
-		bodyJSON, _ := json.Marshal(map[string]string{"domain": tenant.Domain})
-		req, err := http.NewRequestWithContext(ctx, "POST", forumlineURL+"/api/forums/ensure-oauth", strings.NewReader(string(bodyJSON)))
-		if err != nil {
-			log.Printf("failed to create request for %s: %v", tenant.Slug, err)
-			continue
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+serviceKey)
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			log.Printf("OAuth registration request failed for %s: %v", tenant.Slug, err)
-			continue
-		}
-		respBody, _ := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-
-		if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-			log.Printf("OAuth registration failed for %s: %d %s", tenant.Slug, resp.StatusCode, string(respBody))
-			continue
-		}
-
-		var result struct {
-			ClientID     string `json:"client_id"`
-			ClientSecret string `json:"client_secret"`
-		}
-		if err := json.Unmarshal(respBody, &result); err != nil || result.ClientID == "" {
-			if resp.StatusCode == http.StatusOK {
-				log.Printf("OAuth credentials already exist for %s", tenant.Slug)
-			} else {
-				log.Printf("failed to parse OAuth response for %s: %v", tenant.Slug, err)
-			}
-			continue
-		}
-
-		_, err = pool.Exec(ctx,
-			`UPDATE platform_tenants SET forumline_client_id = $1, forumline_client_secret = $2 WHERE slug = $3`,
-			result.ClientID, result.ClientSecret, tenant.Slug)
-		if err != nil {
-			log.Printf("failed to store OAuth credentials for %s: %v", tenant.Slug, err)
-			continue
-		}
-
-		log.Printf("OAuth credentials registered for %s: client_id=%s", tenant.Slug, result.ClientID)
-	}
-
-	// Refresh tenant store and clear router cache to pick up new credentials
-	if err := store.Refresh(ctx); err != nil {
-		log.Printf("tenant store refresh after OAuth fix failed: %v", err)
-	}
-	clearRouterCache()
-	log.Println("router cache cleared after OAuth fix")
 }
 
 // spaHandler serves static files for tenant domains.

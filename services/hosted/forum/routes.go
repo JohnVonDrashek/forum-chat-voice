@@ -22,9 +22,7 @@ func NewRouter(pool db.DB, sseHub *sse.Hub, cfg *Config, valkeyClient *redis.Cli
 	s := store.New(pool)
 
 	notifSvc := service.NewNotificationService(s, &service.NotificationConfig{
-		ForumlineURL:          cfg.ForumlineURL,
-		ForumlineClientID:     cfg.ZitadelClientID,
-		ForumlineClientSecret: cfg.ZitadelClientSecret,
+		ForumlineURL: cfg.ForumlineURL,
 	})
 	threadSvc := service.NewThreadService(s)
 	postSvc := service.NewPostService(s, notifSvc)
@@ -61,10 +59,10 @@ func NewRouter(pool db.DB, sseHub *sse.Hub, cfg *Config, valkeyClient *redis.Cli
 	mux.Handle("GET /api/notification-preferences", httpkit.Use(h.HandleNotificationPreferences, auth))
 	mux.Handle("PUT /api/notification-preferences", httpkit.Use(h.HandleNotificationPreferences, auth))
 
-	// Forumline OAuth (IP-based rate limit on auth endpoints)
+	// Forumline auth (IP-based rate limit on auth endpoints)
 	mux.Handle("GET /api/forumline/auth", httpkit.Use(h.HandleForumlineAuth, authRL))
-	mux.Handle("POST /api/forumline/auth", httpkit.Use(h.HandleForumlineAuth, authRL))
 	mux.Handle("GET /api/forumline/auth/callback", httpkit.Use(h.HandleForumlineCallback, authRL))
+	mux.Handle("POST /api/forumline/auth/token-exchange", httpkit.Use(h.HandleTokenExchange, authRL))
 	mux.Handle("GET /api/forumline/auth/forumline-token", httpkit.Use(h.HandleForumlineToken, authRL))
 	mux.HandleFunc("GET /api/forumline/auth/session", h.HandleForumlineSession)
 	mux.HandleFunc("DELETE /api/forumline/auth/session", h.HandleForumlineSession)

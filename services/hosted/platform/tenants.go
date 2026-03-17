@@ -12,21 +12,19 @@ import (
 
 // Tenant holds the configuration for a single hosted forum.
 type Tenant struct {
-	ID                    string
-	Slug                  string
-	Name                  string
-	SchemaName            string
-	Domain                string
-	OwnerForumlineID      string
-	Description           string
-	IconURL               string
-	Theme                 string
-	ZitadelClientID     string
-	ZitadelClientSecret string
-	Active                bool
-	HasCustomSite         bool
-	SiteStorageBytes      int64
-	SiteStorageLimit      int64
+	ID               string
+	Slug             string
+	Name             string
+	SchemaName       string
+	Domain           string
+	OwnerForumlineID string
+	Description      string
+	IconURL          string
+	Theme            string
+	Active           bool
+	HasCustomSite    bool
+	SiteStorageBytes int64
+	SiteStorageLimit int64
 }
 
 // TenantStore caches tenant configs in memory and refreshes from the database
@@ -75,8 +73,7 @@ func (ts *TenantStore) refresh(ctx context.Context) error {
 	rows, err := ts.pool.Query(ctx, `
 		SELECT id, slug, name, schema_name, domain, owner_forumline_id,
 		       COALESCE(description, ''), COALESCE(icon_url, ''),
-		       theme, COALESCE(zitadel_client_id, ''),
-		       COALESCE(zitadel_client_secret, ''), active,
+		       theme, active,
 		       has_custom_site, site_storage_bytes, site_storage_limit
 		FROM platform_tenants
 		WHERE active = true
@@ -93,8 +90,8 @@ func (ts *TenantStore) refresh(ctx context.Context) error {
 		if err := rows.Scan(
 			&t.ID, &t.Slug, &t.Name, &t.SchemaName, &t.Domain,
 			&t.OwnerForumlineID, &t.Description, &t.IconURL,
-			&t.Theme, &t.ZitadelClientID, &t.ZitadelClientSecret,
-			&t.Active, &t.HasCustomSite, &t.SiteStorageBytes, &t.SiteStorageLimit,
+			&t.Theme, &t.Active,
+			&t.HasCustomSite, &t.SiteStorageBytes, &t.SiteStorageLimit,
 		); err != nil {
 			return fmt.Errorf("scan tenant: %w", err)
 		}

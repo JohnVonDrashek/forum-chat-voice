@@ -38,6 +38,13 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "forumline" {
       service  = "http://192.168.1.111:7880"
     }
 
+    # Forumline Identity Service — id.forumline.net
+    # "Sign in with Forumline" OAuth proxy, co-located with Zitadel on auth-prod
+    ingress_rule {
+      hostname = "id.forumline.net"
+      service  = "http://192.168.1.110:3000"
+    }
+
     # SSH access for CI deploys — single bastion on Proxmox host
     # Developer SSH goes through WireGuard VPN instead
     ingress_rule {

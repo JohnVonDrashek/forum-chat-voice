@@ -43,4 +43,9 @@ ALTER TABLE platform_tenants ADD COLUMN IF NOT EXISTS has_custom_site BOOLEAN NO
 ALTER TABLE platform_tenants ADD COLUMN IF NOT EXISTS site_storage_bytes BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE platform_tenants ADD COLUMN IF NOT EXISTS site_storage_limit BIGINT NOT NULL DEFAULT 52428800; -- 50MB
 
+-- Auth is now handled by id.forumline.net — per-forum OAuth credentials are no longer needed.
+-- Drop the legacy columns (safe: they were nullable and are no longer read by the app).
+ALTER TABLE platform_tenants DROP COLUMN IF EXISTS forumline_client_id;
+ALTER TABLE platform_tenants DROP COLUMN IF EXISTS forumline_client_secret;
+
 SELECT 'Platform tables created!' AS status;
