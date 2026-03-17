@@ -16,19 +16,6 @@ services:
       timeout: 5s
       retries: 10
 
-  init-db:
-    image: postgres:17-alpine
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - ./init.sql:/scripts/01-forumline.sql:ro
-      - ../hosted/init-forum-tables.sql:/scripts/02-forum-tables.sql:ro
-      - ../hosted/init-forum.sql:/scripts/03-forum-triggers.sql:ro
-    environment:
-      PGPASSWORD: postgres
-    entrypoint: ["sh", "-c", "for f in /scripts/*.sql; do psql -h db -U postgres -d postgres -f $$f; done && echo 'DB seeded!'"]
-
   valkey:
     image: valkey/valkey:8-alpine
     ports:

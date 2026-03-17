@@ -54,6 +54,13 @@ func newRouter(s *store.Store, sseHub *sse.Hub, valkey *redis.Client) *http.Serv
 	// DMs are per-user (authenticated), webhooks are per-IP (service keys)
 	dmRL := httpkit.UserRateLimitMiddleware(httpkit.NewValkeyRateLimiter(valkey, 30, time.Minute))
 
+	// Health check (no auth, no DB — just proves the server is alive)
+	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+
 	// Auth routes (Zitadel handles login/signup, we just need session + logout)
 	mux.Handle("GET /api/auth/session", use(authH.HandleSession, authMW))
 	mux.HandleFunc("POST /api/auth/logout", authH.HandleLogout)
