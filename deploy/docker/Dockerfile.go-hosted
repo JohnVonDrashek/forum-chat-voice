@@ -6,6 +6,7 @@ COPY services/hosted/go.mod services/hosted/go.sum ./
 COPY packages/backend/ /packages/backend/
 RUN go mod download
 
+COPY services/hosted/db/ db/
 COPY services/hosted/forum/ forum/
 COPY services/hosted/sqlcdb/ sqlcdb/
 COPY services/hosted/platform/ platform/
