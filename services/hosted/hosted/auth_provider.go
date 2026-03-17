@@ -141,7 +141,7 @@ func (p *ForumlineAuthProvider) TokenExchange(w http.ResponseWriter, r *http.Req
 		"access_token":  req.Token,
 		"local_user_id": localUserID,
 		"user": map[string]string{
-			"id":           userInfo.ForumlineID,
+			"id":           localUserID,
 			"username":     userInfo.Username,
 			"display_name": userInfo.DisplayName,
 			"avatar_url":   userInfo.AvatarURL,
