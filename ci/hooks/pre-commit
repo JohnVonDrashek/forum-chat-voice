@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Pre-commit hook: runs linters and tests in parallel, filtered by staged files.
+# Replaces lefthook — zero dependencies, same behavior.
+#
+# Usage:
+#   ci/hooks/pre-commit              # normal git hook (filters by staged files)
+#   ci/hooks/pre-commit --all-files  # CI mode (runs everything)
+
+set -uo pipefail
+
+ALL_FILES=false
+[ "${1:-}" = "--all-files" ] && ALL_FILES=true
+
+# Get staged files (or pretend everything matches in CI mode)
+if $ALL_FILES; then
+  staged_files_match() { return 0; }
+else
+  STAGED=$(git diff --cached --name-only)
+  [ -z "$STAGED" ] && exit 0
+  staged_files_match() {
+    echo "$STAGED" | grep -qE "$1"
+  }
+fi
+
+PIDS=()
+NAMES=()
+FAILS=0
+
+# Run a check in the background if staged files match the pattern.
+# Usage: run_check "name" "pattern" command...
+run_check() {
+  local name="$1" pattern="$2"
+  shift 2
+  if staged_files_match "$pattern"; then
+    "$@" &
+    PIDS+=($!)
+    NAMES+=("$name")
+  fi
+}
+
+# --- Checks ---
+
+run_check "lockfile-check" \
+  "package\.json$" \
+  bash ci/hooks/lockfile-check.sh
+
+run_check "env-check" \
+  "\.env" \
+  bash ci/hooks/env-check.sh
+
+if command -v gitleaks >/dev/null 2>&1; then
+  run_check "gitleaks" \
+    "." \
+    gitleaks protect --staged --no-banner
+fi
+
+run_check "biome" \
+  "(services/forumline-web|packages/frontend|services/hosted/src)/.*\.(ts|tsx|js|mjs)$" \
+  pnpm lint
+
+run_check "golangci-lint" \
+  "\.go$" \
+  bash -c '
+    cd packages/backend && golangci-lint run ./... &&
+    cd ../forum && golangci-lint run ./... &&
+    cd ../../services/forumline-api && golangci-lint run ./... &&
+    cd ../hosted && golangci-lint run ./...
+  '
+
+run_check "go-test-backend" \
+  "packages/backend/.*\.go$" \
+  bash -c 'cd packages/backend && go test ./...'
+
+run_check "go-test-api" \
+  "(services/forumline-api|packages/backend)/.*\.go$" \
+  bash -c 'cd services/forumline-api && go test ./...'
+
+run_check "go-test-forum" \
+  "packages/forum/.*\.go$" \
+  bash -c 'cd packages/forum && go test ./...'
+
+run_check "go-test-hosted" \
+  "(services/hosted|packages/backend|packages/forum)/.*\.go$" \
+  bash -c 'cd services/hosted && go test ./...'
+
+run_check "ts-test" \
+  "(services/forumline-web|packages/frontend)/.*\.(ts|tsx|js|mjs)$" \
+  pnpm test
+
+# --- Wait for all checks ---
+
+for i in "${!PIDS[@]}"; do
+  if ! wait "${PIDS[$i]}"; then
+    echo "FAIL: ${NAMES[$i]}" >&2
+    FAILS=$((FAILS + 1))
+  fi
+done
+
+if [ "$FAILS" -gt 0 ]; then
+  echo "" >&2
+  echo "$FAILS check(s) failed." >&2
+  exit 1
+fi
