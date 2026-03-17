@@ -7,6 +7,7 @@ COPY packages/backend/ /packages/backend/
 RUN go mod download
 
 COPY services/hosted/forum/ forum/
+COPY services/hosted/sqlcdb/ sqlcdb/
 COPY services/hosted/platform/ platform/
 COPY services/hosted/hosted/main.go hosted/main.go
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/hosted ./hosted/
