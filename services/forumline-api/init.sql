@@ -69,6 +69,22 @@ CREATE TABLE IF NOT EXISTS forumline_conversation_members (
 );
 CREATE INDEX IF NOT EXISTS idx_convo_members_user ON forumline_conversation_members(user_id);
 
+-- Voice/video calls (1:1, via LiveKit)
+CREATE TABLE IF NOT EXISTS forumline_calls (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES forumline_conversations(id) ON DELETE CASCADE,
+  caller_id TEXT NOT NULL REFERENCES forumline_profiles(id) ON DELETE CASCADE,
+  callee_id TEXT NOT NULL REFERENCES forumline_profiles(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'ringing',
+  started_at TIMESTAMPTZ,
+  ended_at TIMESTAMPTZ,
+  duration_seconds INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_forumline_calls_conversation ON forumline_calls(conversation_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_forumline_calls_active ON forumline_calls(status) WHERE status IN ('ringing', 'active');
+
 -- Direct messages (now linked to conversations)
 CREATE TABLE IF NOT EXISTS forumline_direct_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
