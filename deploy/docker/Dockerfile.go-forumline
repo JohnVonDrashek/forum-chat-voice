@@ -32,7 +32,7 @@ RUN pnpm install --ignore-scripts
 
 # Copy source and build
 COPY --from=pruner /app/out/full/ .
-RUN npx turbo build --filter=forumline-central-services...
+RUN cd services/forumline-web && npx vite build
 
 # ---- Production stage ----
 FROM alpine:3.21
