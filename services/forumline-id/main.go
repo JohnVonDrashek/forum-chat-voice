@@ -356,21 +356,18 @@ func handleUserInfo(zitadelURL, clientID string) http.HandlerFunc {
 
 		// Introspect the token with Zitadel
 		introspectURL := strings.TrimRight(zitadelURL, "/") + "/oauth/v2/introspect"
-		form := url.Values{"token": {token}}
-		req, err := http.NewRequestWithContext(r.Context(), "POST", introspectURL, strings.NewReader(form.Encode()))
+		form := url.Values{
+			"token":     {token},
+			"client_id": {clientID},
+		}
+		body := form.Encode()
+		req, err := http.NewRequestWithContext(r.Context(), "POST", introspectURL, strings.NewReader(body))
 		if err != nil {
 			writeErr(w, http.StatusInternalServerError, "failed to build introspection request")
 			return
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		// Use client_id for JWT-based client authentication
 		req.Header.Set("Authorization", "Bearer "+token)
-
-		// For introspection we use the token itself (Zitadel supports this for
-		// JWT profile client authentication). Alternatively, we could use
-		// client_id + client_secret, but this works for public clients too.
-		form.Set("client_id", clientID)
-		req.Body = io.NopCloser(strings.NewReader(form.Encode()))
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
