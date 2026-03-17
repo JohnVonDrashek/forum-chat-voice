@@ -30,9 +30,8 @@ WORKDIR /app
 COPY --from=pruner /app/out/json/ .
 RUN pnpm install --ignore-scripts
 
-# Copy source and build (tsconfig.base.json needed by TS packages)
+# Copy source and build
 COPY --from=pruner /app/out/full/ .
-COPY --from=pruner /app/tsconfig.base.json .
 RUN npx turbo build --filter=forumline-central-services...
 
 # ---- Production stage ----
