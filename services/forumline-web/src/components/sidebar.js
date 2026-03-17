@@ -121,6 +121,57 @@ export function renderForumList() {
   initDragAndDrop();
 }
 
+// ========== DRAG AND DROP ==========
+export function initDragAndDrop() {
+  const forumItems = document.querySelectorAll('#forumList .forum-item');
+  let draggedEl = null;
+
+  forumItems.forEach(item => {
+    item.setAttribute('draggable', 'true');
+
+    item.addEventListener('dragstart', (e) => {
+      draggedEl = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      document.querySelectorAll('.forum-item').forEach(i => i.classList.remove('drag-over'));
+      draggedEl = null;
+    });
+
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (draggedEl && draggedEl !== item) {
+        item.classList.add('drag-over');
+      }
+    });
+
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-over');
+    });
+
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      if (draggedEl && draggedEl !== item) {
+        const forums = ForumStore.forums;
+        const fromId = draggedEl.dataset.forum;
+        const toId = item.dataset.forum;
+        const fromIdx = forums.findIndex(f => (f.id || f.domain) === fromId);
+        const toIdx = forums.findIndex(f => (f.id || f.domain) === toId);
+        if (fromIdx >= 0 && toIdx >= 0) {
+          const [moved] = forums.splice(fromIdx, 1);
+          forums.splice(toIdx, 0, moved);
+          renderForumList();
+        }
+      }
+    });
+  });
+}
+
 // ========== DM LIST ==========
 export function renderDmList() {
   const el = $('dmList');
@@ -207,71 +258,6 @@ export function renderDmList() {
   el.innerHTML = '<div class="dm-item dm-loading">Sign in to see messages</div>';
 }
 
-// ========== DRAG AND DROP ==========
-export function initDragAndDrop() {
-  const forumItems = document.querySelectorAll('#forumList .forum-item');
-  let draggedEl = null;
-  let holdTimer = null;
-
-  forumItems.forEach(item => {
-    // Start draggable only after a long press (200ms) so clicks work normally
-    item.addEventListener('mousedown', () => {
-      holdTimer = setTimeout(() => {
-        item.setAttribute('draggable', 'true');
-      }, 200);
-    });
-
-    item.addEventListener('mouseup', () => {
-      clearTimeout(holdTimer);
-    });
-
-    item.addEventListener('mouseleave', () => {
-      clearTimeout(holdTimer);
-    });
-
-    item.addEventListener('dragstart', (e) => {
-      draggedEl = item;
-      item.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-
-    item.addEventListener('dragend', () => {
-      item.classList.remove('dragging');
-      item.removeAttribute('draggable');
-      document.querySelectorAll('.forum-item').forEach(i => i.classList.remove('drag-over'));
-      draggedEl = null;
-    });
-
-    item.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      if (draggedEl && draggedEl !== item) {
-        item.classList.add('drag-over');
-      }
-    });
-
-    item.addEventListener('dragleave', () => {
-      item.classList.remove('drag-over');
-    });
-
-    item.addEventListener('drop', (e) => {
-      e.preventDefault();
-      item.classList.remove('drag-over');
-      if (draggedEl && draggedEl !== item) {
-        const forums = ForumStore.forums;
-        const fromId = draggedEl.dataset.forum;
-        const toId = item.dataset.forum;
-        const fromIdx = forums.findIndex(f => (f.id || f.domain) === fromId);
-        const toIdx = forums.findIndex(f => (f.id || f.domain) === toId);
-        if (fromIdx >= 0 && toIdx >= 0) {
-          const [moved] = forums.splice(fromIdx, 1);
-          forums.splice(toIdx, 0, moved);
-          renderForumList();
-        }
-      }
-    });
-  });
-}
 
 // ========== NEW DM MODAL ==========
 let _newDmDebounce = null;

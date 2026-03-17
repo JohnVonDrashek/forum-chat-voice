@@ -361,14 +361,10 @@
 }
 
 .forum-item {
-  cursor: pointer;
-}
-
-.forum-item[draggable="true"] {
   cursor: grab;
 }
 
-.forum-item[draggable="true"]:active {
+.forum-item:active {
   cursor: grabbing;
 }
 

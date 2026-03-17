@@ -20,6 +20,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
   },
+  plugins: [{
+    name: 'inject-runtime-config',
+    transformIndexHtml(html) {
+      // In production the Go server injects this; in dev we do it here
+      return html.replace('</head>', `<script>window.ZITADEL_CLIENT_ID="364146623619530755";</script>\n</head>`);
+    },
+  }],
   server: {
     host: true,
     port: 5173,

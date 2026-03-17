@@ -49,7 +49,7 @@ import { ForumlineAPI, ForumlineAuth, EventStream, DmStore, PresenceTracker, For
 
 // UI modules that extend the SDK with DOM rendering
 import { initCallUI } from './api/call-ui.js';
-// loginToForum removed — auth is now automatic via invisible handshake
+import './api/forum-webview.js'; // Side-effect: subscribes to ForumStore to show/hide webview
 import { handleDeepLinkParams, checkUrlParams } from './api/deep-link.js';
 
 // ========== CORE VIEW MANAGEMENT ==========
