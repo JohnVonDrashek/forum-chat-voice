@@ -94,15 +94,13 @@ if [ "$SERVICE" != "logs" ] && [ "$SERVICE" != "livekit" ]; then
   ssh "$HOST" "if [ -d $REMOTE/repo ]; then cd $REMOTE/repo && git fetch origin main && git reset --hard origin/main; else git clone https://github.com/forumline/forumline.git $REMOTE/repo && cd $REMOTE/repo && git checkout main; fi"
 fi
 
-# Run migrations
-if [ "$SERVICE" = "forumline" ]; then
-  echo "Running migrations..."
-  ssh "$HOST" "cd $REMOTE && for f in repo/services/forumline-api/migrations/*.sql; do echo \"Applying: \$f\" && docker compose exec -T postgres psql -U postgres -d postgres < \"\$f\"; done"
-fi
-if [ "$SERVICE" = "hosted" ]; then
-  echo "Running platform migrations..."
-  ssh "$HOST" "cd $REMOTE && docker compose exec -T postgres psql -U postgres -d postgres < repo/services/hosted/init-platform.sql"
-fi
+# Migrations are now handled by goose (embedded in the Go binary).
+# The service runs pending migrations on startup before accepting traffic.
+# Manual migration steps are no longer needed here.
+#
+# For the first deploy with goose, the baseline migration (00001) is
+# idempotent (CREATE IF NOT EXISTS) so it safely marks itself as applied
+# on existing databases.
 
 # Rebuild and restart
 if [ "$SERVICE" = "auth" ]; then

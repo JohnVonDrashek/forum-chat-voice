@@ -18,6 +18,7 @@ import (
 	"github.com/forumline/forumline/backend/httpkit"
 	"github.com/forumline/forumline/backend/sse"
 	"github.com/forumline/forumline/backend/valkey"
+	localdb "github.com/forumline/forumline/services/forumline-api/db"
 	"github.com/forumline/forumline/services/forumline-api/realtime"
 	"github.com/forumline/forumline/services/forumline-api/service"
 	"github.com/forumline/forumline/services/forumline-api/store"
@@ -37,6 +38,11 @@ func main() {
 	}
 	defer rawPool.Close()
 	pool := db.NewObservablePool(rawPool)
+
+	// Run pending migrations (goose, embedded SQL files)
+	if err := db.RunMigrations(ctx, os.Getenv("DATABASE_URL"), localdb.Migrations); err != nil {
+		log.Fatalf("failed to run migrations: %v", err)
+	}
 
 	// Valkey (Redis-compatible cache) — nil if VALKEY_URL not set
 	valkeyClient := valkey.NewClient(ctx)

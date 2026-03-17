@@ -32,6 +32,7 @@ import (
 	"github.com/forumline/forumline/backend/httpkit"
 	"github.com/forumline/forumline/backend/sse"
 	"github.com/forumline/forumline/backend/valkey"
+	localdb "github.com/forumline/forumline/services/hosted/db"
 	"github.com/forumline/forumline/services/hosted/forum"
 	plat "github.com/forumline/forumline/services/hosted/platform"
 	"github.com/minio/minio-go/v7"
@@ -51,6 +52,11 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 	defer pool.Close()
+
+	// Run pending platform migrations (goose, embedded SQL files)
+	if err := db.RunMigrations(ctx, os.Getenv("DATABASE_URL"), localdb.Migrations); err != nil {
+		log.Fatalf("failed to run migrations: %v", err)
+	}
 
 	// Valkey (Redis-compatible cache) — nil if VALKEY_URL not set
 	valkeyClient := valkey.NewClient(ctx)
