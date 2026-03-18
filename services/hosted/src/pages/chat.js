@@ -87,18 +87,25 @@ export function renderChat(container, { channelId }) {
       if (!content || !currentChannel || !user) return;
       input.value = '';
 
+      // Read profile at send time (not render time) — profile loads async after render.
+      // profile.id is the local forum profile UUID and matches the author_id in SSE
+      // payloads, which is required for the dedup check to work. user.id is the
+      // Zitadel subject (numeric string) which does NOT match the SSE payload.
+      const { profile } = authStore.get();
+      const profileId = profile?.id || user.id;
+
       // Optimistic add
       const optimistic = {
         id: 'temp-' + Date.now(),
         channel_id: currentChannel.id,
-        author_id: user.id,
+        author_id: profileId,
         content,
         created_at: new Date().toISOString(),
         author: {
-          id: user.id,
+          id: profileId,
           username: user.username,
-          display_name: user.username,
-          avatar_url: user.avatar,
+          display_name: profile?.display_name || user.username,
+          avatar_url: profile?.avatar_url || user.avatar,
         },
       };
       messages.push(optimistic);
