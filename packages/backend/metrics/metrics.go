@@ -93,6 +93,13 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return rw.ResponseWriter.Write(b)
 }
 
+// Flush implements http.Flusher so SSE streams work through this middleware.
+func (rw *responseWriter) Flush() {
+	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 // Unwrap supports http.ResponseController (Go 1.20+).
 func (rw *responseWriter) Unwrap() http.ResponseWriter {
 	return rw.ResponseWriter
