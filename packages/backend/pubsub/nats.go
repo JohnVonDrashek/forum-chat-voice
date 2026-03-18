@@ -51,6 +51,6 @@ func (n *NATSBus) Subscribe(subject string, handler func(data []byte)) error {
 
 func (n *NATSBus) Close() {
 	if n.conn != nil {
-		n.conn.Drain()
+		_ = n.conn.Drain()
 	}
 }
