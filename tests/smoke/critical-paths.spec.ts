@@ -37,7 +37,7 @@ test.describe('Hosted API critical paths', () => {
   const BASE = 'https://hosted.forumline.net';
 
   test('health endpoint returns 200', async ({ request }) => {
-    const res = await request.get(`${BASE}/api/health`);
+    const res = await request.get(`${BASE}/health`);
     expect(res.status()).toBe(200);
   });
 

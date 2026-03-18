@@ -26,7 +26,7 @@ declare -A URLS=(
 # Health endpoint path differs per service
 declare -A HEALTH_PATHS=(
   [forumline]="/api/health"
-  [hosted]="/api/health"
+  [hosted]="/health"
   [auth]="/health"
 )
 
