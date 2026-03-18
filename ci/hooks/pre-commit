@@ -54,6 +54,17 @@ if command -v gitleaks >/dev/null 2>&1; then
     gitleaks protect --staged --no-banner -c ci/.gitleaks.toml
 fi
 
+run_check "buf-gen-check" \
+  "proto/.*\.proto$" \
+  bash -c '
+    buf generate
+    if ! git diff --quiet packages/rpc/; then
+      echo "packages/rpc/ is stale — run: buf generate" >&2
+      echo "Then re-stage the generated files alongside the .proto change." >&2
+      exit 1
+    fi
+  '
+
 run_check "api-gen-check" \
   "services/forumline-api/openapi\.yaml$" \
   bash -c '

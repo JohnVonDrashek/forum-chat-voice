@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package forumline.hub.v1;
+
+option go_package = "github.com/forumline/forumline/rpc/forumline/hub/v1;hubv1";
+
+// HubService manages the Forumline hub directory.
+// Served by forumline-api; called by hosted when a forum is provisioned.
+service HubService {
+  rpc RegisterForum(RegisterForumRequest) returns (RegisterForumResponse);
+}
+
+message RegisterForumRequest {
+  string domain              = 1;
+  string name                = 2;
+  repeated string capabilities = 3;
+}
+
+message RegisterForumResponse {
+  bool created = 1;
+}

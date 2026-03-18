@@ -133,8 +133,8 @@ func spaHandler(apiHandler http.Handler) http.Handler {
 	indexHTML := buildIndexHTML(distDir)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// API and auth proxy routes go to the router
-		if strings.HasPrefix(r.URL.Path, "/api/") {
+		// API and Connect RPC routes go to the router
+		if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/forumline.") {
 			apiHandler.ServeHTTP(w, r)
 			return
 		}

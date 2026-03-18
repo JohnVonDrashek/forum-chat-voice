@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package forumline.platform.v1;
+
+option go_package = "github.com/forumline/forumline/rpc/forumline/platform/v1;platformv1";
+
+// PlatformService manages hosted forum tenant provisioning.
+// Served by the hosted service; called by forumline-api when a user creates a *.forumline.net forum.
+service PlatformService {
+  rpc ProvisionForum(ProvisionForumRequest) returns (ProvisionForumResponse);
+}
+
+message ProvisionForumRequest {
+  string user_id    = 1;
+  string slug       = 2;
+  string name       = 3;
+  string description = 4;
+}
+
+message ProvisionForumResponse {
+  string domain      = 1;
+  string slug        = 2;
+  string name        = 3;
+  string schema_name = 4;
+}

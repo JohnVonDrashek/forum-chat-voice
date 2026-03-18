@@ -127,6 +127,9 @@ func main() {
 	// Handlers directly implements oapi.ServerInterface — no adapter needed.
 	plat.RegisterRoutes(mux, platformHandlers)
 
+	// Internal Connect RPC services (service-to-service, not browser-facing)
+	plat.MountPlatformService(mux, pool, store, localdb.TenantMigrations)
+
 	// Forum routes — wrapped with tenant middleware.
 	// The tenant middleware resolves Host -> schema and sets search_path.
 	// Forum config and router are built once per tenant and cached.
@@ -267,7 +270,7 @@ func spaHandler(apiHandler http.Handler, store *plat.TenantStore, cache *plat.Si
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/health" || strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/.well-known/") {
+		if r.URL.Path == "/health" || strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/.well-known/") || strings.HasPrefix(r.URL.Path, "/forumline.") {
 			apiHandler.ServeHTTP(w, r)
 			return
 		}

@@ -164,5 +164,8 @@ func newRouter(s *store.Store, sseHub *sse.Hub, valkey *redis.Client) *http.Serv
 		httpkit.UserRateLimitMiddleware(dmRL)))
 	mux.Handle("POST /api/dms/{userId}/read", use(convoH.HandleLegacyMarkRead, authMW))
 
+	// Internal Connect RPC services (service-to-service, not browser-facing)
+	mountHubService(mux, forumSvc)
+
 	return mux
 }

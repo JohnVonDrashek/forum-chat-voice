@@ -3,8 +3,10 @@ module github.com/forumline/forumline/services/hosted
 go 1.26.1
 
 require (
+	connectrpc.com/connect v1.19.1
 	github.com/forumline/forumline/backend v0.0.0-00010101000000-000000000000
 	github.com/forumline/forumline/forum v0.0.0-00010101000000-000000000000
+	github.com/forumline/forumline/rpc v0.0.0-00010101000000-000000000000
 	github.com/getkin/kin-openapi v0.134.0
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/minio/minio-go/v7 v7.0.99
@@ -131,4 +133,5 @@ require (
 replace (
 	github.com/forumline/forumline/backend => ../../packages/backend
 	github.com/forumline/forumline/forum => ../../packages/forum
+	github.com/forumline/forumline/rpc => ../../packages/rpc
 )

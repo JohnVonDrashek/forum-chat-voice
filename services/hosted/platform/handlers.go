@@ -1,18 +1,20 @@
 package platform
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 
+	"connectrpc.com/connect"
 	"github.com/forumline/forumline/forum"
+	hubv1 "github.com/forumline/forumline/rpc/forumline/hub/v1"
+	"github.com/forumline/forumline/rpc/forumline/hub/v1/hubv1connect"
+	"github.com/forumline/forumline/rpc/servicekey"
 	"github.com/forumline/forumline/services/hosted/oapi"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -173,44 +175,30 @@ func (h *Handlers) ExportForum(ctx context.Context, request oapi.ExportForumRequ
 	return exportForumResponse{slug: request.Slug, data: data}, nil
 }
 
-// RegisterForumWithForumline calls POST /api/forums on the Forumline app
-// to register the new forum in the directory.
-func RegisterForumWithForumline(ctx context.Context, domain, name, authHeader string) (bool, error) {
+var hubClient hubv1connect.HubServiceClient
+
+func init() {
 	forumlineURL := os.Getenv("FORUMLINE_APP_URL")
 	if forumlineURL == "" {
-		return false, fmt.Errorf("FORUMLINE_APP_URL not set")
+		forumlineURL = "https://app.forumline.net"
 	}
+	hubClient = hubv1connect.NewHubServiceClient(
+		http.DefaultClient,
+		forumlineURL,
+		connect.WithInterceptors(servicekey.NewClientInterceptor(os.Getenv("INTERNAL_SERVICE_KEY"))),
+	)
+}
 
-	siteURL := "https://" + domain
-	body := map[string]interface{}{
-		"domain":       domain,
-		"name":         name,
-		"api_base":     siteURL + "/api/forumline",
-		"web_base":     siteURL,
-		"capabilities": []string{"threads", "chat", "voice", "notifications"},
-	}
-	bodyJSON, _ := json.Marshal(body)
-
-	req, err := http.NewRequestWithContext(ctx, "POST", forumlineURL+"/api/forums", bytes.NewReader(bodyJSON))
+// RegisterForumWithForumline calls the HubService to register the forum in the Forumline directory.
+func RegisterForumWithForumline(ctx context.Context, domain, name, _ string) (bool, error) {
+	resp, err := hubClient.RegisterForum(ctx, connect.NewRequest(&hubv1.RegisterForumRequest{
+		Domain:       domain,
+		Name:         name,
+		Capabilities: []string{"threads", "chat", "voice", "notifications"},
+	}))
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("hub registration failed: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
-	if authHeader != "" {
-		req.Header.Set("Authorization", authHeader)
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return false, fmt.Errorf("request failed: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		respBody, _ := io.ReadAll(resp.Body)
-		return false, fmt.Errorf("forumline API returned %d: %s", resp.StatusCode, string(respBody))
-	}
-
-	log.Printf("registered forum %s with Forumline directory", domain)
-	return true, nil
+	log.Printf("registered forum %s with Forumline hub (created=%v)", domain, resp.Msg.Created)
+	return resp.Msg.Created, nil
 }

@@ -1,0 +1,12 @@
+version: v2
+inputs:
+  - directory: proto
+plugins:
+  - local: protoc-gen-go
+    out: packages/rpc
+    opt:
+      - paths=source_relative
+  - local: protoc-gen-connect-go
+    out: packages/rpc
+    opt:
+      - paths=source_relative

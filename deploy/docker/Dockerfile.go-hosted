@@ -5,6 +5,7 @@ WORKDIR /app
 COPY services/hosted/go.mod services/hosted/go.sum ./
 COPY packages/backend/ /packages/backend/
 COPY packages/forum/ /packages/forum/
+COPY packages/rpc/ /packages/rpc/
 RUN go mod download
 
 COPY services/hosted/db/ db/

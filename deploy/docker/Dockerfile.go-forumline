@@ -3,8 +3,9 @@ FROM golang:1.26-alpine AS go-build
 
 WORKDIR /app
 
-# Copy backend Go packages (local replace directive in go.mod)
+# Copy local Go packages (local replace directives in go.mod)
 COPY packages/backend/ /packages/backend/
+COPY packages/rpc/ /packages/rpc/
 
 COPY services/forumline-api/go.mod services/forumline-api/go.sum ./
 RUN go mod download
