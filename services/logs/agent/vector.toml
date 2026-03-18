@@ -1,3 +1,8 @@
+# Enable health API for Docker healthcheck
+[api]
+enabled = true
+address = "0.0.0.0:8686"
+
 # Collect logs from all Docker containers
 [sources.docker]
 type = "docker_logs"
@@ -10,6 +15,19 @@ source = '''
 .host = "${LOGS_HOST_LABEL}"
 .container = replace(string!(.container_name), "/", "")
 '''
+
+# Emit internal metrics for monitoring Vector health
+[sources.internal]
+type = "internal_metrics"
+
+# Push Vector's own metrics to VictoriaMetrics
+[sinks.metrics]
+type = "prometheus_remote_write"
+inputs = ["internal"]
+endpoint = "http://192.168.1.108:8428/api/v1/write"
+default_namespace = "vector"
+[sinks.metrics.add_labels]
+host = "${LOGS_HOST_LABEL}"
 
 # Ship to VictoriaLogs (Loki-compatible endpoint)
 [sinks.victorialogs]

@@ -72,3 +72,32 @@ groups:
           description: >
             The forumline API has had zero in-flight requests for 10 minutes.
             Either no users are connected or the service is silently broken.
+
+  - name: log-pipeline
+    rules:
+      - alert: VectorAgentDown
+        expr: >
+          absent_over_time(vector_component_sent_events_total{host="forumline-prod"}[5m])
+          or absent_over_time(vector_component_sent_events_total{host="hosted-prod"}[5m])
+          or absent_over_time(vector_component_sent_events_total{host="livekit-prod"}[5m])
+          or absent_over_time(vector_component_sent_events_total{host="auth-prod"}[5m])
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Vector log agent stopped shipping"
+          description: >
+            A Vector agent has not reported metrics for 5+ minutes.
+            Logs from that host are not reaching VictoriaLogs.
+            Check: ssh root@<host-ip> 'docker logs logs-agent-vector-1 --tail 20'
+
+      - alert: VectorSinkErrors
+        expr: rate(vector_component_errors_total[5m]) > 0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Vector agent on {{ $labels.host }} has sink errors"
+          description: >
+            Vector is failing to ship logs. Usually means VictoriaLogs
+            is unreachable or rejecting data. Check vector.toml config.
