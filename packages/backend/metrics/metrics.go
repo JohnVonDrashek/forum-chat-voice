@@ -7,6 +7,7 @@
 package metrics
 
 import (
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -67,6 +68,19 @@ func Middleware(namespace string) func(http.Handler) http.Handler {
 
 			requestDuration.WithLabelValues(r.Method, p, status).Observe(duration)
 			requestsTotal.WithLabelValues(r.Method, p, status).Inc()
+
+			if rw.status >= 400 {
+				level := slog.LevelWarn
+				if rw.status >= 500 {
+					level = slog.LevelError
+				}
+				slog.Log(r.Context(), level, "http error",
+					"method", r.Method,
+					"path", r.URL.Path,
+					"status", rw.status,
+					"duration_ms", int(duration*1000),
+				)
+			}
 		})
 	}
 }
@@ -93,7 +107,8 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return rw.ResponseWriter.Write(b)
 }
 
-// Flush implements http.Flusher so SSE streams work through this middleware.
+// Flush implements http.Flusher for code that does w.(http.Flusher) directly.
+// ResponseController users get it via Unwrap, but direct assertions need this.
 func (rw *responseWriter) Flush() {
 	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
 		f.Flush()

@@ -72,11 +72,7 @@ func (s notificationSSEStream) VisitStreamNotificationsResponse(w http.ResponseW
 		close(client.Done)
 	}()
 
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
-		return nil
-	}
+	rc := http.NewResponseController(w)
 
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -87,7 +83,9 @@ func (s notificationSSEStream) VisitStreamNotificationsResponse(w http.ResponseW
 	if _, err := fmt.Fprint(w, ":connected\n\n"); err != nil {
 		return nil
 	}
-	flusher.Flush()
+	if err := rc.Flush(); err != nil {
+		return nil
+	}
 
 	heartbeat := time.NewTicker(30 * time.Second)
 	defer heartbeat.Stop()
@@ -100,7 +98,7 @@ func (s notificationSSEStream) VisitStreamNotificationsResponse(w http.ResponseW
 			if _, err := fmt.Fprint(w, ":heartbeat\n\n"); err != nil {
 				return nil
 			}
-			flusher.Flush()
+			_ = rc.Flush()
 		case data := <-client.Send:
 			var raw map[string]interface{}
 			if err := json.Unmarshal(data, &raw); err == nil {
@@ -126,7 +124,7 @@ func (s notificationSSEStream) VisitStreamNotificationsResponse(w http.ResponseW
 					return nil
 				}
 			}
-			flusher.Flush()
+			_ = rc.Flush()
 		}
 	}
 }

@@ -158,17 +158,16 @@ func (h *Hub) Unregister(client *Client) {
 
 // Serve writes SSE events to the response writer for the given client.
 func Serve(w http.ResponseWriter, r *http.Request, client *Client) {
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
-		return
-	}
+	rc := http.NewResponseController(w)
 
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
-	flusher.Flush()
+	if err := rc.Flush(); err != nil {
+		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		return
+	}
 
 	ctx := r.Context()
 	for {
@@ -181,7 +180,7 @@ func Serve(w http.ResponseWriter, r *http.Request, client *Client) {
 			if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
 				return
 			}
-			flusher.Flush()
+			_ = rc.Flush()
 		}
 	}
 }
@@ -252,17 +251,16 @@ func (h *Hub) UnregisterMulti(clients []*Client) {
 
 // ServeMulti writes tagged SSE events to the response from a MultiClient.
 func ServeMulti(w http.ResponseWriter, r *http.Request, mc *MultiClient) {
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
-		return
-	}
+	rc := http.NewResponseController(w)
 
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
-	flusher.Flush()
+	if err := rc.Flush(); err != nil {
+		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		return
+	}
 
 	ctx := r.Context()
 	for {
@@ -275,7 +273,7 @@ func ServeMulti(w http.ResponseWriter, r *http.Request, mc *MultiClient) {
 			if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", tagged.EventType, tagged.Data); err != nil {
 				return
 			}
-			flusher.Flush()
+			_ = rc.Flush()
 		}
 	}
 }
