@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -87,6 +88,7 @@ func (ps *PushService) SendToUser(ctx context.Context, userID, title, body, link
 	wg.Wait()
 
 	if len(staleEndpoints) > 0 {
+		log.Printf("[push] cleaning up %d stale endpoints for %s", len(staleEndpoints), userID)
 		ps.Store.DeleteStaleEndpoints(ctx, userID, staleEndpoints)
 	}
 

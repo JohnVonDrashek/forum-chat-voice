@@ -17,6 +17,12 @@ import (
 	"github.com/forumline/forumline/services/hosted/idclient"
 )
 
+// Cookie names for session management.
+const (
+	cookieState  = "forumline_state"
+	cookieUserID = "forumline_user_id"
+)
+
 // ForumlineAuthProvider implements forum.AuthProvider using id.forumline.net
 // as the identity service. This is the auth provider for hosted forums.
 type ForumlineAuthProvider struct {
@@ -59,7 +65,7 @@ func (p *ForumlineAuthProvider) StartLogin(w http.ResponseWriter, r *http.Reques
 	state := randomHexStr(16)
 
 	http.SetCookie(w, &http.Cookie{
-		Name: "forumline_state", Value: state,
+		Name: cookieState, Value: state,
 		Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: true, MaxAge: 600,
 	})
 
@@ -77,7 +83,7 @@ func (p *ForumlineAuthProvider) StartLogin(w http.ResponseWriter, r *http.Reques
 func (p *ForumlineAuthProvider) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	cookies := parseCookiesHelper(r)
 	state := r.URL.Query().Get("state")
-	if state == "" || cookies["forumline_state"] != state {
+	if state == "" || cookies[cookieState] != state {
 		writeJSONHelper(w, http.StatusBadRequest, map[string]string{"error": "state mismatch"})
 		return
 	}
@@ -109,10 +115,10 @@ func (p *ForumlineAuthProvider) HandleCallback(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	clearCookieHelper(w, "forumline_state")
+	clearCookieHelper(w, cookieState)
 
 	http.SetCookie(w, &http.Cookie{
-		Name: "forumline_user_id", Value: localUserID,
+		Name: cookieUserID, Value: localUserID,
 		Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: true, MaxAge: 3600,
 	})
 
@@ -167,7 +173,7 @@ func (p *ForumlineAuthProvider) TokenExchange(w http.ResponseWriter, r *http.Req
 // GetSession handles GET /api/forumline/auth/session.
 func (p *ForumlineAuthProvider) GetSession(w http.ResponseWriter, r *http.Request) {
 	cookies := parseCookiesHelper(r)
-	localUserID := cookies["forumline_user_id"]
+	localUserID := cookies[cookieUserID]
 	if localUserID == "" {
 		writeJSONHelper(w, http.StatusOK, nil)
 		return
@@ -180,7 +186,7 @@ func (p *ForumlineAuthProvider) GetSession(w http.ResponseWriter, r *http.Reques
 
 // Logout handles DELETE /api/forumline/auth/session.
 func (p *ForumlineAuthProvider) Logout(w http.ResponseWriter, r *http.Request) {
-	clearCookieHelper(w, "forumline_user_id")
+	clearCookieHelper(w, cookieUserID)
 	writeJSONHelper(w, http.StatusOK, map[string]bool{"ok": true})
 }
 

@@ -17,6 +17,12 @@ import (
 	"github.com/forumline/forumline/forum/store"
 )
 
+// Notification types used in the notification table and webhook payloads.
+const (
+	NotifTypeReply   = "reply"
+	NotifTypeMention = "mention"
+)
+
 var mentionRe = regexp.MustCompile(`@(\w+)`)
 
 // pushItem holds a notification to be pushed to the Forumline app.
@@ -91,7 +97,7 @@ func (ns *NotificationService) GeneratePostNotifications(threadID, postID, autho
 	// 1. Notify thread author about the reply
 	if threadAuthorID != (uuid.UUID{}) && !notified[threadAuthorID] {
 		notified[threadAuthorID] = true
-		notifyUser(threadAuthorID, "reply",
+		notifyUser(threadAuthorID, NotifTypeReply,
 			fmt.Sprintf("<strong>%s</strong> replied in \"%s\"", authorUsername, threadTitle),
 			truncate(content, 200), threadLink)
 	}
@@ -101,7 +107,7 @@ func (ns *NotificationService) GeneratePostNotifications(threadID, postID, autho
 		replyAuthorID, _ := ns.Store.GetPostAuthor(ctx, *replyToID)
 		if replyAuthorID != (uuid.UUID{}) && !notified[replyAuthorID] {
 			notified[replyAuthorID] = true
-			notifyUser(replyAuthorID, "reply",
+			notifyUser(replyAuthorID, NotifTypeReply,
 				fmt.Sprintf("<strong>%s</strong> replied to your post in \"%s\"", authorUsername, threadTitle),
 				truncate(content, 200), threadLink)
 		}
@@ -117,7 +123,7 @@ func (ns *NotificationService) GeneratePostNotifications(threadID, postID, autho
 		}
 		if !notified[mentionedUserID] {
 			notified[mentionedUserID] = true
-			notifyUser(mentionedUserID, "mention",
+			notifyUser(mentionedUserID, NotifTypeMention,
 				fmt.Sprintf("<strong>%s</strong> mentioned you in \"%s\"", authorUsername, threadTitle),
 				truncate(content, 200), threadLink)
 		}
