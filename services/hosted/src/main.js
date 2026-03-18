@@ -1,3 +1,7 @@
+// Error tracking must init first so it catches errors during module loading
+import { initErrorTracking } from './lib/error-tracking.js';
+initErrorTracking();
+
 import './style.css';
 import { getPageContainer, renderLayout } from './components/layout.js';
 import { closeMobileSidebar } from './components/sidebar.js';

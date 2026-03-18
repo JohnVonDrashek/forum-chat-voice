@@ -21,6 +21,7 @@ export default defineConfig({
   publicDir: 'public',
   build: {
     outDir: 'dist',
+    sourcemap: 'hidden', // generates .map files but doesn't add //# sourceMappingURL to bundles
   },
   plugins: [
     {

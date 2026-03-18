@@ -6,6 +6,9 @@ const apiTarget = process.env.VITE_API_TARGET || 'http://localhost:3000'
 export default defineConfig({
   plugins: [tailwindcss()],
   base: '/',
+  build: {
+    sourcemap: 'hidden', // generates .map files but doesn't add //# sourceMappingURL to bundles
+  },
   clearScreen: false,
   server: {
     host: true,

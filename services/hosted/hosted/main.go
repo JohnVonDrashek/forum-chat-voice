@@ -277,9 +277,25 @@ const indexHTML = "index.html"
 // spaHandler serves static files for tenant domains.
 // If a tenant has a custom site (HasCustomSite), files are served from R2
 // with an in-memory LRU cache. Otherwise, the default SPA from ./dist/ is served.
+// buildIndexHTML reads dist/index.html and injects runtime config (GLITCHTIP_DSN)
+// right before </head> so the frontend can read window.GLITCHTIP_DSN.
+func buildIndexHTML(distDir string) []byte {
+	raw, err := os.ReadFile(filepath.Join(distDir, "index.html"))
+	if err != nil {
+		log.Printf("Warning: could not read index.html for config injection: %v", err)
+		return raw
+	}
+	if dsn := os.Getenv("GLITCHTIP_DSN"); dsn != "" {
+		script := fmt.Sprintf(`<script>window.GLITCHTIP_DSN=%q;</script>`, dsn)
+		raw = []byte(strings.Replace(string(raw), "</head>", script+"\n</head>", 1))
+	}
+	return raw
+}
+
 func spaHandler(apiHandler http.Handler, store *plat.TenantStore, cache *plat.SiteCache) http.Handler {
 	distDir := "./dist"
 	fileServer := http.FileServer(http.Dir(distDir))
+	indexHTMLBytes := buildIndexHTML(distDir)
 
 	r2AccountID := os.Getenv("R2_ACCOUNT_ID")
 	r2Bucket := os.Getenv("R2_BUCKET_NAME")
@@ -337,7 +353,11 @@ func spaHandler(apiHandler http.Handler, store *plat.TenantStore, cache *plat.Si
 		localPath := filepath.Join(distDir, r.URL.Path)
 		if info, err := os.Stat(localPath); err == nil && !info.IsDir() { // #nosec G703 -- path is cleaned by http.Dir
 			if filepath.Base(r.URL.Path) == indexHTML {
+				// Serve injected index.html with runtime config
 				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				_, _ = w.Write(indexHTMLBytes)
+				return
 			}
 			fileServer.ServeHTTP(w, r)
 			return
@@ -349,7 +369,8 @@ func spaHandler(apiHandler http.Handler, store *plat.TenantStore, cache *plat.Si
 		}
 
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-		http.ServeFile(w, r, filepath.Join(distDir, indexHTML))
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(indexHTMLBytes)
 	})
 }
 

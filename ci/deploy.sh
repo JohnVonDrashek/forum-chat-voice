@@ -4,7 +4,7 @@
 #
 # Usage: ci/deploy.sh <service>
 #
-# Services: forumline, hosted, website, logs, auth, livekit
+# Services: forumline, hosted, website, logs, auth, livekit, glitchtip
 #
 # Secrets are read from deploy/secrets.kdbx via ci/secrets.sh.
 # The master password comes from KEEPASS_PASSWORD env var (CI)
@@ -34,6 +34,7 @@ declare -A HOSTS=(
   [logs]="logs-prod"
   [auth]="auth-prod"
   [livekit]="livekit-prod"
+  [glitchtip]="logs-prod"
 )
 
 declare -A PATHS=(
@@ -42,6 +43,7 @@ declare -A PATHS=(
   [logs]="/opt/logs"
   [auth]="/opt/auth"
   [livekit]="/opt/livekit"
+  [glitchtip]="/opt/glitchtip"
 )
 
 # Map service name to KeePass group (services without secrets have no group)
@@ -50,6 +52,7 @@ declare -A SECRET_GROUPS=(
   [hosted]="hosted-prod"
   [auth]="auth-prod"
   [livekit]="livekit-prod"
+  [glitchtip]="glitchtip-prod"
 )
 
 HOST="${HOSTS[$SERVICE]:?Unknown service: $SERVICE}"
@@ -69,6 +72,8 @@ fi
 echo "Uploading docker-compose.yml..."
 if [ "$SERVICE" = "logs" ]; then
   SRC_COMPOSE="services/logs/server/docker-compose.yml"
+elif [ "$SERVICE" = "glitchtip" ]; then
+  SRC_COMPOSE="services/glitchtip/docker-compose.yml"
 else
   SRC_COMPOSE="services/$SERVICE/docker-compose.yml"
   [ ! -f "$SRC_COMPOSE" ] && SRC_COMPOSE="deploy/compose/$SERVICE/docker-compose.yml"
@@ -89,7 +94,7 @@ if [ "$SERVICE" = "livekit" ]; then
 fi
 
 # Pull latest code (skip for infrastructure-only LXCs — no repo)
-if [ "$SERVICE" != "logs" ] && [ "$SERVICE" != "livekit" ]; then
+if [ "$SERVICE" != "logs" ] && [ "$SERVICE" != "livekit" ] && [ "$SERVICE" != "glitchtip" ]; then
   echo "Pulling latest code..."
   # Auth LXC needs repo for building forumline-id from source
   ssh "$HOST" "if [ -d $REMOTE/repo ]; then cd $REMOTE/repo && git fetch origin main && git reset --hard origin/main; else git clone https://github.com/forumline/forumline.git $REMOTE/repo && cd $REMOTE/repo && git checkout main; fi"
@@ -109,7 +114,7 @@ if [ "$SERVICE" = "auth" ]; then
   ssh "$HOST" "cd $REMOTE && docker compose pull postgres zitadel && docker compose up -d --build --force-recreate --wait && docker compose ps"
   echo "Running Zitadel post-deploy configuration..."
   "$SCRIPT_DIR/configure-zitadel.sh"
-elif [ "$SERVICE" = "logs" ] || [ "$SERVICE" = "livekit" ]; then
+elif [ "$SERVICE" = "logs" ] || [ "$SERVICE" = "livekit" ] || [ "$SERVICE" = "glitchtip" ]; then
   echo "Pulling and restarting..."
   ssh "$HOST" "cd $REMOTE && docker compose pull && docker compose up -d --force-recreate --wait && docker compose ps"
 else

@@ -1,0 +1,20 @@
+name: Deploy GlitchTip
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'services/glitchtip/**'
+      - 'secrets.kdbx'
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Deploy GlitchTip
+        run: ci/deploy.sh glitchtip
+        env:
+          KEEPASS_PASSWORD: ${{ secrets.KEEPASS_PASSWORD }}

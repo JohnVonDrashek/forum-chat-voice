@@ -200,7 +200,7 @@ func spaHandler(apiHandler http.Handler) http.Handler {
 }
 
 // buildIndexHTML reads dist/index.html and injects a <script> tag with
-// runtime config (ZITADEL_CLIENT_ID) right before </head>.
+// runtime config (ZITADEL_CLIENT_ID, GLITCHTIP_DSN) right before </head>.
 func buildIndexHTML(distDir string) []byte {
 	raw, err := os.ReadFile(filepath.Join(distDir, "index.html"))
 	if err != nil {
@@ -208,16 +208,18 @@ func buildIndexHTML(distDir string) []byte {
 		return raw
 	}
 
-	clientID := os.Getenv("ZITADEL_CLIENT_ID")
-	if clientID == "" {
-		return raw // nothing to inject
+	var configs []string
+	if v := os.Getenv("ZITADEL_CLIENT_ID"); v != "" {
+		configs = append(configs, fmt.Sprintf("window.ZITADEL_CLIENT_ID=%q;", v))
+	}
+	if v := os.Getenv("GLITCHTIP_DSN"); v != "" {
+		configs = append(configs, fmt.Sprintf("window.GLITCHTIP_DSN=%q;", v))
+	}
+	if len(configs) == 0 {
+		return raw
 	}
 
-	configScript := fmt.Sprintf(
-		`<script>window.ZITADEL_CLIENT_ID=%q;</script>`,
-		clientID,
-	)
-
+	configScript := "<script>" + strings.Join(configs, "") + "</script>"
 	return bytes.Replace(raw, []byte("</head>"), []byte(configScript+"\n</head>"), 1)
 }
 

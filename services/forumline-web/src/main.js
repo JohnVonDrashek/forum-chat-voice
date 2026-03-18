@@ -1,6 +1,10 @@
 // ========== FORUMLINE — Main Entry Point ==========
 // Composes all UI and API modules, wires up dependencies.
 
+// Error tracking must init first so it catches errors during module loading
+import { initErrorTracking } from './lib/error-tracking.js';
+initErrorTracking();
+
 import './styles/global.css';
 import './styles/layout.css';
 import './styles/components.css';

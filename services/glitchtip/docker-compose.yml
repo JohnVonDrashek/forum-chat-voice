@@ -1,0 +1,72 @@
+# GlitchTip — lightweight error tracking (Sentry-compatible)
+# Deployed on logs-prod LXC (192.168.1.108) alongside VictoriaLogs.
+# Web UI: https://errors.forumline.net (via Cloudflare Tunnel)
+#
+# First-time setup after deploy:
+#   1. Visit https://errors.forumline.net and create your admin account
+#   2. Create organization "Forumline"
+#   3. Create projects: "forumline-web" and "hosted"
+#   4. Copy DSNs into secrets.kdbx:
+#      - glitchtip-prod/GLITCHTIP_DSN_FORUMLINE_WEB
+#      - glitchtip-prod/GLITCHTIP_DSN_HOSTED
+#   5. Redeploy forumline + hosted services to pick up the DSN env vars
+
+services:
+  glitchtip-postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: glitchtip
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: glitchtip-local-only
+    volumes:
+      - glitchtip-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glitchtip"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  glitchtip-redis:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    command: --save "" --appendonly no --maxmemory 32mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  glitchtip-web:
+    image: glitchtip/glitchtip:latest
+    restart: unless-stopped
+    depends_on:
+      glitchtip-postgres:
+        condition: service_healthy
+      glitchtip-redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://glitchtip:glitchtip-local-only@glitchtip-postgres:5432/glitchtip
+      REDIS_URL: redis://glitchtip-redis:6379/0
+      PORT: "8000"
+      ENABLE_OPEN_USER_REGISTRATION: "false"
+
+  glitchtip-worker:
+    image: glitchtip/glitchtip:latest
+    restart: unless-stopped
+    depends_on:
+      glitchtip-postgres:
+        condition: service_healthy
+      glitchtip-redis:
+        condition: service_healthy
+    command: bin/run-celery-with-beat.sh
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://glitchtip:glitchtip-local-only@glitchtip-postgres:5432/glitchtip
+      REDIS_URL: redis://glitchtip-redis:6379/0
+
+volumes:
+  glitchtip-pg-data:
