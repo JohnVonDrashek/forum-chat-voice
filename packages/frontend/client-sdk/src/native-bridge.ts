@@ -153,7 +153,7 @@ export const NativeBridge = {
               native_token: msg.token,
               platform: this.isIOS() ? 'ios' : 'android',
             }),
-          }).catch(() => {});
+          }).catch((e) => console.warn('[NativeBridge] push token registration failed:', e));
         }
         break;
       case 'deep_link':

@@ -83,12 +83,12 @@ export const api = {
   getVoiceRooms: () => get('/api/voice-rooms'),
   getThreads: (limit = 20) => get(`/api/threads?limit=${limit}`),
   getThreadsByCategory: slug => get(`/api/categories/${encodeURIComponent(slug)}/threads`),
-  getThread: id => get(`/api/threads/${encodeURIComponent(id)}`).catch(() => null),
+  getThread: id => get(`/api/threads/${encodeURIComponent(id)}`).catch((e) => { console.error('[API] fetch failed:', e); return null; }),
   getPosts: threadId => get(`/api/threads/${encodeURIComponent(threadId)}/posts`),
-  getCategory: slug => get(`/api/categories/${encodeURIComponent(slug)}`).catch(() => null),
-  getProfile: id => get(`/api/profiles/${encodeURIComponent(id)}`).catch(() => null),
+  getCategory: slug => get(`/api/categories/${encodeURIComponent(slug)}`).catch((e) => { console.error('[API] fetch failed:', e); return null; }),
+  getProfile: id => get(`/api/profiles/${encodeURIComponent(id)}`).catch((e) => { console.error('[API] fetch failed:', e); return null; }),
   getProfileByUsername: username =>
-    get(`/api/profiles/by-username/${encodeURIComponent(username)}`).catch(() => null),
+    get(`/api/profiles/by-username/${encodeURIComponent(username)}`).catch((e) => { console.error('[API] fetch failed:', e); return null; }),
   getChatMessages: slug => get(`/api/channels/${encodeURIComponent(slug)}/messages`),
   getBookmarksWithMeta: () => get('/api/bookmarks', true),
   isBookmarked: threadId =>
@@ -122,7 +122,7 @@ export const api = {
   clearVoicePresence: () => del('/api/voice-presence'),
 
   // Channel follows
-  getChannelFollows: () => get('/api/channel-follows', true).catch(() => []),
+  getChannelFollows: () => get('/api/channel-follows', true).catch((e) => { console.error('[API] channel follows fetch failed:', e); return []; }),
   followCategory: categoryId => post('/api/channel-follows', { category_id: categoryId }),
   unfollowCategory: categoryId =>
     del(`/api/channel-follows?category_id=${encodeURIComponent(categoryId)}`),

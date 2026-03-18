@@ -81,7 +81,9 @@ function connect(): void {
     let parsed: DmEvent | null = null;
     try {
       parsed = JSON.parse(e.data);
-    } catch {}
+    } catch (e) {
+      console.error('[SSE] malformed event data:', e);
+    }
     for (const fn of dmListeners) fn(parsed || { conversation_id: '', sender_id: '' });
   });
 
@@ -89,14 +91,18 @@ function connect(): void {
     try {
       const data: NotificationEvent = JSON.parse(e.data);
       for (const fn of notificationListeners) fn(data);
-    } catch {}
+    } catch (e) {
+      console.error('[SSE] malformed event data:', e);
+    }
   });
 
   eventSource.addEventListener('call', (e: MessageEvent) => {
     try {
       const data: CallSignal = JSON.parse(e.data);
       for (const fn of callListeners) fn(data);
-    } catch {}
+    } catch (e) {
+      console.error('[SSE] malformed event data:', e);
+    }
   });
 
   eventSource.onerror = () => {

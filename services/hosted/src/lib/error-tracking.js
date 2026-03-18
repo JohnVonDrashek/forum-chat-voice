@@ -3,6 +3,7 @@
 // If no DSN is configured, error tracking is silently disabled.
 
 import * as Sentry from '@sentry/browser';
+import { captureConsoleIntegration, httpClientIntegration } from '@sentry/browser';
 
 let initialized = false;
 
@@ -16,6 +17,10 @@ export function initErrorTracking() {
     tracesSampleRate: 0,
     sampleRate: 1.0,
     sendDefaultPii: false,
+    integrations: [
+      httpClientIntegration({ failedRequestStatusCodes: [[400, 599]] }),
+      captureConsoleIntegration({ levels: ['error'] }),
+    ],
     initialScope: {
       tags: {
         app: 'hosted-forum',

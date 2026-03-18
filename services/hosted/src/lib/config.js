@@ -7,7 +7,7 @@ export async function loadConfig() {
     if (res.ok) {
       config = await res.json();
     }
-  } catch {}
+  } catch (e) { console.error('[Config] forum config load failed:', e) }
   return config;
 }
 

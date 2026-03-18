@@ -79,7 +79,9 @@ export const ForumDiscoveryAPI = {
     try {
       const res = await fetch('/api/forums?' + params);
       if (res.ok && gen === this._fetchGen) return await res.json();
-    } catch {}
+    } catch (e) {
+      console.error('[Discovery] search fetch failed:', e);
+    }
     return null;
   },
 
@@ -88,7 +90,9 @@ export const ForumDiscoveryAPI = {
     try {
       const r = await fetch('/api/forums/tags');
       if (r.ok) return await r.json();
-    } catch {}
+    } catch (e) {
+      console.error('[Discovery] tags fetch failed:', e);
+    }
     return [];
   },
 
@@ -105,7 +109,9 @@ export const ForumDiscoveryAPI = {
         headers: { Authorization: 'Bearer ' + accessToken },
       });
       if (r.ok && gen === this._recGen) return await r.json();
-    } catch {}
+    } catch (e) {
+      console.error('[Discovery] recommended fetch failed:', e);
+    }
     return [];
   },
 };

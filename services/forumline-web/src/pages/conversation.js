@@ -304,7 +304,7 @@ async function _fetchAndRenderMessages(dmId, el, isInitial) {
     if (msgs.length > 0) {
       ForumlineAPI.markRead(dmId)
         .then(() => DmStore.fetchConversations())
-        .catch(() => {});
+        .catch((e) => console.error('[DM] mark-read failed:', e));
     }
   } catch (err) {
     if (store.currentDm !== dmId) return;

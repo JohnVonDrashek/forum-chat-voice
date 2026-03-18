@@ -31,7 +31,7 @@ function renderNetworkStats() {
       const el = $('statConversations');
       if (el) el.textContent = (convos || []).length;
     })
-    .catch(() => {});
+    .catch((e) => console.error('[Home] conversations fetch failed:', e));
 }
 
 // Update forums count when memberships sync
@@ -81,7 +81,8 @@ export function renderActivityFeed() {
         });
       });
     })
-    .catch(() => {
+    .catch((e) => {
+      console.error('[Home] activity fetch failed:', e);
       el.innerHTML = '<div class="activity-empty">Could not load activity.</div>';
     });
 }

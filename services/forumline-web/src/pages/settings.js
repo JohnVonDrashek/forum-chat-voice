@@ -37,9 +37,7 @@ export function showSettings() {
         const onlineSelect = $('onlineStatusSelect');
         if (onlineSelect && profile.online_status) onlineSelect.value = profile.online_status;
       })
-      .catch(() => {
-        // Fall through to default HTML values
-      });
+      .catch((e) => console.error('[Settings] profile fetch failed:', e));
   }
 }
 

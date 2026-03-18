@@ -182,6 +182,7 @@ export const ForumlineAuth = {
         }),
       });
       if (!res.ok) {
+        console.error('[Auth] token refresh failed, signing out:', res.status);
         this._isRefreshing = false;
         this._saveSession(null);
         this._emit('SIGNED_OUT', null);
@@ -307,7 +308,10 @@ export const ForumlineAuth = {
           code_verifier: verifier,
         }),
       });
-      if (!res.ok) return false;
+      if (!res.ok) {
+        console.error('[Auth] login callback failed:', res.status);
+        return false;
+      }
 
       const data = await res.json();
       const session = this._tokenResponseToSession(data);
@@ -342,7 +346,9 @@ export const ForumlineAuth = {
         window.location.href = config.end_session_endpoint + '?' + params.toString();
         return;
       }
-    } catch {}
+    } catch (e) {
+      console.error('[Auth] OIDC sign-out cleanup failed:', e);
+    }
   },
 
   /**

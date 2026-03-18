@@ -33,7 +33,7 @@ export function renderThread(container, { threadId }) {
   Promise.all([
     api.getThread(threadId),
     api.getPosts(threadId),
-    authStore.get().user ? api.isBookmarked(threadId).catch(() => false) : Promise.resolve(false),
+    authStore.get().user ? api.isBookmarked(threadId).catch((e) => { console.error('[Thread] bookmark check failed:', e); return false; }) : Promise.resolve(false),
   ])
     .then(([thread, posts, isBookmarked]) => {
       if (!thread) {

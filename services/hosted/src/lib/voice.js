@@ -58,7 +58,7 @@ function deletePresence() {
 export async function fetchVoicePresence() {
   try {
     const res = await fetch('/api/voice-presence');
-    if (!res.ok) return;
+    if (!res.ok) { console.error('[Voice] presence fetch returned', res.status); return; }
     const data = await res.json();
 
     const counts = {};
@@ -73,7 +73,7 @@ export async function fetchVoicePresence() {
       }
     }
     voiceStore.set({ roomParticipantCounts: counts });
-  } catch {}
+  } catch (e) { console.error('[Voice] presence fetch failed:', e) }
 }
 
 export async function joinRoom(slug, name) {
@@ -170,7 +170,7 @@ export async function toggleScreenShare() {
   if (room) {
     try {
       await room.localParticipant.setScreenShareEnabled(!voiceStore.get().isScreenSharing);
-    } catch {}
+    } catch (e) { console.error('[Voice] screen share toggle failed:', e) }
   }
 }
 
@@ -353,6 +353,6 @@ function updateLiveKitParticipants() {
         }
         updateLiveKitParticipants();
       })
-      .catch(() => {});
+      .catch((e) => console.error('[Voice] batch profile fetch failed:', e));
   }
 }

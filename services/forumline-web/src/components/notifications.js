@@ -78,7 +78,7 @@ export function renderNotifications() {
       if (notif && !notif.read) {
         notif.read = true;
         updateBadge();
-        ForumlineAPI.markNotificationRead(id).catch(() => {});
+        ForumlineAPI.markNotificationRead(id).catch((e) => console.error('[Notifications] mark-read failed:', e));
       }
 
       $('notifDropdown').classList.add('hidden');
@@ -145,7 +145,7 @@ export function initNotifications() {
     _notifications.forEach(n => (n.read = true));
     updateBadge();
     renderNotifications();
-    ForumlineAPI.markAllNotificationsRead().catch(() => {});
+    ForumlineAPI.markAllNotificationsRead().catch((e) => console.error('[Notifications] mark-all-read failed:', e));
   });
 }
 
@@ -158,7 +158,7 @@ export function startNotificationUpdates() {
     .then(count => {
       updateBadge(count);
     })
-    .catch(() => {});
+    .catch((e) => console.error('[Notifications] unread count failed:', e));
 
   // Subscribe to unified event stream for real-time updates
   connectNotifications();

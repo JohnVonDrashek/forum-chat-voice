@@ -117,7 +117,10 @@ export const ForumStore = {
       const res = await fetch('/api/memberships', {
         headers: { Authorization: `Bearer ${this._accessToken}` },
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        console.error('[ForumStore] membership sync failed:', res.status);
+        return;
+      }
       const memberships: Array<{
         forum_domain: string;
         forum_name: string;
@@ -298,7 +301,9 @@ export const ForumStore = {
           },
           body: JSON.stringify({ forum_domain: domain }),
         });
-      } catch {}
+      } catch (e) {
+        console.error('[ForumStore] leave request failed:', e);
+      }
     }
     this._forums = this._forums.filter(f => f.domain !== domain);
     if (this._activeForum && this._activeForum.domain === domain) {
@@ -328,7 +333,9 @@ export const ForumStore = {
         body: JSON.stringify({ forum_domain: domain, muted: newMuted }),
       });
       if (forum) forum.muted = newMuted;
-    } catch {}
+    } catch (e) {
+      console.error('[ForumStore] mute request failed:', e);
+    }
   },
 
   /**

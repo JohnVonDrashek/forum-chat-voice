@@ -87,7 +87,7 @@ export const PushNotifications = {
       const config = await ForumlineAPI.apiFetch<{ vapid_public_key?: string }>(
         '/api/push/config',
         { silent: true },
-      ).catch(() => null);
+      ).catch((e) => { console.error('[Push] VAPID config fetch failed:', e); return null; });
       if (!config?.vapid_public_key) return;
       const vapidKey = urlBase64ToUint8Array(config.vapid_public_key) as Uint8Array<ArrayBuffer>;
       const sub = await this.swRegistration.pushManager.subscribe({

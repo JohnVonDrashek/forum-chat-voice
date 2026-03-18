@@ -3,6 +3,7 @@
 // If no DSN is configured, error tracking is silently disabled.
 
 import * as Sentry from '@sentry/browser';
+import { captureConsoleIntegration, httpClientIntegration } from '@sentry/browser';
 
 let initialized = false;
 
@@ -13,13 +14,15 @@ export function initErrorTracking() {
   Sentry.init({
     dsn,
     environment: location.hostname === 'app.forumline.net' ? 'production' : 'development',
-    // Keep sample rate low — we want errors, not performance traces
     tracesSampleRate: 0,
-    // Send 100% of errors (GlitchTip handles dedup)
     sampleRate: 1.0,
-    // Don't send PII by default
     sendDefaultPii: false,
-    // Tag every event with the app name
+    integrations: [
+      // Auto-capture failed fetch responses (4xx, 5xx) as Sentry events
+      httpClientIntegration({ failedRequestStatusCodes: [[400, 599]] }),
+      // Auto-forward console.error() calls to Sentry
+      captureConsoleIntegration({ levels: ['error'] }),
+    ],
     initialScope: {
       tags: { app: 'forumline-web' },
     },

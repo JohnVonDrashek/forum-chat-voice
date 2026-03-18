@@ -87,7 +87,8 @@ export function showProfile(username) {
         _identityProfile = profile;
         _renderApiProfileData(profile, currentUserId, profileKey, isOwnProfile);
       })
-      .catch(() => {
+      .catch((e) => {
+        console.error('[Profile] API failed, using fallback:', e);
         // If API fails and we have no cache, fall back to mock data
         if (!_identityProfile) {
           const mockProfile = data.profiles[profileKey];
@@ -117,7 +118,7 @@ export function ensureIdentityProfile() {
     .then(profile => {
       if (profile) _identityProfile = profile;
     })
-    .catch(() => {});
+    .catch((e) => console.error('[Profile] identity fetch failed:', e));
 }
 
 function _renderApiProfileData(profile, currentUserId, profileKey, _isOwnProfile) {

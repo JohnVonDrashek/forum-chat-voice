@@ -92,7 +92,7 @@ function playRingtone(type) {
     if (curOsc) {
       try {
         curOsc.stop();
-      } catch {}
+      } catch (_e) { /* WebAudio stop() may throw if already stopped */ }
       curOsc.disconnect();
     }
     if (curGain) curGain.disconnect();

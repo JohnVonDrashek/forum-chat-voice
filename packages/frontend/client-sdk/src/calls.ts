@@ -260,7 +260,8 @@ async function acceptCall(): Promise<void> {
     setCallState('active');
     NativeBridge.sendCallEvent('accepted', callState.callInfo);
     await connectLiveKit();
-  } catch {
+  } catch (e) {
+    console.error('[Calls] accept failed:', e);
     callCleanup();
   }
 }
@@ -277,7 +278,9 @@ async function declineCall(): Promise<void> {
       method: 'POST',
       body: JSON.stringify({ action: 'decline' }),
     });
-  } catch {}
+  } catch (e) {
+    console.error('[Calls] decline failed:', e);
+  }
   NativeBridge.sendCallEvent('ended', callState.callInfo);
   callCleanup();
 }
@@ -289,7 +292,9 @@ async function endCall(): Promise<void> {
     await ForumlineAPI.apiFetch('/api/calls/' + callState.callInfo.callId + '/end', {
       method: 'POST',
     });
-  } catch {}
+  } catch (e) {
+    console.error('[Calls] end failed:', e);
+  }
   NativeBridge.sendCallEvent('ended', callState.callInfo);
   callCleanup();
 }
