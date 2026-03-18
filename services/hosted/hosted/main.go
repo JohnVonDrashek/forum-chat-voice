@@ -30,6 +30,7 @@ import (
 	"github.com/forumline/forumline/backend/auth"
 	"github.com/forumline/forumline/backend/db"
 	"github.com/forumline/forumline/backend/httpkit"
+	"github.com/forumline/forumline/backend/pubsub"
 	"github.com/forumline/forumline/backend/sse"
 	"github.com/forumline/forumline/backend/valkey"
 	"github.com/forumline/forumline/forum"
@@ -82,16 +83,41 @@ func main() {
 	tp := &plat.TenantPool{Pool: pool}
 
 	// SSE hub — shared across all tenants, schema filtering via payload
+	sseHub := sse.NewHub()
+
+	sseChannels := []string{"notification_changes", "chat_message_changes", "voice_presence_changes", "post_changes"}
+
 	listenDSN := os.Getenv("DATABASE_URL_DIRECT")
 	if listenDSN == "" {
 		listenDSN = os.Getenv("DATABASE_URL")
 	}
-	sseHub := sse.NewHub(listenDSN)
-	sseHub.Listen(ctx, "notification_changes")
-	sseHub.Listen(ctx, "chat_message_changes")
-	sseHub.Listen(ctx, "voice_presence_changes")
-	sseHub.Listen(ctx, "post_changes")
-	sseHub.StartListening(ctx)
+
+	var eventBus pubsub.EventBus
+	if natsURL := os.Getenv("NATS_URL"); natsURL != "" {
+		bus, err := pubsub.NewNATSBus(natsURL)
+		if err != nil {
+			log.Fatalf("failed to connect to NATS: %v", err)
+		}
+		defer bus.Close()
+		eventBus = bus
+
+		// NATS → SSE Hub (Go service code publishes directly to NATS)
+		for _, ch := range sseChannels {
+			ch := ch
+			if err := bus.Subscribe(ch, func(data []byte) {
+				sseHub.Feed(ch, data)
+			}); err != nil {
+				log.Fatalf("NATS subscribe %s: %v", ch, err)
+			}
+		}
+
+		log.Println("realtime: NATS event bus active")
+	} else {
+		for _, ch := range sseChannels {
+			sseHub.Listen(ctx, ch)
+		}
+		sseHub.StartListening(ctx, listenDSN)
+	}
 
 	var routerMu sync.RWMutex
 	routerCache := make(map[string]http.Handler) // domain -> cached router
@@ -176,11 +202,13 @@ func main() {
 			Domain:       tenant.Domain,
 			ForumName:    tenant.Name,
 			HostedMode:   true,
+			Schema:       tenant.SchemaName,
 			Auth:         authProvider,
 			Storage:      r2Storage,
 			DB:           tp,
 			SSEHub:       sseHub,
 			ValkeyClient: valkeyClient,
+			EventBus:     eventBus,
 			LiveKit:      livekitCfg,
 			ForumlineURL:        os.Getenv("FORUMLINE_APP_URL"),
 			ForumlineServiceKey: os.Getenv("ZITADEL_SERVICE_USER_PAT"),

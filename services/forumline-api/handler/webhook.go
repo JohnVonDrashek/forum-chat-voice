@@ -72,7 +72,7 @@ func (h *WebhookHandler) HandleNotification(w http.ResponseWriter, r *http.Reque
 		link = "/"
 	}
 
-	if err := h.Store.InsertNotification(r.Context(), body.ForumlineUserID, body.ForumDomain, forumName, body.Type, body.Title, body.Body, link); err != nil {
+	if _, _, err := h.Store.InsertNotification(r.Context(), body.ForumlineUserID, body.ForumDomain, forumName, body.Type, body.Title, body.Body, link); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create notification"})
 		return
 	}
@@ -129,7 +129,7 @@ func (h *WebhookHandler) HandleNotificationBatch(w http.ResponseWriter, r *http.
 		if link == "" {
 			link = "/"
 		}
-		if err := h.Store.InsertNotification(ctx, item.ForumlineUserID, forumDomain, forumName, item.Type, item.Title, item.Body, link); err != nil {
+		if _, _, err := h.Store.InsertNotification(ctx, item.ForumlineUserID, forumDomain, forumName, item.Type, item.Title, item.Body, link); err != nil {
 			log.Printf("[webhook] batch insert error: %v", err)
 			continue
 		}

@@ -149,6 +149,30 @@ func (q *Queries) GetConversation(ctx context.Context, arg GetConversationParams
 	return i, err
 }
 
+const getConversationMemberIDs = `-- name: GetConversationMemberIDs :many
+SELECT user_id FROM forumline_conversation_members WHERE conversation_id = $1
+`
+
+func (q *Queries) GetConversationMemberIDs(ctx context.Context, conversationID uuid.UUID) ([]string, error) {
+	rows, err := q.db.Query(ctx, getConversationMemberIDs, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var user_id string
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMessagesBefore = `-- name: GetMessagesBefore :many
 SELECT dm.id, dm.conversation_id, dm.sender_id, dm.content, dm.created_at
 FROM forumline_direct_messages dm

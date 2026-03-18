@@ -12,13 +12,15 @@ import (
 	"github.com/google/uuid"
 )
 
-const clearVoicePresence = `-- name: ClearVoicePresence :exec
-DELETE FROM voice_presence WHERE user_id = $1
+const clearVoicePresence = `-- name: ClearVoicePresence :one
+DELETE FROM voice_presence WHERE user_id = $1 RETURNING room_slug
 `
 
-func (q *Queries) ClearVoicePresence(ctx context.Context, userID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, clearVoicePresence, userID)
-	return err
+func (q *Queries) ClearVoicePresence(ctx context.Context, userID uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, clearVoicePresence, userID)
+	var room_slug string
+	err := row.Scan(&room_slug)
+	return room_slug, err
 }
 
 const listVoicePresence = `-- name: ListVoicePresence :many

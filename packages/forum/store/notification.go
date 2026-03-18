@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -76,15 +77,19 @@ func (s *Store) MarkAllNotificationsRead(ctx context.Context, userID uuid.UUID) 
 	return s.Q.MarkAllNotificationsRead(ctx, userID)
 }
 
-// InsertNotification inserts a notification.
-func (s *Store) InsertNotification(ctx context.Context, userID uuid.UUID, notifType, title, message, link string) error {
-	return s.Q.InsertNotification(ctx, sqlcdb.InsertNotificationParams{
+// InsertNotification inserts a notification and returns its id and created_at.
+func (s *Store) InsertNotification(ctx context.Context, userID uuid.UUID, notifType, title, message, link string) (uuid.UUID, time.Time, error) {
+	row, err := s.Q.InsertNotification(ctx, sqlcdb.InsertNotificationParams{
 		UserID:  userID,
 		Type:    notifType,
 		Title:   title,
 		Message: message,
 		Link:    &link,
 	})
+	if err != nil {
+		return uuid.UUID{}, time.Time{}, err
+	}
+	return row.ID, row.CreatedAt, nil
 }
 
 // CountUnread returns unread notification and chat_mention counts.

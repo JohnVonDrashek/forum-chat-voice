@@ -54,9 +54,10 @@ func (q *Queries) GetThreadTitleAndAuthor(ctx context.Context, id uuid.UUID) (Ge
 	return i, err
 }
 
-const insertNotification = `-- name: InsertNotification :exec
+const insertNotification = `-- name: InsertNotification :one
 INSERT INTO notifications (user_id, type, title, message, link)
 VALUES ($1, $2, $3, $4, $5)
+RETURNING id, read, created_at
 `
 
 type InsertNotificationParams struct {
@@ -67,15 +68,23 @@ type InsertNotificationParams struct {
 	Link    *string   `json:"link"`
 }
 
-func (q *Queries) InsertNotification(ctx context.Context, arg InsertNotificationParams) error {
-	_, err := q.db.Exec(ctx, insertNotification,
+type InsertNotificationRow struct {
+	ID        uuid.UUID `json:"id"`
+	Read      bool      `json:"read"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (q *Queries) InsertNotification(ctx context.Context, arg InsertNotificationParams) (InsertNotificationRow, error) {
+	row := q.db.QueryRow(ctx, insertNotification,
 		arg.UserID,
 		arg.Type,
 		arg.Title,
 		arg.Message,
 		arg.Link,
 	)
-	return err
+	var i InsertNotificationRow
+	err := row.Scan(&i.ID, &i.Read, &i.CreatedAt)
+	return i, err
 }
 
 const listForumlineNotifications = `-- name: ListForumlineNotifications :many

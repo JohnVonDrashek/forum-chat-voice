@@ -2,6 +2,7 @@ package forum
 
 import (
 	"github.com/forumline/forumline/backend/db"
+	"github.com/forumline/forumline/backend/pubsub"
 	"github.com/forumline/forumline/backend/sse"
 	"github.com/redis/go-redis/v9"
 )
@@ -29,6 +30,10 @@ type Config struct {
 	// Forumline-specific UI features in the frontend.
 	HostedMode bool
 
+	// Schema is the PostgreSQL schema name for this tenant (e.g. "forum_testforum").
+	// Used to tag event payloads in multi-tenant mode. Empty for standalone.
+	Schema string
+
 	// --- Injected dependencies ---
 
 	// Auth handles authentication and session management.
@@ -52,6 +57,12 @@ type Config struct {
 	// ValkeyClient is the Redis-compatible client for rate limiting and caching.
 	// If nil, rate limiting falls back to in-memory and caching is disabled.
 	ValkeyClient *redis.Client
+
+	// EventBus is the optional pub/sub bus for realtime events.
+	// When set, events are published directly to NATS after successful DB
+	// operations. When nil, PG LISTEN/NOTIFY triggers handle event delivery
+	// (local dev fallback).
+	EventBus pubsub.EventBus
 
 	// --- Optional features ---
 

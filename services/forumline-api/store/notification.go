@@ -23,8 +23,8 @@ type NotificationRow struct {
 	CreatedAt   string `json:"created_at"`
 }
 
-func (s *Store) InsertNotification(ctx context.Context, userID, forumDomain, forumName, notifType, title, body, link string) error {
-	return s.Q.InsertNotification(ctx, sqlcdb.InsertNotificationParams{
+func (s *Store) InsertNotification(ctx context.Context, userID, forumDomain, forumName, notifType, title, body, link string) (uuid.UUID, time.Time, error) {
+	row, err := s.Q.InsertNotification(ctx, sqlcdb.InsertNotificationParams{
 		UserID:      userID,
 		ForumDomain: forumDomain,
 		ForumName:   forumName,
@@ -33,6 +33,10 @@ func (s *Store) InsertNotification(ctx context.Context, userID, forumDomain, for
 		Body:        body,
 		Link:        link,
 	})
+	if err != nil {
+		return uuid.UUID{}, time.Time{}, err
+	}
+	return row.ID, row.CreatedAt, nil
 }
 
 func (s *Store) ListNotifications(ctx context.Context, userID string, limit int) ([]NotificationRow, error) {

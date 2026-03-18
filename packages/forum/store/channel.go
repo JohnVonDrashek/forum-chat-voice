@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -46,11 +47,15 @@ func (s *Store) ListChatMessages(ctx context.Context, slug string) ([]oapi.ChatM
 	return messages, nil
 }
 
-// InsertChatMessage inserts a chat message.
-func (s *Store) InsertChatMessage(ctx context.Context, channelID, authorID uuid.UUID, content string) error {
-	return s.Q.InsertChatMessage(ctx, sqlcdb.InsertChatMessageParams{
+// InsertChatMessage inserts a chat message and returns its id and created_at.
+func (s *Store) InsertChatMessage(ctx context.Context, channelID, authorID uuid.UUID, content string) (uuid.UUID, time.Time, error) {
+	row, err := s.Q.InsertChatMessage(ctx, sqlcdb.InsertChatMessageParams{
 		ChannelID: channelID,
 		AuthorID:  authorID,
 		Content:   content,
 	})
+	if err != nil {
+		return uuid.UUID{}, time.Time{}, err
+	}
+	return row.ID, row.CreatedAt, nil
 }

@@ -9,12 +9,13 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/forumline/forumline/backend/pubsub"
 	"github.com/forumline/forumline/services/forumline-api/service"
 	"github.com/forumline/forumline/services/forumline-api/store"
 )
 
-// PushListener listens for LISTEN/NOTIFY on the push_dm channel
-// and sends web push notifications for new DMs.
+// PushListener sends web push notifications for new DMs.
+// It can consume events from NATS (production) or PG LISTEN (local dev).
 type PushListener struct {
 	Pool        *pgxpool.Pool
 	Store       *store.Store
@@ -25,6 +26,16 @@ func NewPushListener(pool *pgxpool.Pool, s *store.Store, ps *service.PushService
 	return &PushListener{Pool: pool, Store: s, PushService: ps}
 }
 
+// SubscribeNATS registers a NATS handler for push_dm events.
+// This replaces the PG LISTEN path when NATS is available.
+func (pl *PushListener) SubscribeNATS(ctx context.Context, bus pubsub.EventBus) error {
+	return bus.Subscribe("push_dm", func(data []byte) {
+		pl.handlePayload(ctx, data)
+	})
+}
+
+// Start listens on the push_dm PG NOTIFY channel directly.
+// This is the fallback path when NATS is not configured.
 func (pl *PushListener) Start(ctx context.Context) {
 	for {
 		if ctx.Err() != nil {
@@ -69,32 +80,36 @@ func (pl *PushListener) listenOnce(ctx context.Context) {
 			return
 		}
 
-		var payload struct {
-			ConversationID string   `json:"conversation_id"`
-			SenderID       string   `json:"sender_id"`
-			MemberIDs      []string `json:"member_ids"`
-			Content        string   `json:"content"`
-		}
-		if err := json.Unmarshal([]byte(notification.Payload), &payload); err != nil {
-			log.Printf("PushListener: failed to parse payload: %v", err)
+		pl.handlePayload(ctx, []byte(notification.Payload))
+	}
+}
+
+func (pl *PushListener) handlePayload(ctx context.Context, raw []byte) {
+	var payload struct {
+		ConversationID string   `json:"conversation_id"`
+		SenderID       string   `json:"sender_id"`
+		MemberIDs      []string `json:"member_ids"`
+		Content        string   `json:"content"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		log.Printf("PushListener: failed to parse payload: %v", err)
+		return
+	}
+
+	senderUsername := pl.Store.GetSenderUsername(ctx, payload.SenderID)
+	title := fmt.Sprintf("Message from %s", senderUsername)
+	body := payload.Content
+	if len(body) > 100 {
+		body = body[:100]
+	}
+
+	for _, memberID := range payload.MemberIDs {
+		if memberID == payload.SenderID {
 			continue
 		}
-
-		senderUsername := pl.Store.GetSenderUsername(ctx, payload.SenderID)
-		title := fmt.Sprintf("Message from %s", senderUsername)
-		body := payload.Content
-		if len(body) > 100 {
-			body = body[:100]
-		}
-
-		for _, memberID := range payload.MemberIDs {
-			if memberID == payload.SenderID {
-				continue
-			}
-			sent := pl.PushService.SendToUser(ctx, memberID, title, body, "", "")
-			if sent > 0 {
-				log.Printf("PushListener: sent %d push notifications for DM to %s", sent, memberID)
-			}
+		sent := pl.PushService.SendToUser(ctx, memberID, title, body, "", "")
+		if sent > 0 {
+			log.Printf("PushListener: sent %d push notifications for DM to %s", sent, memberID)
 		}
 	}
 }

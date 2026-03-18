@@ -23,9 +23,10 @@ func (q *Queries) CountUnreadNotifications(ctx context.Context, userID string) (
 	return column_1, err
 }
 
-const insertNotification = `-- name: InsertNotification :exec
+const insertNotification = `-- name: InsertNotification :one
 INSERT INTO forumline_notifications (user_id, forum_domain, forum_name, type, title, body, link)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, read, created_at
 `
 
 type InsertNotificationParams struct {
@@ -38,8 +39,14 @@ type InsertNotificationParams struct {
 	Link        string `json:"link"`
 }
 
-func (q *Queries) InsertNotification(ctx context.Context, arg InsertNotificationParams) error {
-	_, err := q.db.Exec(ctx, insertNotification,
+type InsertNotificationRow struct {
+	ID        uuid.UUID `json:"id"`
+	Read      bool      `json:"read"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (q *Queries) InsertNotification(ctx context.Context, arg InsertNotificationParams) (InsertNotificationRow, error) {
+	row := q.db.QueryRow(ctx, insertNotification,
 		arg.UserID,
 		arg.ForumDomain,
 		arg.ForumName,
@@ -48,7 +55,9 @@ func (q *Queries) InsertNotification(ctx context.Context, arg InsertNotification
 		arg.Body,
 		arg.Link,
 	)
-	return err
+	var i InsertNotificationRow
+	err := row.Scan(&i.ID, &i.Read, &i.CreatedAt)
+	return i, err
 }
 
 const listNotifications = `-- name: ListNotifications :many

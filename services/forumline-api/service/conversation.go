@@ -2,20 +2,24 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 
+	"github.com/forumline/forumline/backend/pubsub"
 	"github.com/forumline/forumline/services/forumline-api/oapi"
 	"github.com/forumline/forumline/services/forumline-api/store"
 )
 
 type ConversationService struct {
-	Store *store.Store
+	Store    *store.Store
+	EventBus pubsub.EventBus
 }
 
-func NewConversationService(s *store.Store) *ConversationService {
-	return &ConversationService{Store: s}
+func NewConversationService(s *store.Store, bus pubsub.EventBus) *ConversationService {
+	return &ConversationService{Store: s, EventBus: bus}
 }
 
 // GetOrCreateDM finds an existing 1:1 conversation or creates one.
@@ -149,7 +153,38 @@ func (cs *ConversationService) SendMessage(ctx context.Context, userID string, c
 	if content == "" || len(content) > 2000 {
 		return nil, &ValidationError{Msg: "message must be 1-2000 characters"}
 	}
-	return cs.Store.SendMessage(ctx, conversationID, userID, content)
+	msg, err := cs.Store.SendMessage(ctx, conversationID, userID, content)
+	if err != nil {
+		return nil, err
+	}
+
+	// Publish dm_changes and push_dm events
+	if cs.EventBus != nil {
+		memberIDs, _ := cs.Store.GetConversationMemberIDs(ctx, conversationID)
+		dmPayload, _ := json.Marshal(map[string]interface{}{
+			"conversation_id": msg.ConversationId,
+			"sender_id":       msg.SenderId,
+			"member_ids":      memberIDs,
+			"id":              msg.Id,
+			"content":         msg.Content,
+			"created_at":      msg.CreatedAt,
+		})
+		if pubErr := cs.EventBus.Publish(ctx, "dm_changes", dmPayload); pubErr != nil {
+			log.Printf("[dm] EventBus publish error: %v", pubErr)
+		}
+
+		pushPayload, _ := json.Marshal(map[string]interface{}{
+			"conversation_id": msg.ConversationId,
+			"sender_id":       msg.SenderId,
+			"member_ids":      memberIDs,
+			"content":         msg.Content,
+		})
+		if pubErr := cs.EventBus.Publish(ctx, "push_dm", pushPayload); pubErr != nil {
+			log.Printf("[dm] EventBus push publish error: %v", pubErr)
+		}
+	}
+
+	return msg, nil
 }
 
 // Leave removes the user from a group conversation.

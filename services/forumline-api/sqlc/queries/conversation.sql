@@ -37,6 +37,9 @@ FROM forumline_conversation_members cm
 JOIN forumline_profiles p ON p.id = cm.user_id
 WHERE cm.conversation_id = ANY(@conversation_ids::uuid[]);
 
+-- name: GetConversationMemberIDs :many
+SELECT user_id FROM forumline_conversation_members WHERE conversation_id = $1;
+
 -- name: IsConversationMember :one
 SELECT EXISTS(SELECT 1 FROM forumline_conversation_members WHERE conversation_id = $1 AND user_id = $2);
 

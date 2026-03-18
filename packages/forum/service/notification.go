@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/forumline/forumline/backend/pubsub"
 	"github.com/forumline/forumline/forum/store"
 )
 
@@ -44,13 +45,15 @@ type NotificationConfig struct {
 
 // NotificationService handles notification business logic.
 type NotificationService struct {
-	Store  *store.Store
-	Config *NotificationConfig
+	Store    *store.Store
+	Config   *NotificationConfig
+	EventBus pubsub.EventBus
+	Schema   string
 }
 
 // NewNotificationService creates a new NotificationService.
-func NewNotificationService(s *store.Store, cfg *NotificationConfig) *NotificationService {
-	return &NotificationService{Store: s, Config: cfg}
+func NewNotificationService(s *store.Store, cfg *NotificationConfig, bus pubsub.EventBus, schema string) *NotificationService {
+	return &NotificationService{Store: s, Config: cfg, EventBus: bus, Schema: schema}
 }
 
 // GeneratePostNotifications creates notification rows for @mentions and thread reply notifications.
@@ -76,9 +79,28 @@ func (ns *NotificationService) GeneratePostNotifications(threadID, postID, autho
 
 	// helper: insert local notification and queue forumline push
 	notifyUser := func(userID uuid.UUID, notifType, title, body, link string) {
-		if err := ns.Store.InsertNotification(ctx, userID, notifType, title, body, link); err != nil {
+		id, createdAt, err := ns.Store.InsertNotification(ctx, userID, notifType, title, body, link)
+		if err != nil {
 			log.Printf("[notifications] failed to insert for %s: %v", userID, err)
 			return
+		}
+
+		// Publish notification_changes event
+		if ns.EventBus != nil {
+			payload, _ := json.Marshal(map[string]interface{}{
+				"schema":     ns.Schema,
+				"id":         id,
+				"user_id":    userID,
+				"type":       notifType,
+				"title":      title,
+				"message":    body,
+				"link":       link,
+				"read":       false,
+				"created_at": createdAt,
+			})
+			if pubErr := ns.EventBus.Publish(context.Background(), "notification_changes", payload); pubErr != nil {
+				log.Printf("[notifications] EventBus publish error: %v", pubErr)
+			}
 		}
 
 		// Look up forumline_id for push

@@ -16,6 +16,7 @@ import (
 	"github.com/forumline/forumline/backend/auth"
 	"github.com/forumline/forumline/backend/db"
 	"github.com/forumline/forumline/backend/httpkit"
+	"github.com/forumline/forumline/backend/pubsub"
 	"github.com/forumline/forumline/backend/sse"
 	"github.com/forumline/forumline/backend/valkey"
 	localdb "github.com/forumline/forumline/services/forumline-api/db"
@@ -48,19 +49,10 @@ func main() {
 	valkeyClient := valkey.NewClient(ctx)
 	defer valkey.Close(valkeyClient)
 
-	// SSE hub for LISTEN/NOTIFY — uses direct connection (bypasses PgBouncer)
-	listenDSN := os.Getenv("DATABASE_URL_DIRECT")
-	if listenDSN == "" {
-		listenDSN = os.Getenv("DATABASE_URL")
-	}
-	sseHub := sse.NewHub(listenDSN)
-	sseHub.Listen(ctx, "dm_changes")
-	sseHub.Listen(ctx, "push_dm")
-	sseHub.Listen(ctx, "call_signal")
-	sseHub.Listen(ctx, "forumline_notification_changes")
-	sseHub.StartListening(ctx)
+	// SSE hub — fan-out engine for realtime events to browser SSE clients.
+	sseHub := sse.NewHub()
 
-	// Store + services
+	// Store + services (needed before push listener wiring)
 	s := store.New(pool)
 
 	// Validate schema on startup (warns about UUID/TEXT mismatches, missing FKs)
@@ -76,13 +68,55 @@ func main() {
 		log.Printf("Cleaned up %d stale call(s) from previous run", tag.RowsAffected())
 	}
 
-	// Push notification listener
 	pushSvc := service.NewPushService(s)
 	pushListener := realtime.NewPushListener(rawPool, s, pushSvc)
-	go pushListener.Start(ctx)
+
+	// Event bus: NATS (production) or direct PG LISTEN (local dev fallback).
+	sseChannels := []string{"dm_changes", "push_dm", "call_signal", "forumline_notification_changes"}
+
+	listenDSN := os.Getenv("DATABASE_URL_DIRECT")
+	if listenDSN == "" {
+		listenDSN = os.Getenv("DATABASE_URL")
+	}
+
+	var eventBus pubsub.EventBus
+	if natsURL := os.Getenv("NATS_URL"); natsURL != "" {
+		bus, err := pubsub.NewNATSBus(natsURL)
+		if err != nil {
+			log.Fatalf("failed to connect to NATS: %v", err)
+		}
+		defer bus.Close()
+		eventBus = bus
+
+		// NATS → SSE Hub (Go service code publishes directly to NATS)
+		for _, ch := range sseChannels {
+			ch := ch
+			if err := bus.Subscribe(ch, func(data []byte) {
+				sseHub.Feed(ch, data)
+			}); err != nil {
+				log.Fatalf("NATS subscribe %s: %v", ch, err)
+			}
+		}
+
+		// Push notifications via NATS
+		if err := pushListener.SubscribeNATS(ctx, bus); err != nil {
+			log.Fatalf("NATS subscribe push_dm (push): %v", err)
+		}
+
+		log.Println("realtime: NATS event bus active")
+	} else {
+		// Fallback: direct PG LISTEN → Hub (no NATS needed for local dev)
+		for _, ch := range sseChannels {
+			sseHub.Listen(ctx, ch)
+		}
+		sseHub.StartListening(ctx, listenDSN)
+
+		// Push notifications via direct PG LISTEN
+		go pushListener.Start(ctx)
+	}
 
 	// Router
-	router := newRouter(s, sseHub, valkeyClient)
+	router := newRouter(s, sseHub, valkeyClient, eventBus)
 
 	// Wrap with global middleware
 	var handler http.Handler = router

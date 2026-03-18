@@ -23,8 +23,9 @@ func (q *Queries) GetChannelIDBySlug(ctx context.Context, slug string) (uuid.UUI
 	return id, err
 }
 
-const insertChatMessage = `-- name: InsertChatMessage :exec
+const insertChatMessage = `-- name: InsertChatMessage :one
 INSERT INTO chat_messages (channel_id, author_id, content) VALUES ($1, $2, $3)
+RETURNING id, created_at
 `
 
 type InsertChatMessageParams struct {
@@ -33,9 +34,16 @@ type InsertChatMessageParams struct {
 	Content   string    `json:"content"`
 }
 
-func (q *Queries) InsertChatMessage(ctx context.Context, arg InsertChatMessageParams) error {
-	_, err := q.db.Exec(ctx, insertChatMessage, arg.ChannelID, arg.AuthorID, arg.Content)
-	return err
+type InsertChatMessageRow struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (q *Queries) InsertChatMessage(ctx context.Context, arg InsertChatMessageParams) (InsertChatMessageRow, error) {
+	row := q.db.QueryRow(ctx, insertChatMessage, arg.ChannelID, arg.AuthorID, arg.Content)
+	var i InsertChatMessageRow
+	err := row.Scan(&i.ID, &i.CreatedAt)
+	return i, err
 }
 
 const listChannels = `-- name: ListChannels :many

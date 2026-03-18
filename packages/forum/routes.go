@@ -19,11 +19,11 @@ func NewRouter(cfg *Config) *http.ServeMux {
 	notifSvc := service.NewNotificationService(s, &service.NotificationConfig{
 		ForumlineURL: cfg.ForumlineURL,
 		ServiceKey:   cfg.ForumlineServiceKey,
-	})
+	}, cfg.EventBus, cfg.Schema)
 	threadSvc := service.NewThreadService(s)
-	postSvc := service.NewPostService(s, notifSvc)
+	postSvc := service.NewPostService(s, notifSvc, cfg.EventBus, cfg.Schema)
 	profileSvc := service.NewProfileService(s)
-	chatSvc := service.NewChatService(s)
+	chatSvc := service.NewChatService(s, cfg.EventBus, cfg.Schema)
 	adminSvc := service.NewAdminService(s)
 
 	h := &Handlers{

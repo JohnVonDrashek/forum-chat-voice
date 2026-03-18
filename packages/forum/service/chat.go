@@ -2,21 +2,27 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"log"
+	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/forumline/forumline/backend/pubsub"
 	"github.com/forumline/forumline/forum/oapi"
 	"github.com/forumline/forumline/forum/store"
 )
 
 // ChatService handles chat business logic.
 type ChatService struct {
-	Store *store.Store
+	Store    *store.Store
+	EventBus pubsub.EventBus
+	Schema   string
 }
 
 // NewChatService creates a new ChatService.
-func NewChatService(s *store.Store) *ChatService {
-	return &ChatService{Store: s}
+func NewChatService(s *store.Store, bus pubsub.EventBus, schema string) *ChatService {
+	return &ChatService{Store: s, EventBus: bus, Schema: schema}
 }
 
 // ListMessages returns chat messages for a channel slug.
@@ -35,7 +41,13 @@ func (cs *ChatService) SendMessage(ctx context.Context, userID uuid.UUID, slug, 
 		return &NotFoundError{Msg: "channel not found"}
 	}
 
-	return cs.Store.InsertChatMessage(ctx, channelID, userID, content)
+	id, createdAt, err := cs.Store.InsertChatMessage(ctx, channelID, userID, content)
+	if err != nil {
+		return err
+	}
+
+	cs.publishChatMessage(channelID, id, userID, content, createdAt)
+	return nil
 }
 
 // SendMessageByID sends a chat message to a channel by ID.
@@ -43,5 +55,27 @@ func (cs *ChatService) SendMessageByID(ctx context.Context, userID, channelID uu
 	if content == "" {
 		return &ValidationError{Msg: "content is required"}
 	}
-	return cs.Store.InsertChatMessage(ctx, channelID, userID, content)
+	id, createdAt, err := cs.Store.InsertChatMessage(ctx, channelID, userID, content)
+	if err != nil {
+		return err
+	}
+	cs.publishChatMessage(channelID, id, userID, content, createdAt)
+	return nil
+}
+
+func (cs *ChatService) publishChatMessage(channelID, id, authorID uuid.UUID, content string, createdAt time.Time) {
+	if cs.EventBus == nil {
+		return
+	}
+	payload, _ := json.Marshal(map[string]interface{}{
+		"schema":     cs.Schema,
+		"id":         id,
+		"channel_id": channelID,
+		"author_id":  authorID,
+		"content":    content,
+		"created_at": createdAt,
+	})
+	if err := cs.EventBus.Publish(context.Background(), "chat_message_changes", payload); err != nil {
+		log.Printf("[chat] EventBus publish error: %v", err)
+	}
 }

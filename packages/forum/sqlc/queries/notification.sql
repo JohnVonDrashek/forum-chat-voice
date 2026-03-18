@@ -18,9 +18,10 @@ UPDATE notifications SET read = true WHERE id = $1 AND user_id = $2;
 -- name: MarkAllNotificationsRead :exec
 UPDATE notifications SET read = true WHERE user_id = $1 AND read = false;
 
--- name: InsertNotification :exec
+-- name: InsertNotification :one
 INSERT INTO notifications (user_id, type, title, message, link)
-VALUES ($1, $2, $3, $4, $5);
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, read, created_at;
 
 -- name: CountUnreadNotifications :one
 SELECT COUNT(*)::int FROM notifications

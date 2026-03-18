@@ -21,38 +21,39 @@ type Client struct {
 	Done       chan struct{}
 }
 
-// Hub manages LISTEN/NOTIFY subscriptions and fans out to SSE clients.
-// Uses a single direct pgx connection for all LISTEN channels to minimize
-// Postgres backend processes on memory-constrained instances.
+// Hub manages SSE client subscriptions and fans out events to connected
+// browsers. Events can arrive from any source via Feed() — NATS in
+// production, or direct PG LISTEN for local development.
 type Hub struct {
-	mu        sync.RWMutex
-	clients   map[string][]*Client // channel -> clients
-	listenDSN string               // direct Postgres DSN for LISTEN connections
-	channels  []string             // channels to listen on
+	mu       sync.RWMutex
+	clients  map[string][]*Client // channel -> clients
+	channels []string             // channels for PG LISTEN fallback
 }
 
-func NewHub(listenDSN string) *Hub {
+// NewHub creates an empty Hub. Call Feed() to push events in, or use
+// Listen()+StartListening() for the legacy PG LISTEN fallback path.
+func NewHub() *Hub {
 	return &Hub{
-		clients:   make(map[string][]*Client),
-		listenDSN: listenDSN,
+		clients: make(map[string][]*Client),
 	}
 }
 
-// Listen registers a channel to be listened on. Call StartListening after
-// all channels are registered to open a single multiplexed connection.
-func (h *Hub) Listen(ctx context.Context, channel string) {
+// Listen registers a channel for the PG LISTEN fallback path.
+// Call StartListening after all channels are registered.
+func (h *Hub) Listen(_ context.Context, channel string) {
 	h.channels = append(h.channels, channel)
 }
 
 // StartListening opens a single Postgres connection and LISTENs on all
-// registered channels. Automatically reconnects on failure.
-func (h *Hub) StartListening(ctx context.Context) {
+// registered channels, feeding events into the hub via broadcast().
+// This is the fallback path for local development without NATS.
+func (h *Hub) StartListening(ctx context.Context, listenDSN string) {
 	go func() {
 		for {
 			if ctx.Err() != nil {
 				return
 			}
-			h.listenAll(ctx)
+			h.listenAll(ctx, listenDSN)
 			if ctx.Err() != nil {
 				return
 			}
@@ -66,8 +67,8 @@ func (h *Hub) StartListening(ctx context.Context) {
 	}()
 }
 
-func (h *Hub) listenAll(ctx context.Context) {
-	conn, err := pgx.Connect(ctx, h.listenDSN)
+func (h *Hub) listenAll(ctx context.Context, dsn string) {
+	conn, err := pgx.Connect(ctx, dsn)
 	if err != nil {
 		log.Printf("SSEHub: failed to connect for LISTEN: %v", err)
 		return
@@ -89,7 +90,7 @@ func (h *Hub) listenAll(ctx context.Context) {
 		notification, err := conn.WaitForNotification(ctx)
 		if err != nil {
 			if ctx.Err() != nil {
-				return // context cancelled, clean shutdown
+				return
 			}
 			log.Printf("SSEHub: WaitForNotification error: %v", err)
 			return
@@ -277,6 +278,13 @@ func ServeMulti(w http.ResponseWriter, r *http.Request, mc *MultiClient) {
 			flusher.Flush()
 		}
 	}
+}
+
+// Feed injects an event into the hub from an external source (e.g. NATS).
+// This decouples event production from the hub's client management, allowing
+// any transport to feed events into the SSE fan-out.
+func (h *Hub) Feed(channel string, payload []byte) {
+	h.broadcast(channel, payload)
 }
 
 func matchesFilter(data map[string]interface{}, filter map[string]string) bool {

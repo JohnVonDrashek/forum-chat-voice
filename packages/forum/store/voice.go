@@ -51,7 +51,7 @@ func (s *Store) SetVoicePresence(ctx context.Context, userID uuid.UUID, roomSlug
 	})
 }
 
-// ClearVoicePresence removes a user's voice presence.
-func (s *Store) ClearVoicePresence(ctx context.Context, userID uuid.UUID) error {
+// ClearVoicePresence removes a user's voice presence and returns the room slug.
+func (s *Store) ClearVoicePresence(ctx context.Context, userID uuid.UUID) (string, error) {
 	return s.Q.ClearVoicePresence(ctx, userID)
 }

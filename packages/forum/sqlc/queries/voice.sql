@@ -16,5 +16,5 @@ INSERT INTO voice_presence (user_id, room_slug, joined_at)
 VALUES ($1, $2, $3)
 ON CONFLICT (user_id) DO UPDATE SET room_slug = $2, joined_at = $3;
 
--- name: ClearVoicePresence :exec
-DELETE FROM voice_presence WHERE user_id = $1;
+-- name: ClearVoicePresence :one
+DELETE FROM voice_presence WHERE user_id = $1 RETURNING room_slug;

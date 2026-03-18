@@ -291,6 +291,10 @@ func (s *Store) RemoveConversationMembers(ctx context.Context, conversationID uu
 	})
 }
 
+func (s *Store) GetConversationMemberIDs(ctx context.Context, conversationID uuid.UUID) ([]string, error) {
+	return s.Q.GetConversationMemberIDs(ctx, conversationID)
+}
+
 func (s *Store) LeaveConversation(ctx context.Context, conversationID uuid.UUID, userID string) error {
 	return s.Q.LeaveConversation(ctx, sqlcdb.LeaveConversationParams{
 		ConversationID: conversationID,

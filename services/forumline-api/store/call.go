@@ -109,7 +109,3 @@ func (s *Store) IsCallParticipant(ctx context.Context, callID uuid.UUID, userID 
 func (s *Store) CleanupStaleCalls(ctx context.Context) (int64, error) {
 	return s.Q.CleanupStaleCalls(ctx)
 }
-
-func (s *Store) NotifyCallSignal(ctx context.Context, payload string) error {
-	return s.Q.NotifyCallSignal(ctx, payload)
-}

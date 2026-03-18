@@ -44,5 +44,4 @@ WHERE id = $1 AND (caller_id = $2 OR callee_id = $2) AND status IN ('ringing', '
 UPDATE forumline_calls SET status = CASE WHEN status = 'ringing' THEN 'missed' ELSE 'completed' END, ended_at = now()
 WHERE status IN ('ringing', 'active');
 
--- name: NotifyCallSignal :exec
-SELECT pg_notify('call_signal', $1);
+-- NotifyCallSignal removed: call signals now publish directly to NATS EventBus.

@@ -2,7 +2,10 @@ package forum
 
 import (
 	"context"
+	"encoding/json"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -266,6 +269,9 @@ func (h *Handlers) SetVoicePresence(ctx context.Context, request oapi.SetVoicePr
 	if err := h.Store.SetVoicePresence(ctx, userID, request.Body.RoomSlug); err != nil {
 		return oapi.SetVoicePresence500JSONResponse{InternalErrorJSONResponse: oapi.InternalErrorJSONResponse{Error: err.Error()}}, nil
 	}
+
+	h.publishVoiceEvent("INSERT", userID, request.Body.RoomSlug, time.Now())
+
 	t := true
 	return oapi.SetVoicePresence200JSONResponse(oapi.Success{Success: &t}), nil
 }
@@ -274,9 +280,32 @@ func (h *Handlers) SetVoicePresence(ctx context.Context, request oapi.SetVoicePr
 func (h *Handlers) ClearVoicePresence(ctx context.Context, _ oapi.ClearVoicePresenceRequestObject) (oapi.ClearVoicePresenceResponseObject, error) {
 	userID := ProfileUUIDFromContext(ctx)
 
-	if err := h.Store.ClearVoicePresence(ctx, userID); err != nil {
+	roomSlug, err := h.Store.ClearVoicePresence(ctx, userID)
+	if err != nil {
 		return oapi.ClearVoicePresence500JSONResponse{InternalErrorJSONResponse: oapi.InternalErrorJSONResponse{Error: err.Error()}}, nil
 	}
+
+	h.publishVoiceEvent("DELETE", userID, roomSlug, time.Time{})
+
 	t := true
 	return oapi.ClearVoicePresence200JSONResponse(oapi.Success{Success: &t}), nil
+}
+
+func (h *Handlers) publishVoiceEvent(event string, userID uuid.UUID, roomSlug string, joinedAt time.Time) {
+	if h.Config.EventBus == nil {
+		return
+	}
+	data := map[string]interface{}{
+		"schema":    h.Config.Schema,
+		"event":     event,
+		"user_id":   userID,
+		"room_slug": roomSlug,
+	}
+	if event != "DELETE" {
+		data["joined_at"] = joinedAt
+	}
+	payload, _ := json.Marshal(data)
+	if err := h.Config.EventBus.Publish(context.Background(), "voice_presence_changes", payload); err != nil {
+		log.Printf("[voice] EventBus publish error: %v", err)
+	}
 }

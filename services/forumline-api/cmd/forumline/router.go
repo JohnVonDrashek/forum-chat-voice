@@ -7,6 +7,7 @@ import (
 
 	"github.com/forumline/forumline/backend/auth"
 	"github.com/forumline/forumline/backend/httpkit"
+	"github.com/forumline/forumline/backend/pubsub"
 	"github.com/forumline/forumline/backend/sse"
 	"github.com/forumline/forumline/services/forumline-api/handler"
 	"github.com/forumline/forumline/services/forumline-api/oapi"
@@ -21,14 +22,14 @@ func use(h http.HandlerFunc, mws ...func(http.Handler) http.Handler) http.Handle
 	return httpkit.Use(h, mws...)
 }
 
-func newRouter(s *store.Store, sseHub *sse.Hub, valkey *redis.Client) *http.ServeMux {
+func newRouter(s *store.Store, sseHub *sse.Hub, valkey *redis.Client, bus pubsub.EventBus) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// Services
 	forumSvc := service.NewForumService(s)
 	pushSvc := service.NewPushService(s)
-	convoSvc := service.NewConversationService(s)
-	callSvc := service.NewCallService(s, pushSvc)
+	convoSvc := service.NewConversationService(s, bus)
+	callSvc := service.NewCallService(s, pushSvc, bus)
 	presenceTracker := presence.NewTracker(90*time.Second, valkey)
 
 	// Rate limiter for DMs — per-user, 30 msgs/minute
@@ -46,9 +47,10 @@ func newRouter(s *store.Store, sseHub *sse.Hub, valkey *redis.Client) *http.Serv
 			APIKey:    os.Getenv("LIVEKIT_API_KEY"),
 			APISecret: os.Getenv("LIVEKIT_API_SECRET"),
 		},
-		dmRL:    dmRL,
-		sseHub:  sseHub,
-		tracker: presenceTracker,
+		dmRL:     dmRL,
+		sseHub:   sseHub,
+		tracker:  presenceTracker,
+		eventBus: bus,
 	}
 
 	// Build the strict ServerInterface and wrapper.

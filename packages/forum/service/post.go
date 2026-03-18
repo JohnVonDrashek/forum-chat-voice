@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/forumline/forumline/backend/pubsub"
 	"github.com/forumline/forumline/forum/oapi"
 	"github.com/forumline/forumline/forum/store"
 )
@@ -15,11 +17,13 @@ import (
 type PostService struct {
 	Store           *store.Store
 	NotificationSvc *NotificationService
+	EventBus        pubsub.EventBus
+	Schema          string
 }
 
 // NewPostService creates a new PostService.
-func NewPostService(s *store.Store, notifSvc *NotificationService) *PostService {
-	return &PostService{Store: s, NotificationSvc: notifSvc}
+func NewPostService(s *store.Store, notifSvc *NotificationService, bus pubsub.EventBus, schema string) *PostService {
+	return &PostService{Store: s, NotificationSvc: notifSvc, EventBus: bus, Schema: schema}
 }
 
 // ListByThread returns posts for a thread.
@@ -61,6 +65,22 @@ func (ps *PostService) Create(ctx context.Context, userID uuid.UUID, input Creat
 	// Update thread stats (best-effort)
 	if err := ps.Store.UpdateThreadStats(ctx, input.ThreadID, time.Now()); err != nil {
 		log.Printf("update thread stats error: %v", err)
+	}
+
+	// Publish post_changes event
+	if ps.EventBus != nil {
+		payload, _ := json.Marshal(map[string]interface{}{
+			"schema":      ps.Schema,
+			"id":          id,
+			"thread_id":   input.ThreadID,
+			"author_id":   userID,
+			"content":     input.Content,
+			"reply_to_id": input.ReplyToID,
+			"created_at":  time.Now(),
+		})
+		if err := ps.EventBus.Publish(context.Background(), "post_changes", payload); err != nil {
+			log.Printf("[post] EventBus publish error: %v", err)
+		}
 	}
 
 	// Generate notifications in background

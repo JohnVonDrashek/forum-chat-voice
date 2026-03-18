@@ -210,12 +210,3 @@ func (q *Queries) IsUserInCall(ctx context.Context, callerID string) (bool, erro
 	err := row.Scan(&exists)
 	return exists, err
 }
-
-const notifyCallSignal = `-- name: NotifyCallSignal :exec
-SELECT pg_notify('call_signal', $1)
-`
-
-func (q *Queries) NotifyCallSignal(ctx context.Context, pgNotify string) error {
-	_, err := q.db.Exec(ctx, notifyCallSignal, pgNotify)
-	return err
-}

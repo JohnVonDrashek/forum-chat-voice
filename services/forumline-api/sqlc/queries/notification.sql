@@ -1,6 +1,7 @@
--- name: InsertNotification :exec
+-- name: InsertNotification :one
 INSERT INTO forumline_notifications (user_id, forum_domain, forum_name, type, title, body, link)
-VALUES ($1, $2, $3, $4, $5, $6, $7);
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, read, created_at;
 
 -- name: ListNotifications :many
 SELECT id, forum_domain, forum_name, type, title, body, link, read, created_at

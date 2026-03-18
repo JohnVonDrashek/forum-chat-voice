@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/forumline/forumline/backend/pubsub"
 	"github.com/forumline/forumline/services/forumline-api/oapi"
 	"github.com/forumline/forumline/services/forumline-api/store"
 )
@@ -15,10 +16,11 @@ import (
 type CallService struct {
 	Store       *store.Store
 	PushService *PushService
+	EventBus    pubsub.EventBus
 }
 
-func NewCallService(s *store.Store, ps *PushService) *CallService {
-	return &CallService{Store: s, PushService: ps}
+func NewCallService(s *store.Store, ps *PushService, bus pubsub.EventBus) *CallService {
+	return &CallService{Store: s, PushService: ps, EventBus: bus}
 }
 
 // InitiateResult contains the call record and the callee ID for SSE notification.
@@ -74,7 +76,9 @@ func (cs *CallService) Initiate(ctx context.Context, callerID string, conversati
 		"caller_display_name": displayName, "caller_avatar_url": callerAvatarURL,
 		"target_user_id": calleeID,
 	})
-	_ = cs.Store.NotifyCallSignal(ctx, string(signalData))
+	if cs.EventBus != nil {
+		_ = cs.EventBus.Publish(ctx, "call_signal", signalData)
+	}
 
 	// Send push in background (intentionally detached from request context)
 	go func() { // #nosec G118 -- push must outlive HTTP request
@@ -118,7 +122,9 @@ func (cs *CallService) Respond(ctx context.Context, userID string, callID uuid.U
 	signalData, _ := json.Marshal(map[string]interface{}{
 		"type": signalType, "call_id": callID, "target_user_id": callerID,
 	})
-	_ = cs.Store.NotifyCallSignal(ctx, string(signalData))
+	if cs.EventBus != nil {
+		_ = cs.EventBus.Publish(ctx, "call_signal", signalData)
+	}
 
 	return &RespondResult{Status: action + "ed"}, nil
 }
@@ -138,7 +144,9 @@ func (cs *CallService) End(ctx context.Context, userID string, callID uuid.UUID)
 	signalData, _ := json.Marshal(map[string]interface{}{
 		"type": "call_ended", "call_id": callID, "ended_by": userID, "target_user_id": otherUserID,
 	})
-	_ = cs.Store.NotifyCallSignal(ctx, string(signalData))
+	if cs.EventBus != nil {
+		_ = cs.EventBus.Publish(ctx, "call_signal", signalData)
+	}
 
 	return &EndResult{Status: newStatus}, nil
 }

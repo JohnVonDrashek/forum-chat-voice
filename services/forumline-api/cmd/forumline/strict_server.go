@@ -15,6 +15,7 @@ import (
 
 	"github.com/forumline/forumline/backend/auth"
 	"github.com/forumline/forumline/backend/httpkit"
+	"github.com/forumline/forumline/backend/pubsub"
 	"github.com/forumline/forumline/backend/sse"
 	"github.com/forumline/forumline/services/forumline-api/oapi"
 	"github.com/forumline/forumline/services/forumline-api/presence"
@@ -108,6 +109,7 @@ type StrictServer struct {
 	dmRL     *httpkit.ValkeyRateLimiter
 	sseHub   *sse.Hub
 	tracker  *presence.Tracker
+	eventBus pubsub.EventBus
 }
 
 // lkConfig holds LiveKit connection details (mirrors handler.LiveKitConfig).
@@ -786,8 +788,18 @@ func (s *StrictServer) WebhookNotification(ctx context.Context, req oapi.Webhook
 	if link == "" {
 		link = "/"
 	}
-	if err := s.store.InsertNotification(ctx, b.ForumlineUserId, b.ForumDomain, forumName, string(b.Type), b.Title, b.Body, link); err != nil {
+	id, createdAt, err := s.store.InsertNotification(ctx, b.ForumlineUserId, b.ForumDomain, forumName, string(b.Type), b.Title, b.Body, link)
+	if err != nil {
 		return nil, fmt.Errorf("failed to create notification: %w", err)
+	}
+	if s.eventBus != nil {
+		payload, _ := json.Marshal(map[string]interface{}{
+			"id": id, "user_id": b.ForumlineUserId,
+			"forum_domain": b.ForumDomain, "forum_name": forumName,
+			"type": string(b.Type), "title": b.Title, "body": b.Body,
+			"link": link, "read": false, "created_at": createdAt,
+		})
+		_ = s.eventBus.Publish(ctx, "forumline_notification_changes", payload)
 	}
 	return oapi.WebhookNotification200JSONResponse{Status: "ok"}, nil
 }
@@ -818,9 +830,19 @@ func (s *StrictServer) WebhookNotificationBatch(ctx context.Context, req oapi.We
 		if link == "" {
 			link = "/"
 		}
-		if err := s.store.InsertNotification(ctx, item.ForumlineUserId, b.ForumDomain, forumName, string(item.Type), item.Title, item.Body, link); err != nil {
+		id, createdAt, err := s.store.InsertNotification(ctx, item.ForumlineUserId, b.ForumDomain, forumName, string(item.Type), item.Title, item.Body, link)
+		if err != nil {
 			log.Printf("[webhook] batch insert error: %v", err)
 			continue
+		}
+		if s.eventBus != nil {
+			payload, _ := json.Marshal(map[string]interface{}{
+				"id": id, "user_id": item.ForumlineUserId,
+				"forum_domain": b.ForumDomain, "forum_name": forumName,
+				"type": string(item.Type), "title": item.Title, "body": item.Body,
+				"link": link, "read": false, "created_at": createdAt,
+			})
+			_ = s.eventBus.Publish(ctx, "forumline_notification_changes", payload)
 		}
 		inserted++
 	}
