@@ -189,6 +189,19 @@ function _startDmStoreIfAuth() {
     DmStore.onChanged(() => renderDmList());
     PresenceTracker.start();
     PresenceTracker.onUpdate(() => renderDmList());
+
+    // In-app DM notification: toast + sound when a message arrives
+    // and the user isn't currently viewing that conversation
+    EventStream.subscribeDm(event => {
+      const myId = ForumlineAPI.getUserId();
+      if (event.sender_id === myId) return; // don't notify on own messages
+      if (store.currentView === 'dm' && store.currentDm === event.conversation_id) return;
+      const convo = DmStore.getConversations().find(c => c.id === event.conversation_id);
+      const senderName = convo
+        ? (convo.members || []).find(m => m.id === event.sender_id)?.displayName || convo.name || 'Someone'
+        : 'Someone';
+      showToast(`${senderName} sent you a message`);
+    });
   }
 }
 

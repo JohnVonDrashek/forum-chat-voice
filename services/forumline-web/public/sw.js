@@ -1,4 +1,4 @@
-// Forumline Redesign — Push Notification Service Worker
+// Forumline — Push Notification Service Worker
 
 self.addEventListener('push', event => {
   if (!event.data) return;
@@ -7,12 +7,30 @@ self.addEventListener('push', event => {
   const { title, body, link, forum_domain } = data;
 
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon: '/forum.svg',
-      badge: '/forum.svg',
-      tag: link || 'forumline',
-      data: { link, forum_domain },
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      // If a Forumline tab is focused, send message to page for in-app handling
+      const focusedClient = windowClients.find(
+        c => c.focused && c.url.includes(self.location.origin),
+      );
+      if (focusedClient) {
+        focusedClient.postMessage({
+          type: 'push-message',
+          title,
+          body,
+          link,
+          forum_domain,
+        });
+        return;
+      }
+
+      // Tab not focused or closed — show OS notification
+      return self.registration.showNotification(title, {
+        body,
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        tag: link || 'forumline',
+        data: { link, forum_domain },
+      });
     }),
   );
 });
