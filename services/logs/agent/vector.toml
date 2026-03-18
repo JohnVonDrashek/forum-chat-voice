@@ -20,14 +20,20 @@ source = '''
 [sources.internal]
 type = "internal_metrics"
 
+# Tag metrics with host label (substituted by deploy script)
+[transforms.tag_metrics]
+type = "remap"
+inputs = ["internal"]
+source = '''
+.tags.host = "${LOGS_HOST_LABEL}"
+'''
+
 # Push Vector's own metrics to VictoriaMetrics
 [sinks.metrics]
 type = "prometheus_remote_write"
-inputs = ["internal"]
+inputs = ["tag_metrics"]
 endpoint = "http://192.168.1.108:8428/api/v1/write"
 default_namespace = "vector"
-[sinks.metrics.add_labels]
-host = "${LOGS_HOST_LABEL}"
 
 # Ship to VictoriaLogs (Loki-compatible endpoint)
 [sinks.victorialogs]
