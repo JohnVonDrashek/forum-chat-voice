@@ -356,10 +356,10 @@ function initNewDmModal() {
             const userId = el.dataset.userId;
             closeNewDmModal();
             try {
-              const convo = await ForumlineAPI.getOrCreateDM(userId);
+              const convoId = await ForumlineAPI.getOrCreateDM(userId);
               await DmStore.fetchConversations();
               renderDmList();
-              _deps.showDm(convo.id);
+              _deps.showDm(convoId);
             } catch (err) {
               console.error('[NewDM] Failed to create conversation:', err);
             }

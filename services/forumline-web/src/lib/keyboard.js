@@ -66,11 +66,11 @@ export function initKeyboardShortcuts(deps) {
       const currentView = getCurrentView();
       const currentForum = getCurrentForum();
       if (currentView === 'thread' && currentForum) {
-        showForum(currentForum);
+        _showForum(currentForum);
         return;
       }
       if (currentView === 'newThread' && currentForum) {
-        showForum(currentForum);
+        _showForum(currentForum);
         return;
       }
       if (currentView !== 'home') {

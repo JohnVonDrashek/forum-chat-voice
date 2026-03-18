@@ -7,6 +7,7 @@
 import { ForumStore } from '@forumline/client-sdk';
 import { avatarUrl } from '../lib/avatar.js';
 import { showErrorBanner } from '../components/error-banner.js';
+import { showToast } from '../components/toast.js';
 
 let _webviewIframe = null;
 let _messageHandler = null;
