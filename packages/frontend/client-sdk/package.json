@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@forumline/protocol": "workspace:*",
-    "openapi-fetch": "^0.13.5"
+    "openapi-fetch": "^0.17.0"
   },
   "peerDependencies": {
     "livekit-client": ">=2.0.0"
