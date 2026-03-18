@@ -1,0 +1,74 @@
+groups:
+  - name: deploy-safety
+    # These rules catch the exact class of bugs we just found:
+    # middleware breaking SSE, endpoints returning unexpected 5xx, etc.
+    rules:
+      - alert: SSEEndpoint500
+        expr: rate(forumline_api_http_requests_total{path="/api/events/stream", status="500"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SSE event stream returning 500"
+          description: >
+            The /api/events/stream endpoint is returning 500 errors.
+            This usually means a middleware wrapper is breaking http.Flusher.
+            All realtime features (DMs, notifications, calls) are down.
+
+      - alert: HighErrorRate
+        expr: >
+          sum(rate(forumline_api_http_requests_total{status=~"5.."}[5m])) /
+          sum(rate(forumline_api_http_requests_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Forumline API error rate above 5%"
+          description: >
+            More than 5% of requests are returning 5xx errors.
+            Check recent deploys and VictoriaLogs for details.
+
+      - alert: HostedHighErrorRate
+        expr: >
+          sum(rate(hosted_http_requests_total{status=~"5.."}[5m])) /
+          sum(rate(hosted_http_requests_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hosted API error rate above 5%"
+          description: >
+            More than 5% of hosted forum requests are returning 5xx errors.
+
+      - alert: TokenExchangeFailures
+        expr: rate(hosted_http_requests_total{path="/api/forumline/auth/token-exchange", status=~"4..|5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Forum auto sign-in failures elevated"
+          description: >
+            The token-exchange endpoint (invisible handshake) is failing at
+            an elevated rate. Users may need to click Sign In manually.
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is unreachable"
+          description: >
+            VictoriaMetrics cannot scrape {{ $labels.job }} at
+            {{ $labels.instance }}. The service may be down.
+
+      - alert: SSEConnectionsZero
+        expr: forumline_api_http_requests_in_flight == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No in-flight requests for 10 minutes"
+          description: >
+            The forumline API has had zero in-flight requests for 10 minutes.
+            Either no users are connected or the service is silently broken.

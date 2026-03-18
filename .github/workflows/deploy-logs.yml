@@ -15,3 +15,5 @@ jobs:
 
       - name: Deploy VictoriaLogs
         run: ci/deploy.sh logs
+        env:
+          KEEPASS_PASSWORD: ${{ secrets.KEEPASS_PASSWORD }}

@@ -22,3 +22,7 @@ jobs:
         run: ci/deploy.sh hosted
         env:
           KEEPASS_PASSWORD: ${{ secrets.KEEPASS_PASSWORD }}
+
+      - name: Smoke test critical paths
+        if: success()
+        run: pnpm test:e2e:smoke -- --grep "critical paths"

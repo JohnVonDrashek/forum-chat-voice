@@ -83,8 +83,16 @@ scp "$SRC_COMPOSE" "$HOST:$REMOTE/docker-compose.yml"
 # Upload extra config files
 if [ "$SERVICE" = "logs" ]; then
   [ -f services/logs/server/prometheus.yml ] && scp services/logs/server/prometheus.yml "$HOST:$REMOTE/prometheus.yml"
+  [ -f services/logs/server/alerts.yml ] && scp services/logs/server/alerts.yml "$HOST:$REMOTE/alerts.yml"
+  [ -f services/logs/server/alertmanager.yml ] && scp services/logs/server/alertmanager.yml "$HOST:$REMOTE/alertmanager.yml"
+  [ -f services/logs/server/discord-relay.py ] && scp services/logs/server/discord-relay.py "$HOST:$REMOTE/discord-relay.py"
   [ -f services/logs/server/loki-config.yml ] && scp services/logs/server/loki-config.yml "$HOST:$REMOTE/loki-config.yml"
   [ -f services/logs/server/users.yml ] && scp services/logs/server/users.yml "$HOST:$REMOTE/users.yml"
+  # Generate .env with Discord webhook for alert relay
+  DISCORD_WEBHOOK=$("$SCRIPT_DIR/secrets.sh" services | grep DISCORD_ALERT_WEBHOOK | cut -d= -f2- || true)
+  if [ -n "$DISCORD_WEBHOOK" ]; then
+    echo "DISCORD_ALERT_WEBHOOK=$DISCORD_WEBHOOK" | ssh "$HOST" "cat > $REMOTE/.env"
+  fi
   # Clean up orphaned syslog logging driver config (from reverted a6665b3).
   # Only restarts Docker if the file actually exists. Waits for Docker to be ready.
   ssh "$HOST" 'if [ -f /etc/docker/daemon.json ]; then rm /etc/docker/daemon.json && systemctl restart docker && echo "Removed orphaned daemon.json, restarting Docker..." && while ! docker info >/dev/null 2>&1; do sleep 1; done && echo "Docker ready"; fi'
@@ -122,5 +130,9 @@ else
   echo "Building and restarting..."
   ssh "$HOST" "cd $REMOTE && docker compose build --no-cache $SERVICE && docker compose up -d $SERVICE && docker compose ps"
 fi
+
+# Post-deploy health verification
+echo "Running post-deploy checks..."
+"$SCRIPT_DIR/post-deploy-check.sh" "$SERVICE"
 
 echo "=== $SERVICE deployed ==="

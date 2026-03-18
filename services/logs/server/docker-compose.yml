@@ -25,6 +25,46 @@ services:
     ports:
       - "8428:8428"
 
+  vmalert:
+    image: victoriametrics/vmalert:latest
+    restart: unless-stopped
+    volumes:
+      - ./alerts.yml:/etc/alerts/alerts.yml:ro
+    command:
+      - -rule=/etc/alerts/alerts.yml
+      - -datasource.url=http://victoria-metrics:8428
+      - -remoteWrite.url=http://victoria-metrics:8428
+      - -notifier.url=http://alertmanager:9093
+      - -httpListenAddr=:8880
+    ports:
+      - "8880:8880"
+    depends_on:
+      - victoria-metrics
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    restart: unless-stopped
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.listen-address=:9093
+    ports:
+      - "9093:9093"
+
+  discord-relay:
+    image: python:3-alpine
+    restart: unless-stopped
+    volumes:
+      - ./discord-relay.py:/app/relay.py:ro
+    command: python /app/relay.py
+    environment:
+      - DISCORD_WEBHOOK_URL=${DISCORD_ALERT_WEBHOOK}
+    depends_on:
+      - alertmanager
+
 volumes:
   victoria-logs-data:
   victoria-metrics-data:
