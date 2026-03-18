@@ -16,6 +16,7 @@ import (
 	"github.com/forumline/forumline/backend/auth"
 	"github.com/forumline/forumline/backend/db"
 	"github.com/forumline/forumline/backend/httpkit"
+	"github.com/forumline/forumline/backend/metrics"
 	"github.com/forumline/forumline/backend/pubsub"
 	"github.com/forumline/forumline/backend/sse"
 	"github.com/forumline/forumline/backend/valkey"
@@ -117,9 +118,11 @@ func main() {
 
 	// Router
 	router := newRouter(s, sseHub, valkeyClient, eventBus)
+	router.Handle("GET /metrics", metrics.Handler())
 
 	// Wrap with global middleware
 	var handler http.Handler = router
+	handler = metrics.Middleware("forumline_api")(handler)
 	handler = httpkit.CORSMiddleware(handler)
 	handler = httpkit.SecurityHeaders(handler)
 
@@ -167,8 +170,8 @@ func spaHandler(apiHandler http.Handler) http.Handler {
 	indexHTML := buildIndexHTML(distDir)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// API and Connect RPC routes go to the router
-		if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/forumline.") {
+		// API, Connect RPC, and metrics routes go to the router
+		if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/forumline.") || r.URL.Path == "/metrics" {
 			apiHandler.ServeHTTP(w, r)
 			return
 		}

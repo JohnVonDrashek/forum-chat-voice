@@ -82,6 +82,7 @@ scp "$SRC_COMPOSE" "$HOST:$REMOTE/docker-compose.yml"
 
 # Upload extra config files
 if [ "$SERVICE" = "logs" ]; then
+  [ -f services/logs/server/prometheus.yml ] && scp services/logs/server/prometheus.yml "$HOST:$REMOTE/prometheus.yml"
   [ -f services/logs/server/loki-config.yml ] && scp services/logs/server/loki-config.yml "$HOST:$REMOTE/loki-config.yml"
   [ -f services/logs/server/users.yml ] && scp services/logs/server/users.yml "$HOST:$REMOTE/users.yml"
   # Clean up orphaned syslog logging driver config (from reverted a6665b3).

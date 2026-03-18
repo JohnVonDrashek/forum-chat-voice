@@ -30,6 +30,7 @@ import (
 	"github.com/forumline/forumline/backend/auth"
 	"github.com/forumline/forumline/backend/db"
 	"github.com/forumline/forumline/backend/httpkit"
+	"github.com/forumline/forumline/backend/metrics"
 	"github.com/forumline/forumline/backend/pubsub"
 	"github.com/forumline/forumline/backend/sse"
 	"github.com/forumline/forumline/backend/valkey"
@@ -142,6 +143,9 @@ func main() {
 	// Forum routes are served with tenant middleware (Host-based routing).
 	mux := http.NewServeMux()
 
+	// Prometheus metrics (no tenant context)
+	mux.Handle("GET /metrics", metrics.Handler())
+
 	// Health check (no tenant context, no DB — keeps Cloudflare Tunnel warm)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -235,6 +239,7 @@ func main() {
 
 	// Global middleware
 	var handler http.Handler = mux
+	handler = metrics.Middleware("hosted")(handler)
 	handler = httpkit.CORSMiddleware(handler)
 	handler = httpkit.SecurityHeaders(handler)
 	handler = spaHandler(handler, store, siteCache)
@@ -316,7 +321,7 @@ func spaHandler(apiHandler http.Handler, store *plat.TenantStore, cache *plat.Si
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/health" || strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/.well-known/") || strings.HasPrefix(r.URL.Path, "/forumline.") {
+		if r.URL.Path == "/health" || r.URL.Path == "/metrics" || strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/.well-known/") || strings.HasPrefix(r.URL.Path, "/forumline.") {
 			apiHandler.ServeHTTP(w, r)
 			return
 		}

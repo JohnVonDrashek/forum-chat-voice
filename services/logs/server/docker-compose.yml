@@ -11,5 +11,20 @@ services:
     ports:
       - "9428:9428"
 
+  victoria-metrics:
+    image: victoriametrics/victoria-metrics:latest
+    restart: unless-stopped
+    volumes:
+      - victoria-metrics-data:/victoria-metrics-data
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - -storageDataPath=/victoria-metrics-data
+      - -retentionPeriod=30d
+      - -httpListenAddr=:8428
+      - -promscrape.config=/etc/prometheus/prometheus.yml
+    ports:
+      - "8428:8428"
+
 volumes:
   victoria-logs-data:
+  victoria-metrics-data:
