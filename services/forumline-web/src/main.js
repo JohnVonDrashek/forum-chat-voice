@@ -232,7 +232,8 @@ ForumlineAuth.onAuthStateChange((event, session) => {
       ForumStore.syncFromServer(ForumlineAPI.getToken()).then(() => {
         CallManager.init();
         initCallUI();
-        PushNotifications.registerServiceWorker(params => handleDeepLinkParams(params));
+        PushNotifications.registerServiceWorker(params => handleDeepLinkParams(params))
+          .then(() => PushNotifications.subscribe());
         checkUrlParams({ showDm: wrappedShowDm, showForum: wrappedShowForum, ForumStore, DmStore });
       });
 

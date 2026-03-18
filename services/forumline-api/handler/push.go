@@ -22,6 +22,16 @@ func NewPushHandler(s *store.Store, ps *service.PushService) *PushHandler {
 	return &PushHandler{Store: s, PushService: ps}
 }
 
+// HandleConfig returns the VAPID public key so the frontend can subscribe to web push.
+func (h *PushHandler) HandleConfig(w http.ResponseWriter, r *http.Request) {
+	vapidKey := os.Getenv("VAPID_PUBLIC_KEY")
+	if vapidKey == "" {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "push not configured"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"vapid_public_key": vapidKey})
+}
+
 func (h *PushHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	action := r.URL.Query().Get("action")
 	if action == "notify" && r.Method == http.MethodPost {

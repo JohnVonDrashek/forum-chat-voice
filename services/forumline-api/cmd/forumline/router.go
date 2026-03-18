@@ -154,8 +154,9 @@ func newRouter(s *store.Store, sseHub *sse.Hub, valkey *redis.Client, bus pubsub
 	mux.HandleFunc("PUT /api/forums/health", forumH.HandleUpdateHealth)
 	mux.HandleFunc("GET /api/forums/all", forumH.HandleListAll)
 
-	// Push notify (service key auth, not in spec — separate from subscribe/unsubscribe)
+	// Push (not in spec — config is public, notify uses service key auth)
 	pushH := handler.NewPushHandler(s, pushSvc)
+	mux.HandleFunc("GET /api/push/config", pushH.HandleConfig)
 	mux.HandleFunc("POST /api/push/notify", pushH.HandleNotify)
 
 	// Legacy /api/dms/* routes (backward compatibility)

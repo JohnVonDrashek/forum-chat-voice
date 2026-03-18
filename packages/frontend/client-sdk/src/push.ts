@@ -94,12 +94,16 @@ export const PushNotifications = {
         userVisibleOnly: true,
         applicationServerKey: vapidKey,
       });
-      await ForumlineAPI.apiFetch('/api/push', {
+      const subJson = sub.toJSON();
+      await ForumlineAPI.apiFetch('/api/push?action=subscribe', {
         method: 'POST',
-        body: JSON.stringify({ action: 'subscribe', subscription: sub.toJSON() }),
+        body: JSON.stringify({
+          endpoint: subJson.endpoint,
+          keys: subJson.keys,
+        }),
       });
       console.log('[Push] Subscribed');
-      NativeBridge.sendPushToken(JSON.stringify(sub.toJSON()));
+      NativeBridge.sendPushToken(JSON.stringify(subJson));
     } catch (err) {
       console.error('[Push] Subscribe failed:', err);
     }
