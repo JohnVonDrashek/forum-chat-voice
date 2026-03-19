@@ -74,11 +74,11 @@ test.describe('Forum auto sign-in prerequisites', () => {
     expect(body.error).toContain('token');
   });
 
-  test('testforum config endpoint returns capabilities', async ({ request }) => {
+  test('testforum config endpoint returns forum config', async ({ request }) => {
     const res = await request.get('https://testforum.forumline.net/api/config');
     expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body).toHaveProperty('name');
-    expect(body).toHaveProperty('capabilities');
+    expect(body).toHaveProperty('hosted_mode');
   });
 });
