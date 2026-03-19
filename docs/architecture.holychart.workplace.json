@@ -1,0 +1,1827 @@
+{
+  "version": 1,
+  "diagrams": [
+    {
+      "id": "infra-overview",
+      "name": "Infrastructure & Network Topology",
+      "elements": [
+        {
+          "id": "title-infra",
+          "type": "text",
+          "text": "**Forumline Infrastructure**\nSelf-hosted on Proxmox · Cloudflare edge · WireGuard VPN",
+          "x": 0,
+          "y": -450,
+          "width": 500,
+          "height": 50,
+          "fontSize": 24,
+          "color": "#4fc3f7"
+        },
+
+        {
+          "id": "cloudflare-box",
+          "type": "box",
+          "text": "**Cloudflare Edge**",
+          "x": -350,
+          "y": -380,
+          "width": 700,
+          "height": 140,
+          "fontSize": 14,
+          "style": "dashed",
+          "color": "#f48225"
+        },
+        {
+          "id": "cf-tunnel",
+          "type": "icon",
+          "iconName": "mdi:cloud",
+          "x": -250,
+          "y": -330,
+          "width": 48,
+          "height": 48,
+          "label": "Cloudflare Tunnel",
+          "color": "#f48225"
+        },
+        {
+          "id": "cf-pages",
+          "type": "icon",
+          "iconName": "mdi:web",
+          "x": -50,
+          "y": -330,
+          "width": 48,
+          "height": 48,
+          "label": "CF Pages\nforumline.net",
+          "color": "#f48225"
+        },
+        {
+          "id": "cf-workers",
+          "type": "icon",
+          "iconName": "mdi:function-variant",
+          "x": 150,
+          "y": -330,
+          "width": 48,
+          "height": 48,
+          "label": "CF Workers\nstatus.forumline.net",
+          "color": "#f48225"
+        },
+
+        {
+          "id": "proxmox-box",
+          "type": "box",
+          "text": "**Proxmox Host** (192.168.1.98)",
+          "x": -550,
+          "y": -200,
+          "width": 1100,
+          "height": 550,
+          "fontSize": 14,
+          "style": "dashed",
+          "color": "#7e57c2"
+        },
+
+        {
+          "id": "forumline-lxc-box",
+          "type": "box",
+          "text": "**CT 101 — forumline-prod** (192.168.1.99)",
+          "x": -520,
+          "y": -150,
+          "width": 300,
+          "height": 230,
+          "fontSize": 12,
+          "style": "filled",
+          "color": "#1a237e"
+        },
+        {
+          "id": "forumline-api",
+          "type": "icon",
+          "iconName": "mdi:server",
+          "x": -470,
+          "y": -100,
+          "width": 48,
+          "height": 48,
+          "label": "Forumline API\n:3000",
+          "color": "#4fc3f7"
+        },
+        {
+          "id": "forumline-pg",
+          "type": "icon",
+          "iconName": "mdi:elephant",
+          "x": -370,
+          "y": -100,
+          "width": 48,
+          "height": 48,
+          "label": "Postgres 17",
+          "color": "#81c784"
+        },
+        {
+          "id": "forumline-nats",
+          "type": "icon",
+          "iconName": "mdi:transfer",
+          "x": -470,
+          "y": -10,
+          "width": 48,
+          "height": 48,
+          "label": "NATS",
+          "color": "#26a69a"
+        },
+        {
+          "id": "forumline-valkey",
+          "type": "icon",
+          "iconName": "mdi:cached",
+          "x": -370,
+          "y": -10,
+          "width": 48,
+          "height": 48,
+          "label": "Valkey",
+          "color": "#ef5350"
+        },
+
+        {
+          "id": "hosted-lxc-box",
+          "type": "box",
+          "text": "**CT 104 — hosted-prod** (192.168.1.107)",
+          "x": -180,
+          "y": -150,
+          "width": 300,
+          "height": 230,
+          "fontSize": 12,
+          "style": "filled",
+          "color": "#1a237e"
+        },
+        {
+          "id": "hosted-api",
+          "type": "icon",
+          "iconName": "mdi:server-network",
+          "x": -130,
+          "y": -100,
+          "width": 48,
+          "height": 48,
+          "label": "Hosted Server\n:3000",
+          "color": "#4fc3f7"
+        },
+        {
+          "id": "hosted-citus",
+          "type": "icon",
+          "iconName": "mdi:elephant",
+          "x": -30,
+          "y": -100,
+          "width": 48,
+          "height": 48,
+          "label": "Citus 13\n(schema/tenant)",
+          "color": "#66bb6a"
+        },
+        {
+          "id": "hosted-nats",
+          "type": "icon",
+          "iconName": "mdi:transfer",
+          "x": -130,
+          "y": -10,
+          "width": 48,
+          "height": 48,
+          "label": "NATS",
+          "color": "#26a69a"
+        },
+        {
+          "id": "hosted-valkey",
+          "type": "icon",
+          "iconName": "mdi:cached",
+          "x": -30,
+          "y": -10,
+          "width": 48,
+          "height": 48,
+          "label": "Valkey",
+          "color": "#ef5350"
+        },
+
+        {
+          "id": "auth-lxc-box",
+          "type": "box",
+          "text": "**CT 107 — auth-prod** (192.168.1.110)",
+          "x": 160,
+          "y": -150,
+          "width": 300,
+          "height": 230,
+          "fontSize": 12,
+          "style": "filled",
+          "color": "#1a237e"
+        },
+        {
+          "id": "zitadel",
+          "type": "icon",
+          "iconName": "mdi:shield-key",
+          "x": 210,
+          "y": -100,
+          "width": 48,
+          "height": 48,
+          "label": "Zitadel\nauth.forumline.net",
+          "color": "#ffb74d"
+        },
+        {
+          "id": "forumline-id",
+          "type": "icon",
+          "iconName": "mdi:key",
+          "x": 360,
+          "y": -100,
+          "width": 48,
+          "height": 48,
+          "label": "forumline-id\nid.forumline.net",
+          "color": "#ffb74d"
+        },
+        {
+          "id": "auth-pg",
+          "type": "icon",
+          "iconName": "mdi:elephant",
+          "x": 260,
+          "y": -10,
+          "width": 48,
+          "height": 48,
+          "label": "Postgres 17\n(Zitadel)",
+          "color": "#81c784"
+        },
+
+        {
+          "id": "livekit-lxc-box",
+          "type": "box",
+          "text": "**CT 106 — livekit-prod** (192.168.1.111)",
+          "x": -520,
+          "y": 120,
+          "width": 250,
+          "height": 170,
+          "fontSize": 12,
+          "style": "filled",
+          "color": "#1a237e"
+        },
+        {
+          "id": "livekit",
+          "type": "icon",
+          "iconName": "mdi:phone",
+          "x": -420,
+          "y": 170,
+          "width": 48,
+          "height": 48,
+          "label": "LiveKit SFU\nlivekit.forumline.net",
+          "color": "#ab47bc"
+        },
+
+        {
+          "id": "logs-lxc-box",
+          "type": "box",
+          "text": "**CT 105 — logs-prod** (192.168.1.108)",
+          "x": -230,
+          "y": 120,
+          "width": 700,
+          "height": 170,
+          "fontSize": 12,
+          "style": "filled",
+          "color": "#1a237e"
+        },
+        {
+          "id": "victoria-logs",
+          "type": "icon",
+          "iconName": "mdi:file",
+          "x": -160,
+          "y": 170,
+          "width": 48,
+          "height": 48,
+          "label": "VictoriaLogs\n:9428",
+          "color": "#29b6f6"
+        },
+        {
+          "id": "victoria-metrics",
+          "type": "icon",
+          "iconName": "mdi:chart-bar",
+          "x": -20,
+          "y": 170,
+          "width": 48,
+          "height": 48,
+          "label": "VictoriaMetrics\n:8428",
+          "color": "#29b6f6"
+        },
+        {
+          "id": "vmalert",
+          "type": "icon",
+          "iconName": "mdi:bell-alert",
+          "x": 120,
+          "y": 170,
+          "width": 48,
+          "height": 48,
+          "label": "vmalert\n:8880",
+          "color": "#ffa726"
+        },
+        {
+          "id": "glitchtip",
+          "type": "icon",
+          "iconName": "mdi:bug",
+          "x": 260,
+          "y": 170,
+          "width": 48,
+          "height": 48,
+          "label": "GlitchTip\nerrors.forumline.net",
+          "color": "#ef5350"
+        },
+        {
+          "id": "alertmanager",
+          "type": "icon",
+          "iconName": "mdi:bell",
+          "x": 400,
+          "y": 170,
+          "width": 48,
+          "height": 48,
+          "label": "Alertmanager\n→ Discord",
+          "color": "#ffa726"
+        },
+
+        {
+          "id": "r2",
+          "type": "icon",
+          "iconName": "mdi:harddisk",
+          "x": 500,
+          "y": -100,
+          "width": 48,
+          "height": 48,
+          "label": "Cloudflare R2\n(avatars, uploads)",
+          "color": "#f48225"
+        },
+
+        {
+          "id": "users",
+          "type": "icon",
+          "iconName": "mdi:account-group",
+          "x": 0,
+          "y": -500,
+          "width": 64,
+          "height": 64,
+          "label": "Users",
+          "color": "#ffffff"
+        },
+
+        {
+          "id": "wireguard",
+          "type": "icon",
+          "iconName": "mdi:vpn",
+          "x": 500,
+          "y": 50,
+          "width": 48,
+          "height": 48,
+          "label": "WireGuard VPN\n10.10.0.0/24",
+          "color": "#7e57c2"
+        }
+      ],
+      "connections": [
+        { "id": "c-users-cf", "type": "connection", "fromId": "users", "toId": "cf-tunnel", "label": "HTTPS", "style": "solid", "color": "#f48225" },
+        { "id": "c-cf-forumline", "type": "connection", "fromId": "cf-tunnel", "toId": "forumline-api", "label": "app.forumline.net", "style": "solid", "color": "#4fc3f7" },
+        { "id": "c-cf-hosted", "type": "connection", "fromId": "cf-tunnel", "toId": "hosted-api", "label": "*.forumline.net", "style": "solid", "color": "#4fc3f7" },
+        { "id": "c-cf-zitadel", "type": "connection", "fromId": "cf-tunnel", "toId": "zitadel", "label": "auth.forumline.net", "style": "solid", "color": "#ffb74d" },
+        { "id": "c-cf-id", "type": "connection", "fromId": "cf-tunnel", "toId": "forumline-id", "label": "id.forumline.net", "style": "solid", "color": "#ffb74d" },
+        { "id": "c-cf-livekit", "type": "connection", "fromId": "cf-tunnel", "toId": "livekit", "label": "livekit.forumline.net", "style": "solid", "color": "#ab47bc" },
+        { "id": "c-cf-glitchtip", "type": "connection", "fromId": "cf-tunnel", "toId": "glitchtip", "label": "errors.forumline.net", "style": "dashed", "color": "#ef5350" },
+        { "id": "c-forumline-pg", "type": "connection", "fromId": "forumline-api", "toId": "forumline-pg", "style": "solid", "color": "#81c784" },
+        { "id": "c-forumline-nats", "type": "connection", "fromId": "forumline-api", "toId": "forumline-nats", "style": "solid", "color": "#26a69a" },
+        { "id": "c-forumline-valkey", "type": "connection", "fromId": "forumline-api", "toId": "forumline-valkey", "style": "solid", "color": "#ef5350" },
+        { "id": "c-hosted-citus", "type": "connection", "fromId": "hosted-api", "toId": "hosted-citus", "style": "solid", "color": "#66bb6a" },
+        { "id": "c-hosted-nats", "type": "connection", "fromId": "hosted-api", "toId": "hosted-nats", "style": "solid", "color": "#26a69a" },
+        { "id": "c-hosted-valkey", "type": "connection", "fromId": "hosted-api", "toId": "hosted-valkey", "style": "solid", "color": "#ef5350" },
+        { "id": "c-id-zitadel", "type": "connection", "fromId": "forumline-id", "toId": "zitadel", "label": "OIDC", "style": "solid", "color": "#ffb74d" },
+        { "id": "c-zitadel-pg", "type": "connection", "fromId": "zitadel", "toId": "auth-pg", "style": "solid", "color": "#81c784" },
+        { "id": "c-hosted-r2", "type": "connection", "fromId": "hosted-api", "toId": "r2", "label": "file uploads", "style": "dashed", "color": "#f48225" },
+        { "id": "c-vmalert-am", "type": "connection", "fromId": "vmalert", "toId": "alertmanager", "label": "alerts", "style": "solid", "color": "#ffa726" },
+        { "id": "c-vmalert-vm", "type": "connection", "fromId": "vmalert", "toId": "victoria-metrics", "label": "PromQL", "style": "dashed", "color": "#29b6f6" },
+        { "id": "c-forumline-livekit", "type": "connection", "fromId": "forumline-api", "toId": "livekit", "label": "room tokens", "style": "dashed", "color": "#ab47bc" },
+        { "id": "c-hosted-id", "type": "connection", "fromId": "hosted-api", "toId": "forumline-id", "label": "auth tokens", "style": "dashed", "color": "#ffb74d" }
+      ],
+      "viewport": { "panX": 0, "panY": 0, "zoom": 1, "rotation": 0 }
+    },
+
+    {
+      "id": "service-arch",
+      "name": "Go Service & Package Architecture",
+      "elements": [
+        {
+          "id": "title-svc",
+          "type": "text",
+          "text": "**Go Service & Package Dependency Graph**\nHandler → Service → Store layering",
+          "x": 0,
+          "y": -420,
+          "width": 500,
+          "height": 50,
+          "fontSize": 24,
+          "color": "#4fc3f7"
+        },
+
+        {
+          "id": "services-box",
+          "type": "box",
+          "text": "**Services (Entry Points)**",
+          "x": -500,
+          "y": -350,
+          "width": 1000,
+          "height": 200,
+          "fontSize": 16,
+          "style": "dashed",
+          "color": "#4fc3f7"
+        },
+
+        {
+          "id": "svc-forumline",
+          "type": "icon",
+          "iconName": "mdi:server",
+          "x": -350,
+          "y": -300,
+          "width": 48,
+          "height": 48,
+          "label": "forumline-api\n(Platform Hub)",
+          "color": "#4fc3f7"
+        },
+        {
+          "id": "svc-forumline-desc",
+          "type": "text",
+          "text": "DMs, calls, profiles\nforum discovery\npush notifications",
+          "x": -350,
+          "y": -230,
+          "width": 140,
+          "height": 50,
+          "fontSize": 11,
+          "color": "#90a4ae"
+        },
+
+        {
+          "id": "svc-hosted",
+          "type": "icon",
+          "iconName": "mdi:server-network",
+          "x": 0,
+          "y": -300,
+          "width": 48,
+          "height": 48,
+          "label": "hosted\n(Multi-Tenant Forums)",
+          "color": "#66bb6a"
+        },
+        {
+          "id": "svc-hosted-desc",
+          "type": "text",
+          "text": "Tenant routing\nschema isolation\ncustom sites (R2)",
+          "x": 0,
+          "y": -230,
+          "width": 140,
+          "height": 50,
+          "fontSize": 11,
+          "color": "#90a4ae"
+        },
+
+        {
+          "id": "svc-id",
+          "type": "icon",
+          "iconName": "mdi:key",
+          "x": 350,
+          "y": -300,
+          "width": 48,
+          "height": 48,
+          "label": "forumline-id\n(Identity Service)",
+          "color": "#ffb74d"
+        },
+        {
+          "id": "svc-id-desc",
+          "type": "text",
+          "text": "OAuth proxy\nwraps Zitadel\n~340 lines",
+          "x": 350,
+          "y": -230,
+          "width": 140,
+          "height": 50,
+          "fontSize": 11,
+          "color": "#90a4ae"
+        },
+
+        {
+          "id": "forum-engine-box",
+          "type": "box",
+          "text": "**packages/forum** (Reusable Forum Engine)",
+          "x": -350,
+          "y": -110,
+          "width": 700,
+          "height": 200,
+          "fontSize": 14,
+          "style": "filled",
+          "color": "#1b5e20"
+        },
+
+        {
+          "id": "forum-config",
+          "type": "icon",
+          "iconName": "mdi:cog",
+          "x": -280,
+          "y": -60,
+          "width": 48,
+          "height": 48,
+          "label": "Config\n(DI entry point)",
+          "color": "#a5d6a7"
+        },
+        {
+          "id": "forum-handlers",
+          "type": "icon",
+          "iconName": "mdi:api",
+          "x": -130,
+          "y": -60,
+          "width": 48,
+          "height": 48,
+          "label": "Handlers\n(80+ endpoints)",
+          "color": "#a5d6a7"
+        },
+        {
+          "id": "forum-services",
+          "type": "icon",
+          "iconName": "mdi:code-tags",
+          "x": 20,
+          "y": -60,
+          "width": 48,
+          "height": 48,
+          "label": "Services\n(business logic)",
+          "color": "#a5d6a7"
+        },
+        {
+          "id": "forum-store",
+          "type": "icon",
+          "iconName": "mdi:database",
+          "x": 170,
+          "y": -60,
+          "width": 48,
+          "height": 48,
+          "label": "Store\n(sqlc queries)",
+          "color": "#a5d6a7"
+        },
+
+        {
+          "id": "forum-auth-iface",
+          "type": "text",
+          "text": "***AuthProvider*** interface",
+          "x": -280,
+          "y": 20,
+          "width": 160,
+          "height": 20,
+          "fontSize": 12,
+          "color": "#ffb74d"
+        },
+        {
+          "id": "forum-storage-iface",
+          "type": "text",
+          "text": "***FileStorage*** interface",
+          "x": 20,
+          "y": 20,
+          "width": 160,
+          "height": 20,
+          "fontSize": 12,
+          "color": "#f48225"
+        },
+
+        {
+          "id": "backend-box",
+          "type": "box",
+          "text": "**packages/backend** (Shared Infrastructure)",
+          "x": -500,
+          "y": 130,
+          "width": 1000,
+          "height": 150,
+          "fontSize": 14,
+          "style": "dashed",
+          "color": "#7e57c2"
+        },
+
+        {
+          "id": "pkg-auth",
+          "type": "icon",
+          "iconName": "mdi:shield-key",
+          "x": -400,
+          "y": 180,
+          "width": 48,
+          "height": 48,
+          "label": "auth/\nZitadel JWT",
+          "color": "#ce93d8"
+        },
+        {
+          "id": "pkg-db",
+          "type": "icon",
+          "iconName": "mdi:elephant",
+          "x": -260,
+          "y": 180,
+          "width": 48,
+          "height": 48,
+          "label": "db/\npgxpool + goose",
+          "color": "#ce93d8"
+        },
+        {
+          "id": "pkg-sse",
+          "type": "icon",
+          "iconName": "mdi:transfer",
+          "x": -120,
+          "y": 180,
+          "width": 48,
+          "height": 48,
+          "label": "sse/\nSSE Hub",
+          "color": "#ce93d8"
+        },
+        {
+          "id": "pkg-pubsub",
+          "type": "icon",
+          "iconName": "mdi:tray-full",
+          "x": 20,
+          "y": 180,
+          "width": 48,
+          "height": 48,
+          "label": "pubsub/\nNATS + Watermill",
+          "color": "#ce93d8"
+        },
+        {
+          "id": "pkg-valkey",
+          "type": "icon",
+          "iconName": "mdi:cached",
+          "x": 160,
+          "y": 180,
+          "width": 48,
+          "height": 48,
+          "label": "valkey/\ncache client",
+          "color": "#ce93d8"
+        },
+        {
+          "id": "pkg-httpkit",
+          "type": "icon",
+          "iconName": "mdi:lan",
+          "x": 300,
+          "y": 180,
+          "width": 48,
+          "height": 48,
+          "label": "httpkit/\nCORS, rate limit",
+          "color": "#ce93d8"
+        },
+        {
+          "id": "pkg-metrics",
+          "type": "icon",
+          "iconName": "mdi:chart-bar",
+          "x": 440,
+          "y": 180,
+          "width": 48,
+          "height": 48,
+          "label": "metrics/\nPrometheus",
+          "color": "#ce93d8"
+        },
+
+        {
+          "id": "rpc-box",
+          "type": "box",
+          "text": "**packages/rpc** (Connect RPC)",
+          "x": -500,
+          "y": 320,
+          "width": 400,
+          "height": 100,
+          "fontSize": 14,
+          "style": "dashed",
+          "color": "#ef5350"
+        },
+        {
+          "id": "rpc-platform",
+          "type": "text",
+          "text": "**PlatformService** — ProvisionForum\n**HubService** — RegisterForum\nAuth: x-internal-service-key header",
+          "x": -470,
+          "y": 350,
+          "width": 340,
+          "height": 50,
+          "fontSize": 12,
+          "color": "#ef9a9a"
+        }
+      ],
+      "connections": [
+        { "id": "c-hosted-forum", "type": "connection", "fromId": "svc-hosted", "toId": "forum-config", "label": "imports forum engine", "style": "solid", "color": "#66bb6a" },
+        { "id": "c-forumline-backend", "type": "connection", "fromId": "svc-forumline", "toId": "pkg-auth", "label": "imports", "style": "solid", "color": "#7e57c2" },
+        { "id": "c-hosted-backend", "type": "connection", "fromId": "svc-hosted", "toId": "pkg-db", "label": "imports", "style": "solid", "color": "#7e57c2" },
+        { "id": "c-id-backend", "type": "connection", "fromId": "svc-id", "toId": "pkg-httpkit", "label": "imports", "style": "dashed", "color": "#7e57c2" },
+        { "id": "c-forum-backend-sse", "type": "connection", "fromId": "forum-services", "toId": "pkg-sse", "label": "feeds events", "style": "solid", "color": "#ce93d8" },
+        { "id": "c-forum-backend-pubsub", "type": "connection", "fromId": "forum-services", "toId": "pkg-pubsub", "label": "publishes", "style": "solid", "color": "#ce93d8" },
+        { "id": "c-forum-backend-db", "type": "connection", "fromId": "forum-store", "toId": "pkg-db", "label": "queries", "style": "solid", "color": "#ce93d8" },
+        { "id": "c-handlers-services", "type": "connection", "fromId": "forum-handlers", "toId": "forum-services", "style": "solid", "color": "#a5d6a7" },
+        { "id": "c-services-store", "type": "connection", "fromId": "forum-services", "toId": "forum-store", "style": "solid", "color": "#a5d6a7" },
+        { "id": "c-forumline-rpc", "type": "connection", "fromId": "svc-forumline", "toId": "rpc-platform", "label": "HubService server\nPlatformService client", "style": "dashed", "color": "#ef5350" },
+        { "id": "c-hosted-rpc", "type": "connection", "fromId": "svc-hosted", "toId": "rpc-platform", "label": "PlatformService server\nHubService client", "style": "dashed", "color": "#ef5350" }
+      ],
+      "viewport": { "panX": 0, "panY": 0, "zoom": 1, "rotation": 0 }
+    },
+
+    {
+      "id": "realtime-flow",
+      "name": "Realtime Event Flow (SSE + NATS)",
+      "elements": [
+        {
+          "id": "title-rt",
+          "type": "text",
+          "text": "**Realtime Event Pipeline**\nService → NATS → Watermill → SSE Hub → Browser",
+          "x": 0,
+          "y": -400,
+          "width": 500,
+          "height": 50,
+          "fontSize": 24,
+          "color": "#26a69a"
+        },
+
+        {
+          "id": "svc-layer-box",
+          "type": "box",
+          "text": "**Service Layer** (event producers)",
+          "x": -400,
+          "y": -320,
+          "width": 800,
+          "height": 120,
+          "fontSize": 14,
+          "style": "dashed",
+          "color": "#66bb6a"
+        },
+        {
+          "id": "chat-svc",
+          "type": "icon",
+          "iconName": "mdi:chat",
+          "x": -300,
+          "y": -280,
+          "width": 48,
+          "height": 48,
+          "label": "ChatService",
+          "color": "#66bb6a"
+        },
+        {
+          "id": "call-svc",
+          "type": "icon",
+          "iconName": "mdi:phone",
+          "x": -120,
+          "y": -280,
+          "width": 48,
+          "height": 48,
+          "label": "CallService",
+          "color": "#66bb6a"
+        },
+        {
+          "id": "post-svc",
+          "type": "icon",
+          "iconName": "mdi:message",
+          "x": 60,
+          "y": -280,
+          "width": 48,
+          "height": 48,
+          "label": "PostService",
+          "color": "#66bb6a"
+        },
+        {
+          "id": "notif-svc",
+          "type": "icon",
+          "iconName": "mdi:bell",
+          "x": 240,
+          "y": -280,
+          "width": 48,
+          "height": 48,
+          "label": "NotificationService",
+          "color": "#66bb6a"
+        },
+
+        {
+          "id": "eventbus",
+          "type": "icon",
+          "iconName": "mdi:tray-full",
+          "x": -30,
+          "y": -160,
+          "width": 64,
+          "height": 64,
+          "label": "EventBus.Publish()",
+          "color": "#26a69a"
+        },
+
+        {
+          "id": "nats",
+          "type": "icon",
+          "iconName": "mdi:transfer",
+          "x": -30,
+          "y": -40,
+          "width": 64,
+          "height": 64,
+          "label": "NATS (pub/sub)",
+          "color": "#26a69a"
+        },
+
+        {
+          "id": "topics-box",
+          "type": "box",
+          "text": "**NATS Topics**",
+          "x": -380,
+          "y": 60,
+          "width": 760,
+          "height": 100,
+          "fontSize": 14,
+          "style": "filled",
+          "color": "#004d40"
+        },
+        {
+          "id": "topic-dm",
+          "type": "text",
+          "text": "**dm_changes**",
+          "x": -330,
+          "y": 90,
+          "width": 120,
+          "height": 20,
+          "fontSize": 12,
+          "color": "#80cbc4"
+        },
+        {
+          "id": "topic-call",
+          "type": "text",
+          "text": "**call_signal**",
+          "x": -170,
+          "y": 90,
+          "width": 120,
+          "height": 20,
+          "fontSize": 12,
+          "color": "#80cbc4"
+        },
+        {
+          "id": "topic-chat",
+          "type": "text",
+          "text": "**chat_message_changes**",
+          "x": 0,
+          "y": 90,
+          "width": 160,
+          "height": 20,
+          "fontSize": 12,
+          "color": "#80cbc4"
+        },
+        {
+          "id": "topic-notif",
+          "type": "text",
+          "text": "**notification_changes**",
+          "x": 200,
+          "y": 90,
+          "width": 150,
+          "height": 20,
+          "fontSize": 12,
+          "color": "#80cbc4"
+        },
+        {
+          "id": "topic-push",
+          "type": "text",
+          "text": "**push_dm**",
+          "x": -330,
+          "y": 120,
+          "width": 100,
+          "height": 20,
+          "fontSize": 12,
+          "color": "#80cbc4"
+        },
+        {
+          "id": "topic-voice",
+          "type": "text",
+          "text": "**voice_presence_changes**",
+          "x": 200,
+          "y": 120,
+          "width": 160,
+          "height": 20,
+          "fontSize": 12,
+          "color": "#80cbc4"
+        },
+
+        {
+          "id": "watermill",
+          "type": "icon",
+          "iconName": "mdi:pipe",
+          "x": -30,
+          "y": 210,
+          "width": 64,
+          "height": 64,
+          "label": "Watermill Router",
+          "color": "#7e57c2"
+        },
+
+        {
+          "id": "sse-hub",
+          "type": "icon",
+          "iconName": "mdi:lan",
+          "x": -30,
+          "y": 340,
+          "width": 64,
+          "height": 64,
+          "label": "SSE Hub\n(in-memory multiplexer)",
+          "color": "#ef5350"
+        },
+
+        {
+          "id": "push-listener",
+          "type": "icon",
+          "iconName": "mdi:bell-alert",
+          "x": 250,
+          "y": 210,
+          "width": 48,
+          "height": 48,
+          "label": "Push Listener\n(web push)",
+          "color": "#ffa726"
+        },
+
+        {
+          "id": "filter-box",
+          "type": "box",
+          "text": "**Per-Client Filtering**",
+          "x": -320,
+          "y": 430,
+          "width": 640,
+          "height": 100,
+          "fontSize": 14,
+          "style": "dashed",
+          "color": "#ef5350"
+        },
+        {
+          "id": "filter-desc",
+          "type": "text",
+          "text": "Static: `{\"user_id\": \"123\"}` — match exact fields\nDynamic: `FilterFunc(data) bool` — call_signal targets, tenant schema\nBuffer: 32 events per client, drop on backpressure",
+          "x": -300,
+          "y": 460,
+          "width": 600,
+          "height": 50,
+          "fontSize": 12,
+          "color": "#ef9a9a"
+        },
+
+        {
+          "id": "browser-box",
+          "type": "box",
+          "text": "**Browser (EventSource)**",
+          "x": -320,
+          "y": 570,
+          "width": 640,
+          "height": 150,
+          "fontSize": 14,
+          "style": "filled",
+          "color": "#0d47a1"
+        },
+        {
+          "id": "browser-sse",
+          "type": "icon",
+          "iconName": "mdi:web",
+          "x": -200,
+          "y": 620,
+          "width": 48,
+          "height": 48,
+          "label": "EventStream\n(single SSE conn)",
+          "color": "#64b5f6"
+        },
+        {
+          "id": "browser-dm",
+          "type": "text",
+          "text": "event: **dm**",
+          "x": -40,
+          "y": 610,
+          "width": 80,
+          "height": 20,
+          "fontSize": 12,
+          "color": "#90caf9"
+        },
+        {
+          "id": "browser-notif",
+          "type": "text",
+          "text": "event: **notification**",
+          "x": -40,
+          "y": 640,
+          "width": 130,
+          "height": 20,
+          "fontSize": 12,
+          "color": "#90caf9"
+        },
+        {
+          "id": "browser-call",
+          "type": "text",
+          "text": "event: **call**",
+          "x": -40,
+          "y": 670,
+          "width": 80,
+          "height": 20,
+          "fontSize": 12,
+          "color": "#90caf9"
+        },
+        {
+          "id": "livekit-sfu",
+          "type": "icon",
+          "iconName": "mdi:phone",
+          "x": 200,
+          "y": 620,
+          "width": 48,
+          "height": 48,
+          "label": "LiveKit SFU\n(WebRTC audio)",
+          "color": "#ab47bc"
+        }
+      ],
+      "connections": [
+        { "id": "c-chat-eb", "type": "connection", "fromId": "chat-svc", "toId": "eventbus", "label": "events.Publish()", "style": "solid", "color": "#66bb6a" },
+        { "id": "c-call-eb", "type": "connection", "fromId": "call-svc", "toId": "eventbus", "style": "solid", "color": "#66bb6a" },
+        { "id": "c-post-eb", "type": "connection", "fromId": "post-svc", "toId": "eventbus", "style": "solid", "color": "#66bb6a" },
+        { "id": "c-notif-eb", "type": "connection", "fromId": "notif-svc", "toId": "eventbus", "style": "solid", "color": "#66bb6a" },
+        { "id": "c-eb-nats", "type": "connection", "fromId": "eventbus", "toId": "nats", "label": "fire-and-forget", "style": "animated", "color": "#26a69a" },
+        { "id": "c-nats-wm", "type": "connection", "fromId": "nats", "toId": "watermill", "label": "subscribe", "style": "animated", "color": "#7e57c2" },
+        { "id": "c-wm-sse", "type": "connection", "fromId": "watermill", "toId": "sse-hub", "label": "sseHub.Feed(ch, payload)", "style": "animated", "color": "#ef5350" },
+        { "id": "c-wm-push", "type": "connection", "fromId": "watermill", "toId": "push-listener", "label": "push_dm topic", "style": "dashed", "color": "#ffa726" },
+        { "id": "c-sse-browser", "type": "connection", "fromId": "sse-hub", "toId": "browser-sse", "label": "HTTP/1.1 SSE\ntagged events", "style": "animated", "color": "#64b5f6" },
+        { "id": "c-call-livekit", "type": "connection", "fromId": "browser-call", "toId": "livekit-sfu", "label": "on accept →\nWebRTC connect", "style": "dashed", "color": "#ab47bc" }
+      ],
+      "viewport": { "panX": 0, "panY": 0, "zoom": 1, "rotation": 0 }
+    },
+
+    {
+      "id": "auth-flow",
+      "name": "Authentication Flows",
+      "elements": [
+        {
+          "id": "title-auth",
+          "type": "text",
+          "text": "**Authentication Architecture**\nTwo flows: Direct OIDC (Forumline app) + Identity proxy (hosted forums)",
+          "x": 0,
+          "y": -400,
+          "width": 600,
+          "height": 50,
+          "fontSize": 24,
+          "color": "#ffb74d"
+        },
+
+        {
+          "id": "flow1-box",
+          "type": "box",
+          "text": "**Flow 1: Forumline App** (Direct OIDC with Zitadel)",
+          "x": -450,
+          "y": -320,
+          "width": 900,
+          "height": 200,
+          "fontSize": 14,
+          "style": "dashed",
+          "color": "#4fc3f7"
+        },
+        {
+          "id": "f1-browser",
+          "type": "icon",
+          "iconName": "mdi:laptop",
+          "x": -350,
+          "y": -260,
+          "width": 48,
+          "height": 48,
+          "label": "Browser\napp.forumline.net",
+          "color": "#ffffff"
+        },
+        {
+          "id": "f1-zitadel",
+          "type": "icon",
+          "iconName": "mdi:shield-key",
+          "x": -100,
+          "y": -260,
+          "width": 48,
+          "height": 48,
+          "label": "Zitadel\nauth.forumline.net",
+          "color": "#ffb74d"
+        },
+        {
+          "id": "f1-api",
+          "type": "icon",
+          "iconName": "mdi:server",
+          "x": 150,
+          "y": -260,
+          "width": 48,
+          "height": 48,
+          "label": "Forumline API\nvalidates JWT",
+          "color": "#4fc3f7"
+        },
+        {
+          "id": "f1-step1",
+          "type": "text",
+          "text": "1. PKCE auth code flow",
+          "x": -230,
+          "y": -300,
+          "width": 160,
+          "height": 20,
+          "fontSize": 11,
+          "color": "#90caf9"
+        },
+        {
+          "id": "f1-step2",
+          "type": "text",
+          "text": "2. JWT issued",
+          "x": -230,
+          "y": -230,
+          "width": 120,
+          "height": 20,
+          "fontSize": 11,
+          "color": "#90caf9"
+        },
+        {
+          "id": "f1-step3",
+          "type": "text",
+          "text": "3. Bearer token in API requests",
+          "x": 20,
+          "y": -230,
+          "width": 200,
+          "height": 20,
+          "fontSize": 11,
+          "color": "#90caf9"
+        },
+
+        {
+          "id": "flow2-box",
+          "type": "box",
+          "text": "**Flow 2: Hosted Forum — Direct Visit**",
+          "x": -450,
+          "y": -80,
+          "width": 900,
+          "height": 200,
+          "fontSize": 14,
+          "style": "dashed",
+          "color": "#66bb6a"
+        },
+        {
+          "id": "f2-browser",
+          "type": "icon",
+          "iconName": "mdi:laptop",
+          "x": -350,
+          "y": -20,
+          "width": 48,
+          "height": 48,
+          "label": "Browser\nmyforum.forumline.net",
+          "color": "#ffffff"
+        },
+        {
+          "id": "f2-id",
+          "type": "icon",
+          "iconName": "mdi:key",
+          "x": -100,
+          "y": -20,
+          "width": 48,
+          "height": 48,
+          "label": "forumline-id\nid.forumline.net",
+          "color": "#ffb74d"
+        },
+        {
+          "id": "f2-zitadel",
+          "type": "icon",
+          "iconName": "mdi:shield-key",
+          "x": 150,
+          "y": -20,
+          "width": 48,
+          "height": 48,
+          "label": "Zitadel",
+          "color": "#ffb74d"
+        },
+        {
+          "id": "f2-forum",
+          "type": "icon",
+          "iconName": "mdi:server-network",
+          "x": 350,
+          "y": -20,
+          "width": 48,
+          "height": 48,
+          "label": "Hosted Server\nPOST /token",
+          "color": "#66bb6a"
+        },
+
+        {
+          "id": "flow3-box",
+          "type": "box",
+          "text": "**Flow 3: Hosted Forum — In-App (Invisible Handshake)**",
+          "x": -450,
+          "y": 160,
+          "width": 900,
+          "height": 200,
+          "fontSize": 14,
+          "style": "dashed",
+          "color": "#ab47bc"
+        },
+        {
+          "id": "f3-app",
+          "type": "icon",
+          "iconName": "mdi:laptop",
+          "x": -350,
+          "y": 230,
+          "width": 48,
+          "height": 48,
+          "label": "Forumline App\n(parent window)",
+          "color": "#ffffff"
+        },
+        {
+          "id": "f3-iframe",
+          "type": "icon",
+          "iconName": "mdi:web",
+          "x": -100,
+          "y": 230,
+          "width": 48,
+          "height": 48,
+          "label": "Forum iframe\nmyforum.forumline.net",
+          "color": "#ab47bc"
+        },
+        {
+          "id": "f3-hosted",
+          "type": "icon",
+          "iconName": "mdi:server-network",
+          "x": 200,
+          "y": 230,
+          "width": 48,
+          "height": 48,
+          "label": "POST /api/forumline/\nauth/token-exchange",
+          "color": "#66bb6a"
+        },
+        {
+          "id": "f3-id-verify",
+          "type": "icon",
+          "iconName": "mdi:key",
+          "x": 400,
+          "y": 230,
+          "width": 48,
+          "height": 48,
+          "label": "forumline-id\nGET /userinfo",
+          "color": "#ffb74d"
+        },
+
+        {
+          "id": "key-insight",
+          "type": "text",
+          "text": "**Key Design:** Forums never talk to Zitadel directly.\nid.forumline.net is the abstraction layer —\nenabling future self-hosted forums with any OIDC provider.",
+          "x": 0,
+          "y": 400,
+          "width": 450,
+          "height": 60,
+          "fontSize": 14,
+          "color": "#ffcc80"
+        }
+      ],
+      "connections": [
+        { "id": "c-f1-1", "type": "connection", "fromId": "f1-browser", "toId": "f1-zitadel", "label": "redirect + PKCE", "style": "solid", "color": "#ffb74d" },
+        { "id": "c-f1-2", "type": "connection", "fromId": "f1-zitadel", "toId": "f1-browser", "label": "JWT token", "style": "dashed", "color": "#ffb74d" },
+        { "id": "c-f1-3", "type": "connection", "fromId": "f1-browser", "toId": "f1-api", "label": "Bearer JWT", "style": "solid", "color": "#4fc3f7" },
+
+        { "id": "c-f2-1", "type": "connection", "fromId": "f2-browser", "toId": "f2-id", "label": "1. redirect /authorize", "style": "solid", "color": "#ffb74d" },
+        { "id": "c-f2-2", "type": "connection", "fromId": "f2-id", "toId": "f2-zitadel", "label": "2. OIDC login", "style": "solid", "color": "#ffb74d" },
+        { "id": "c-f2-3", "type": "connection", "fromId": "f2-zitadel", "toId": "f2-id", "label": "3. callback", "style": "dashed", "color": "#ffb74d" },
+        { "id": "c-f2-4", "type": "connection", "fromId": "f2-id", "toId": "f2-browser", "label": "4. auth code → forum", "style": "dashed", "color": "#66bb6a" },
+        { "id": "c-f2-5", "type": "connection", "fromId": "f2-forum", "toId": "f2-id", "label": "5. exchange code → user info", "style": "solid", "color": "#66bb6a" },
+
+        { "id": "c-f3-1", "type": "connection", "fromId": "f3-app", "toId": "f3-iframe", "label": "1. postMessage(JWT)", "style": "solid", "color": "#ab47bc" },
+        { "id": "c-f3-2", "type": "connection", "fromId": "f3-iframe", "toId": "f3-hosted", "label": "2. exchange JWT", "style": "solid", "color": "#66bb6a" },
+        { "id": "c-f3-3", "type": "connection", "fromId": "f3-hosted", "toId": "f3-id-verify", "label": "3. verify JWT", "style": "solid", "color": "#ffb74d" },
+        { "id": "c-f3-4", "type": "connection", "fromId": "f3-id-verify", "toId": "f3-hosted", "label": "4. user profile", "style": "dashed", "color": "#ffb74d" }
+      ],
+      "viewport": { "panX": 0, "panY": 0, "zoom": 1, "rotation": 0 }
+    },
+
+    {
+      "id": "multi-tenant",
+      "name": "Multi-Tenant Architecture (Hosted Forums)",
+      "elements": [
+        {
+          "id": "title-mt",
+          "type": "text",
+          "text": "**Multi-Tenant Forum Architecture**\nCitus schema-per-tenant · Lazy router cache · R2 custom sites",
+          "x": 0,
+          "y": -400,
+          "width": 550,
+          "height": 50,
+          "fontSize": 24,
+          "color": "#66bb6a"
+        },
+
+        {
+          "id": "request-box",
+          "type": "box",
+          "text": "**Incoming Request**",
+          "x": -100,
+          "y": -320,
+          "width": 200,
+          "height": 80,
+          "fontSize": 14,
+          "style": "filled",
+          "color": "#37474f"
+        },
+        {
+          "id": "request-icon",
+          "type": "icon",
+          "iconName": "mdi:web",
+          "x": 0,
+          "y": -300,
+          "width": 48,
+          "height": 48,
+          "label": "myforum.forumline.net",
+          "color": "#ffffff"
+        },
+
+        {
+          "id": "tenant-mw",
+          "type": "icon",
+          "iconName": "mdi:gate",
+          "x": 0,
+          "y": -190,
+          "width": 48,
+          "height": 48,
+          "label": "TenantMiddleware\nHost header → lookup",
+          "color": "#ffa726"
+        },
+
+        {
+          "id": "tenant-store",
+          "type": "icon",
+          "iconName": "mdi:cached",
+          "x": 250,
+          "y": -190,
+          "width": 48,
+          "height": 48,
+          "label": "TenantStore\n(cached lookup)",
+          "color": "#ffa726"
+        },
+
+        {
+          "id": "router-cache-box",
+          "type": "box",
+          "text": "**Router Cache** (per-domain, lazy-init)",
+          "x": -300,
+          "y": -100,
+          "width": 600,
+          "height": 130,
+          "fontSize": 14,
+          "style": "dashed",
+          "color": "#66bb6a"
+        },
+        {
+          "id": "router-a",
+          "type": "icon",
+          "iconName": "mdi:api",
+          "x": -200,
+          "y": -50,
+          "width": 48,
+          "height": 48,
+          "label": "forum_alpha\nrouter",
+          "color": "#a5d6a7"
+        },
+        {
+          "id": "router-b",
+          "type": "icon",
+          "iconName": "mdi:api",
+          "x": -50,
+          "y": -50,
+          "width": 48,
+          "height": 48,
+          "label": "forum_beta\nrouter",
+          "color": "#a5d6a7"
+        },
+        {
+          "id": "router-c",
+          "type": "icon",
+          "iconName": "mdi:api",
+          "x": 100,
+          "y": -50,
+          "width": 48,
+          "height": 48,
+          "label": "forum_gamma\nrouter",
+          "color": "#a5d6a7"
+        },
+        {
+          "id": "router-n",
+          "type": "text",
+          "text": "**...**",
+          "x": 220,
+          "y": -50,
+          "width": 30,
+          "height": 20,
+          "fontSize": 20,
+          "color": "#a5d6a7"
+        },
+
+        {
+          "id": "forum-engine",
+          "type": "icon",
+          "iconName": "mdi:code-tags",
+          "x": 0,
+          "y": 90,
+          "width": 64,
+          "height": 64,
+          "label": "packages/forum\n(shared forum engine)",
+          "color": "#66bb6a"
+        },
+
+        {
+          "id": "citus-box",
+          "type": "box",
+          "text": "**Citus PostgreSQL** (schema-per-tenant)",
+          "x": -350,
+          "y": 200,
+          "width": 700,
+          "height": 180,
+          "fontSize": 14,
+          "style": "filled",
+          "color": "#1b5e20"
+        },
+        {
+          "id": "platform-schema",
+          "type": "icon",
+          "iconName": "mdi:database",
+          "x": -250,
+          "y": 260,
+          "width": 48,
+          "height": 48,
+          "label": "public schema\nplatform_tenants",
+          "color": "#81c784"
+        },
+        {
+          "id": "schema-alpha",
+          "type": "icon",
+          "iconName": "mdi:database",
+          "x": -100,
+          "y": 260,
+          "width": 48,
+          "height": 48,
+          "label": "forum_alpha\n(tenant schema)",
+          "color": "#a5d6a7"
+        },
+        {
+          "id": "schema-beta",
+          "type": "icon",
+          "iconName": "mdi:database",
+          "x": 50,
+          "y": 260,
+          "width": 48,
+          "height": 48,
+          "label": "forum_beta\n(tenant schema)",
+          "color": "#a5d6a7"
+        },
+        {
+          "id": "schema-gamma",
+          "type": "icon",
+          "iconName": "mdi:database",
+          "x": 200,
+          "y": 260,
+          "width": 48,
+          "height": 48,
+          "label": "forum_gamma\n(tenant schema)",
+          "color": "#a5d6a7"
+        },
+
+        {
+          "id": "tenant-pool",
+          "type": "icon",
+          "iconName": "mdi:elephant",
+          "x": -250,
+          "y": 90,
+          "width": 48,
+          "height": 48,
+          "label": "TenantPool\nSET search_path",
+          "color": "#81c784"
+        },
+
+        {
+          "id": "r2-storage",
+          "type": "icon",
+          "iconName": "mdi:harddisk",
+          "x": 300,
+          "y": 90,
+          "width": 48,
+          "height": 48,
+          "label": "R2Storage\n(uploads + custom sites)",
+          "color": "#f48225"
+        },
+
+        {
+          "id": "site-cache",
+          "type": "icon",
+          "iconName": "mdi:cached",
+          "x": 300,
+          "y": -50,
+          "width": 48,
+          "height": 48,
+          "label": "SiteCache\nLRU 256MB / 5min TTL",
+          "color": "#f48225"
+        },
+
+        {
+          "id": "shared-sse",
+          "type": "icon",
+          "iconName": "mdi:lan",
+          "x": 250,
+          "y": 90,
+          "width": 0,
+          "height": 0,
+          "color": "#ef5350"
+        },
+
+        {
+          "id": "scale-note",
+          "type": "text",
+          "text": "**Scale path:** Add Citus worker nodes\nfor horizontal sharding.\nZero code changes needed.\n`citus_schema_distribute()` per tenant.",
+          "x": 0,
+          "y": 420,
+          "width": 300,
+          "height": 70,
+          "fontSize": 13,
+          "color": "#81c784"
+        }
+      ],
+      "connections": [
+        { "id": "c-req-mw", "type": "connection", "fromId": "request-icon", "toId": "tenant-mw", "label": "Host header", "style": "solid", "color": "#ffffff" },
+        { "id": "c-mw-ts", "type": "connection", "fromId": "tenant-mw", "toId": "tenant-store", "label": "domain → tenant", "style": "solid", "color": "#ffa726" },
+        { "id": "c-mw-cache", "type": "connection", "fromId": "tenant-mw", "toId": "router-b", "label": "route to cached router", "style": "solid", "color": "#66bb6a" },
+        { "id": "c-router-engine", "type": "connection", "fromId": "router-b", "toId": "forum-engine", "label": "forum.NewRouter(cfg)", "style": "solid", "color": "#66bb6a" },
+        { "id": "c-engine-pool", "type": "connection", "fromId": "forum-engine", "toId": "tenant-pool", "label": "queries via\ndb.DB interface", "style": "solid", "color": "#81c784" },
+        { "id": "c-pool-schemas", "type": "connection", "fromId": "tenant-pool", "toId": "schema-beta", "label": "SET search_path = forum_beta", "style": "solid", "color": "#a5d6a7" },
+        { "id": "c-engine-r2", "type": "connection", "fromId": "forum-engine", "toId": "r2-storage", "label": "FileStorage interface", "style": "dashed", "color": "#f48225" },
+        { "id": "c-mw-sitecache", "type": "connection", "fromId": "tenant-mw", "toId": "site-cache", "label": "custom site?", "style": "dashed", "color": "#f48225" },
+        { "id": "c-sitecache-r2", "type": "connection", "fromId": "site-cache", "toId": "r2-storage", "label": "cache miss → fetch", "style": "dashed", "color": "#f48225" }
+      ],
+      "viewport": { "panX": 0, "panY": 0, "zoom": 1, "rotation": 0 }
+    },
+
+    {
+      "id": "cicd-pipeline",
+      "name": "CI/CD Pipeline & Observability",
+      "elements": [
+        {
+          "id": "title-cicd",
+          "type": "text",
+          "text": "**CI/CD & Observability Stack**\nGitHub Actions → self-hosted runners → Docker Compose → health checks",
+          "x": 0,
+          "y": -400,
+          "width": 600,
+          "height": 50,
+          "fontSize": 24,
+          "color": "#4fc3f7"
+        },
+
+        {
+          "id": "dev-box",
+          "type": "box",
+          "text": "**Developer**",
+          "x": -450,
+          "y": -320,
+          "width": 200,
+          "height": 100,
+          "fontSize": 14,
+          "style": "dashed",
+          "color": "#ffffff"
+        },
+        {
+          "id": "dev",
+          "type": "icon",
+          "iconName": "mdi:laptop",
+          "x": -380,
+          "y": -280,
+          "width": 48,
+          "height": 48,
+          "label": "git push main",
+          "color": "#ffffff"
+        },
+
+        {
+          "id": "github",
+          "type": "icon",
+          "iconName": "mdi:github",
+          "x": -100,
+          "y": -280,
+          "width": 64,
+          "height": 64,
+          "label": "GitHub Actions",
+          "color": "#ffffff"
+        },
+
+        {
+          "id": "hooks-box",
+          "type": "box",
+          "text": "**Pre-commit Hooks**",
+          "x": -450,
+          "y": -180,
+          "width": 200,
+          "height": 100,
+          "fontSize": 12,
+          "style": "filled",
+          "color": "#37474f"
+        },
+        {
+          "id": "hooks-desc",
+          "type": "text",
+          "text": "ESLint\ngolangci-lint\nGo tests\nTS tests",
+          "x": -430,
+          "y": -160,
+          "width": 120,
+          "height": 60,
+          "fontSize": 11,
+          "color": "#90a4ae"
+        },
+
+        {
+          "id": "runner",
+          "type": "icon",
+          "iconName": "mdi:server",
+          "x": 200,
+          "y": -280,
+          "width": 48,
+          "height": 48,
+          "label": "Self-hosted Runner\n(CT 109, ×2)",
+          "color": "#7e57c2"
+        },
+
+        {
+          "id": "secrets",
+          "type": "icon",
+          "iconName": "mdi:safe-square",
+          "x": 200,
+          "y": -160,
+          "width": 48,
+          "height": 48,
+          "label": "secrets.kdbx\n→ .env generation",
+          "color": "#ffa726"
+        },
+
+        {
+          "id": "deploy-script",
+          "type": "icon",
+          "iconName": "mdi:rocket-launch",
+          "x": 0,
+          "y": -120,
+          "width": 64,
+          "height": 64,
+          "label": "ci/deploy.sh",
+          "color": "#ef5350"
+        },
+
+        {
+          "id": "deploy-targets-box",
+          "type": "box",
+          "text": "**Deploy Targets**",
+          "x": -350,
+          "y": -20,
+          "width": 700,
+          "height": 130,
+          "fontSize": 14,
+          "style": "dashed",
+          "color": "#4fc3f7"
+        },
+        {
+          "id": "tgt-forumline",
+          "type": "icon",
+          "iconName": "mdi:server",
+          "x": -270,
+          "y": 20,
+          "width": 48,
+          "height": 48,
+          "label": "forumline",
+          "color": "#4fc3f7"
+        },
+        {
+          "id": "tgt-hosted",
+          "type": "icon",
+          "iconName": "mdi:server-network",
+          "x": -130,
+          "y": 20,
+          "width": 48,
+          "height": 48,
+          "label": "hosted",
+          "color": "#66bb6a"
+        },
+        {
+          "id": "tgt-auth",
+          "type": "icon",
+          "iconName": "mdi:shield-key",
+          "x": 10,
+          "y": 20,
+          "width": 48,
+          "height": 48,
+          "label": "auth",
+          "color": "#ffb74d"
+        },
+        {
+          "id": "tgt-logs",
+          "type": "icon",
+          "iconName": "mdi:file",
+          "x": 150,
+          "y": 20,
+          "width": 48,
+          "height": 48,
+          "label": "logs",
+          "color": "#29b6f6"
+        },
+        {
+          "id": "tgt-website",
+          "type": "icon",
+          "iconName": "mdi:web",
+          "x": 290,
+          "y": 20,
+          "width": 48,
+          "height": 48,
+          "label": "website\n(CF Pages)",
+          "color": "#f48225"
+        },
+
+        {
+          "id": "deploy-steps",
+          "type": "text",
+          "text": "1. Extract secrets → .env\n2. SCP compose + .env to LXC\n3. git pull on remote\n4. docker compose build --no-cache\n5. docker compose up -d\n6. post-deploy health check",
+          "x": -100,
+          "y": 150,
+          "width": 250,
+          "height": 100,
+          "fontSize": 12,
+          "color": "#90a4ae"
+        },
+
+        {
+          "id": "observability-box",
+          "type": "box",
+          "text": "**Observability Stack**",
+          "x": -350,
+          "y": 290,
+          "width": 700,
+          "height": 150,
+          "fontSize": 14,
+          "style": "dashed",
+          "color": "#29b6f6"
+        },
+        {
+          "id": "obs-vector",
+          "type": "icon",
+          "iconName": "mdi:transfer",
+          "x": -250,
+          "y": 340,
+          "width": 48,
+          "height": 48,
+          "label": "Vector agents\n(log shipping)",
+          "color": "#26a69a"
+        },
+        {
+          "id": "obs-vlogs",
+          "type": "icon",
+          "iconName": "mdi:file",
+          "x": -80,
+          "y": 340,
+          "width": 48,
+          "height": 48,
+          "label": "VictoriaLogs\n(30d retention)",
+          "color": "#29b6f6"
+        },
+        {
+          "id": "obs-vmetrics",
+          "type": "icon",
+          "iconName": "mdi:chart-bar",
+          "x": 80,
+          "y": 340,
+          "width": 48,
+          "height": 48,
+          "label": "VictoriaMetrics\n(/metrics scrape)",
+          "color": "#29b6f6"
+        },
+        {
+          "id": "obs-glitchtip",
+          "type": "icon",
+          "iconName": "mdi:bug",
+          "x": 240,
+          "y": 340,
+          "width": 48,
+          "height": 48,
+          "label": "GlitchTip\n(error tracking)",
+          "color": "#ef5350"
+        },
+
+        {
+          "id": "discord",
+          "type": "icon",
+          "iconName": "mdi:chat",
+          "x": 150,
+          "y": 480,
+          "width": 48,
+          "height": 48,
+          "label": "Discord\n(alert webhook)",
+          "color": "#5865f2"
+        },
+
+        {
+          "id": "smoke-tests",
+          "type": "icon",
+          "iconName": "mdi:test-tube",
+          "x": -250,
+          "y": 480,
+          "width": 48,
+          "height": 48,
+          "label": "Playwright\nsmoke tests",
+          "color": "#66bb6a"
+        },
+
+        {
+          "id": "cost-note",
+          "type": "text",
+          "text": "**Total hosting cost: $0/mo**\nAll self-hosted on Proxmox + Cloudflare free tier",
+          "x": 0,
+          "y": 560,
+          "width": 350,
+          "height": 30,
+          "fontSize": 14,
+          "color": "#81c784"
+        }
+      ],
+      "connections": [
+        { "id": "c-dev-gh", "type": "connection", "fromId": "dev", "toId": "github", "label": "push to main", "style": "solid", "color": "#ffffff" },
+        { "id": "c-gh-runner", "type": "connection", "fromId": "github", "toId": "runner", "label": "trigger workflow", "style": "solid", "color": "#7e57c2" },
+        { "id": "c-runner-secrets", "type": "connection", "fromId": "runner", "toId": "secrets", "style": "solid", "color": "#ffa726" },
+        { "id": "c-runner-deploy", "type": "connection", "fromId": "runner", "toId": "deploy-script", "label": "ci/deploy.sh <svc>", "style": "solid", "color": "#ef5350" },
+        { "id": "c-deploy-forumline", "type": "connection", "fromId": "deploy-script", "toId": "tgt-forumline", "style": "solid", "color": "#4fc3f7" },
+        { "id": "c-deploy-hosted", "type": "connection", "fromId": "deploy-script", "toId": "tgt-hosted", "style": "solid", "color": "#66bb6a" },
+        { "id": "c-deploy-auth", "type": "connection", "fromId": "deploy-script", "toId": "tgt-auth", "style": "solid", "color": "#ffb74d" },
+        { "id": "c-deploy-logs", "type": "connection", "fromId": "deploy-script", "toId": "tgt-logs", "style": "solid", "color": "#29b6f6" },
+        { "id": "c-deploy-website", "type": "connection", "fromId": "deploy-script", "toId": "tgt-website", "style": "solid", "color": "#f48225" },
+        { "id": "c-vector-vlogs", "type": "connection", "fromId": "obs-vector", "toId": "obs-vlogs", "label": "Docker logs", "style": "animated", "color": "#26a69a" },
+        { "id": "c-vmetrics-discord", "type": "connection", "fromId": "obs-vmetrics", "toId": "discord", "label": "vmalert → Alertmanager", "style": "dashed", "color": "#ffa726" },
+        { "id": "c-deploy-smoke", "type": "connection", "fromId": "deploy-script", "toId": "smoke-tests", "label": "post-deploy", "style": "dashed", "color": "#66bb6a" }
+      ],
+      "viewport": { "panX": 0, "panY": 0, "zoom": 1, "rotation": 0 }
+    }
+  ],
+  "activeDiagramId": "infra-overview"
+}
