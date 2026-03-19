@@ -262,8 +262,7 @@ func main() {
 	})))
 
 	// Mount the stdlib mux inside the chi router (catches all paths)
-	r.Handle("/{rest...}", mux)
-	r.Handle("/", mux)
+	r.Mount("/", mux)
 
 	// SPA handler wraps the chi router
 	handler := spaHandler(r, store, siteCache)

@@ -426,8 +426,7 @@ func main() {
 	mux := http.NewServeMux()
 	strictHandler := oapi.NewStrictHandler(server, nil)
 	oapi.HandlerFromMux(strictHandler, mux)
-	r.Handle("/{rest...}", mux)
-	r.Handle("/", mux)
+	r.Mount("/", mux)
 
 	var handler http.Handler = r
 
