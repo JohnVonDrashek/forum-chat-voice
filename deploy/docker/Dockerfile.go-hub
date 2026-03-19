@@ -1,0 +1,51 @@
+# ---- Go build stage ----
+FROM golang:1.26-alpine AS go-build
+
+WORKDIR /app
+
+# Copy local Go packages (local replace directives in go.mod)
+COPY packages/backend/ /packages/backend/
+COPY packages/rpc/ /packages/rpc/
+
+COPY services/forumline-hub/go.mod services/forumline-hub/go.sum ./
+RUN go mod download
+
+COPY services/forumline-hub/ .
+RUN CGO_ENABLED=0 GOOS=linux go build -o hub ./cmd/hub/
+
+# ---- Prune stage — extract only what this service needs ----
+FROM node:20-slim AS pruner
+
+WORKDIR /app
+COPY . .
+RUN npx turbo prune forumline-central-services --docker
+
+# ---- Frontend build stage ----
+FROM node:20-slim AS frontend-build
+
+RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
+
+WORKDIR /app
+
+# Install deps first (cached unless package.json or lockfile changes)
+COPY --from=pruner /app/out/json/ .
+RUN pnpm install --ignore-scripts
+
+# Copy source and build
+COPY --from=pruner /app/out/full/ .
+RUN cd services/forumline-web && npx vite build
+
+# ---- Production stage ----
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /app
+
+COPY --from=go-build /app/hub .
+COPY --from=frontend-build /app/services/forumline-web/dist ./dist/
+
+ENV PORT=3000
+EXPOSE 3000
+
+CMD ["./hub"]

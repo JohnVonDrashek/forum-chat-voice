@@ -53,11 +53,42 @@ services:
     ports:
       - "127.0.0.1:4222:4222"
 
-  forumline:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      hub:
+        condition: service_healthy
+      comm:
+        condition: service_healthy
+    restart: unless-stopped
+
+  hub:
     build:
       context: /opt/forumline/repo
-      dockerfile: deploy/docker/Dockerfile.go-forumline
+      dockerfile: deploy/docker/Dockerfile.go-hub
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      VALKEY_URL: "valkey:6379"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
     restart: unless-stopped
+
+  comm:
+    build:
+      context: /opt/forumline/repo
+      dockerfile: deploy/docker/Dockerfile.go-comm
     depends_on:
       postgres:
         condition: service_healthy
@@ -67,7 +98,12 @@ services:
         condition: service_healthy
     env_file: .env
     environment:
+      PORT: "3001"
       VALKEY_URL: "valkey:6379"
       NATS_URL: "nats://nats:4222"
-    ports:
-      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped

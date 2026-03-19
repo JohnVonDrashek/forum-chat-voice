@@ -1,0 +1,28 @@
+# ---- Go build stage ----
+FROM golang:1.26-alpine AS go-build
+
+WORKDIR /app
+
+# Copy local Go packages (local replace directives in go.mod)
+COPY packages/backend/ /packages/backend/
+COPY packages/rpc/ /packages/rpc/
+
+COPY services/forumline-comm/go.mod services/forumline-comm/go.sum ./
+RUN go mod download
+
+COPY services/forumline-comm/ .
+RUN CGO_ENABLED=0 GOOS=linux go build -o comm ./cmd/comm/
+
+# ---- Production stage ----
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /app
+
+COPY --from=go-build /app/comm .
+
+ENV PORT=3000
+EXPOSE 3000
+
+CMD ["./comm"]

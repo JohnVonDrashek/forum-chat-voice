@@ -97,6 +97,10 @@ if [ "$SERVICE" = "logs" ]; then
   # Only restarts Docker if the file actually exists. Waits for Docker to be ready.
   ssh "$HOST" 'if [ -f /etc/docker/daemon.json ]; then rm /etc/docker/daemon.json && systemctl restart docker && echo "Removed orphaned daemon.json, restarting Docker..." && while ! docker info >/dev/null 2>&1; do sleep 1; done && echo "Docker ready"; fi'
 fi
+if [ "$SERVICE" = "forumline" ]; then
+  echo "Uploading Caddyfile..."
+  scp deploy/compose/forumline/Caddyfile "$HOST:$REMOTE/Caddyfile"
+fi
 if [ "$SERVICE" = "livekit" ]; then
   echo "Uploading livekit.yaml..."
   scp services/livekit/livekit.yaml "$HOST:$REMOTE/livekit.yaml"
@@ -128,7 +132,11 @@ elif [ "$SERVICE" = "logs" ] || [ "$SERVICE" = "livekit" ] || [ "$SERVICE" = "gl
   ssh "$HOST" "cd $REMOTE && docker compose pull && docker compose up -d --force-recreate --wait && docker compose ps"
 else
   echo "Building and restarting..."
-  ssh "$HOST" "cd $REMOTE && docker compose build --no-cache $SERVICE && docker compose up -d $SERVICE && docker compose ps"
+  if [ "$SERVICE" = "forumline" ]; then
+    ssh "$HOST" "cd $REMOTE && docker compose build --no-cache hub comm && docker compose up -d && docker compose ps"
+  else
+    ssh "$HOST" "cd $REMOTE && docker compose build --no-cache $SERVICE && docker compose up -d $SERVICE && docker compose ps"
+  fi
 fi
 
 # Post-deploy health verification

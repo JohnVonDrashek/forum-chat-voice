@@ -1,0 +1,13 @@
+:3000 {
+    @comm path /api/conversations/* /api/calls/* /api/events/* /api/notifications/* /api/push/* /api/push /api/dms/* /api/dms /api/webhooks/* /api/presence/*
+
+    handle @comm {
+        reverse_proxy comm:3001 {
+            flush_interval -1
+        }
+    }
+
+    handle {
+        reverse_proxy hub:3000
+    }
+}

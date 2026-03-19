@@ -6,11 +6,15 @@ on:
     branches: [main]
     paths:
       - 'services/forumline-api/**'
+      - 'services/forumline-hub/**'
+      - 'services/forumline-comm/**'
       - 'services/forumline-web/**'
       - 'packages/frontend/**'
       - 'packages/backend/**'
       - 'pnpm-lock.yaml'
       - 'deploy/docker/Dockerfile.go-forumline'
+      - 'deploy/docker/Dockerfile.go-hub'
+      - 'deploy/docker/Dockerfile.go-comm'
       - 'deploy/compose/forumline/**'
       - 'secrets.kdbx'
 
