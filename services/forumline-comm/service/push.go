@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
-	"github.com/forumline/forumline/services/forumline-comm/store"
+	"github.com/forumline/forumline/services/forumline-comm/sqlcdb"
 )
 
 type VAPIDConfig struct {
@@ -20,11 +20,11 @@ type VAPIDConfig struct {
 }
 
 type PushService struct {
-	Store *store.Store
+	Q     *sqlcdb.Queries
 	VAPID VAPIDConfig
 }
 
-func NewPushService(s *store.Store) *PushService {
+func NewPushService(q *sqlcdb.Queries) *PushService {
 	vapidEmail := os.Getenv("VAPID_EMAIL")
 	vapidSubject := vapidEmail
 	if vapidSubject != "" && !strings.HasPrefix(vapidSubject, "mailto:") {
@@ -32,7 +32,7 @@ func NewPushService(s *store.Store) *PushService {
 	}
 
 	ps := &PushService{
-		Store: s,
+		Q: q,
 		VAPID: VAPIDConfig{
 			PublicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
 			PrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
@@ -50,7 +50,7 @@ func (ps *PushService) SendToUser(ctx context.Context, userID, title, body, link
 		return 0
 	}
 
-	subs, err := ps.Store.ListPushSubscriptions(ctx, userID)
+	subs, err := ps.Q.ListPushSubscriptions(ctx, userID)
 	if err != nil || len(subs) == 0 {
 		return 0
 	}
@@ -111,7 +111,10 @@ func (ps *PushService) SendToUser(ctx context.Context, userID, title, body, link
 
 	if len(staleEndpoints) > 0 {
 		log.Printf("[push] cleaning up %d stale endpoints for %s", len(staleEndpoints), userID)
-		ps.Store.DeleteStaleEndpoints(ctx, userID, staleEndpoints)
+		_ = ps.Q.DeleteStaleEndpoints(ctx, sqlcdb.DeleteStaleEndpointsParams{
+			UserID:    userID,
+			Endpoints: staleEndpoints,
+		})
 	}
 
 	return int(sent)

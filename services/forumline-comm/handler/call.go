@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"log"
 	"net/http"
 	"os"
@@ -16,12 +15,10 @@ import (
 
 	"github.com/forumline/forumline/backend/auth"
 	"github.com/forumline/forumline/services/forumline-comm/service"
-	"github.com/forumline/forumline/services/forumline-comm/store"
 )
 
 type CallHandler struct {
 	CallService *service.CallService
-	Store       *store.Store
 	LKConfig    *LiveKitConfig
 }
 
@@ -31,8 +28,8 @@ type LiveKitConfig struct {
 	APISecret string
 }
 
-func NewCallHandler(cs *service.CallService, s *store.Store, lk *LiveKitConfig) *CallHandler {
-	return &CallHandler{CallService: cs, Store: s, LKConfig: lk}
+func NewCallHandler(cs *service.CallService, lk *LiveKitConfig) *CallHandler {
+	return &CallHandler{CallService: cs, LKConfig: lk}
 }
 
 func (h *CallHandler) HandleInitiate(w http.ResponseWriter, r *http.Request) {
@@ -103,14 +100,13 @@ func (h *CallHandler) HandleGetToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok, _ := h.Store.IsCallParticipant(r.Context(), callID, userID)
+	ok, _ := h.CallService.IsCallParticipant(r.Context(), callID, userID)
 	if !ok {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "not a participant of this call"})
 		return
 	}
 
-	// Look up the call to get the room name
-	call, err := h.Store.GetCallByID(r.Context(), callID)
+	call, err := h.CallService.GetCallByID(r.Context(), callID)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "call not found"})
 		return
@@ -121,7 +117,22 @@ func (h *CallHandler) HandleGetToken(w http.ResponseWriter, r *http.Request) {
 		roomName = "call-" + callID.String() // fallback for legacy records
 	}
 
-	token, err := generateLiveKitToken(lk.APIKey, lk.APISecret, roomName, userID, h.Store, r.Context())
+	participantName := h.CallService.GetProfileDisplayName(r.Context(), userID)
+
+	boolTrue := true
+	at := lkauth.NewAccessToken(lk.APIKey, lk.APISecret)
+	grant := &lkauth.VideoGrant{
+		Room:         roomName,
+		RoomJoin:     true,
+		CanPublish:   &boolTrue,
+		CanSubscribe: &boolTrue,
+	}
+	at.SetVideoGrant(grant).
+		SetIdentity(userID).
+		SetName(participantName).
+		SetValidFor(time.Hour)
+
+	token, err := at.ToJWT()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to generate token"})
 		return
@@ -130,7 +141,6 @@ func (h *CallHandler) HandleGetToken(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleLiveKitWebhook receives and validates LiveKit webhook events.
-// LiveKit signs webhooks with the API key/secret, so no additional auth is needed.
 func (h *CallHandler) HandleLiveKitWebhook(w http.ResponseWriter, r *http.Request) {
 	lk := h.LKConfig
 	if lk == nil || lk.APIKey == "" || lk.APISecret == "" {
@@ -161,33 +171,6 @@ func (h *CallHandler) HandleLiveKitWebhook(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.WriteHeader(http.StatusOK)
-}
-
-func generateLiveKitToken(apiKey, apiSecret, roomName, userID string, s *store.Store, ctx context.Context) (string, error) {
-	profile, _ := s.GetProfile(ctx, userID)
-	participantName := userID
-	if profile != nil {
-		if profile.DisplayName != "" {
-			participantName = profile.DisplayName
-		} else {
-			participantName = profile.Username
-		}
-	}
-
-	boolTrue := true
-	at := lkauth.NewAccessToken(apiKey, apiSecret)
-	grant := &lkauth.VideoGrant{
-		Room:         roomName,
-		RoomJoin:     true,
-		CanPublish:   &boolTrue,
-		CanSubscribe: &boolTrue,
-	}
-	at.SetVideoGrant(grant).
-		SetIdentity(userID).
-		SetName(participantName).
-		SetValidFor(time.Hour)
-
-	return at.ToJWT()
 }
 
 func NewLiveKitConfigFromEnv() *LiveKitConfig {

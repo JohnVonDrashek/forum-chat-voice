@@ -28,7 +28,7 @@ import (
 	"github.com/forumline/forumline/services/forumline-comm/handler"
 	"github.com/forumline/forumline/services/forumline-comm/presence"
 	"github.com/forumline/forumline/services/forumline-comm/service"
-	"github.com/forumline/forumline/services/forumline-comm/store"
+	"github.com/forumline/forumline/services/forumline-comm/sqlcdb"
 )
 
 func main() {
@@ -53,9 +53,9 @@ func main() {
 
 	sseHub := sse.NewHub()
 
-	s := store.New(pool)
+	q := sqlcdb.New(pool)
 
-	pushSvc := service.NewPushService(s)
+	pushSvc := service.NewPushService(q)
 
 	natsURL := os.Getenv("NATS_URL")
 	if natsURL == "" {
@@ -103,17 +103,17 @@ func main() {
 
 	log.Println("realtime: Watermill event bus active")
 
-	convoSvc := service.NewConversationService(s, eventBus, jsm)
+	convoSvc := service.NewConversationService(q, pool, eventBus, jsm)
 	lkCfg := handler.NewLiveKitConfigFromEnv()
 	var lkClient *service.LiveKitClient
 	if lkCfg.URL != "" && lkCfg.APIKey != "" && lkCfg.APISecret != "" {
 		lkClient = service.NewLiveKitClient(lkCfg.URL, lkCfg.APIKey, lkCfg.APISecret)
 		log.Println("LiveKit client initialized for call room management")
 	}
-	callSvc := service.NewCallService(s, pushSvc, eventBus, lkClient)
+	callSvc := service.NewCallService(q, pushSvc, eventBus, lkClient)
 	presenceTracker := presence.NewTracker(90*time.Second, valkeyClient)
 
-	r := newRouter(s, sseHub, valkeyClient, eventBus, convoSvc, callSvc, pushSvc, presenceTracker, lkCfg)
+	r := newRouter(q, sseHub, valkeyClient, eventBus, convoSvc, callSvc, pushSvc, presenceTracker, lkCfg)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -145,7 +145,7 @@ func main() {
 }
 
 func newRouter(
-	s *store.Store,
+	q *sqlcdb.Queries,
 	sseHub *sse.Hub,
 	valkeyClient interface{}, // *redis.Client but unused directly here
 	eventBus pubsub.EventBus,
@@ -164,10 +164,10 @@ func newRouter(
 	authMW := auth.Middleware
 	webhookRL := httpkit.IPRateLimit(100, time.Minute)
 
-	convoH := handler.NewConversationHandler(convoSvc, s)
-	callH := handler.NewCallHandler(callSvc, s, lkCfg)
-	notifH := handler.NewNotificationHandler(s, eventBus)
-	pushH := handler.NewPushHandler(s, pushSvc)
+	convoH := handler.NewConversationHandler(convoSvc)
+	callH := handler.NewCallHandler(callSvc, lkCfg)
+	notifH := handler.NewNotificationHandler(q, eventBus)
+	pushH := handler.NewPushHandler(q, pushSvc)
 	eventsH := handler.NewEventsHandler(sseHub)
 
 	// Health
@@ -214,11 +214,11 @@ func newRouter(
 				userIDs = userIDs[:200]
 			}
 			status := tracker.OnlineStatusBatch(userIDs)
-			prefs, err := s.GetOnlineStatusPreferences(req.Context(), userIDs)
+			rows, err := q.GetOnlineStatusPreferences(req.Context(), userIDs)
 			if err == nil {
-				for uid, showOnline := range prefs {
-					if !showOnline {
-						status[uid] = false
+				for _, r := range rows {
+					if !r.ShowOnlineStatus || r.OnlineStatus == "offline" || r.OnlineStatus == "away" {
+						status[r.ID] = false
 					}
 				}
 			}

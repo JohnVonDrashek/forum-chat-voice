@@ -6,42 +6,65 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/forumline/forumline/backend/auth"
 	"github.com/forumline/forumline/backend/events"
 	"github.com/forumline/forumline/backend/pubsub"
-	"github.com/forumline/forumline/services/forumline-comm/store"
+	"github.com/forumline/forumline/services/forumline-comm/service"
+	"github.com/forumline/forumline/services/forumline-comm/sqlcdb"
 )
 
 type NotificationHandler struct {
-	Store    *store.Store
+	Q        *sqlcdb.Queries
 	EventBus pubsub.EventBus
 }
 
-func NewNotificationHandler(s *store.Store, bus pubsub.EventBus) *NotificationHandler {
-	return &NotificationHandler{Store: s, EventBus: bus}
+func NewNotificationHandler(q *sqlcdb.Queries, bus pubsub.EventBus) *NotificationHandler {
+	return &NotificationHandler{Q: q, EventBus: bus}
 }
 
 func (h *NotificationHandler) HandleList(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserIDFromContext(r.Context())
-	notifs, err := h.Store.ListNotifications(r.Context(), userID, 50)
+	rows, err := h.Q.ListNotifications(r.Context(), sqlcdb.ListNotificationsParams{
+		UserID: userID,
+		Limit:  50,
+	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to fetch notifications"})
 		return
+	}
+
+	notifs := make([]service.NotificationRow, 0, len(rows))
+	for _, r := range rows {
+		notifs = append(notifs, service.NotificationRow{
+			ID:          r.ID,
+			ForumDomain: r.ForumDomain,
+			ForumName:   r.ForumName,
+			Type:        r.Type,
+			Title:       r.Title,
+			Body:        r.Body,
+			Link:        r.Link,
+			Read:        r.Read,
+			CreatedAt:   r.CreatedAt.Format(time.RFC3339),
+		})
+	}
+	if len(notifs) == 0 {
+		notifs = []service.NotificationRow{}
 	}
 	writeJSON(w, http.StatusOK, notifs)
 }
 
 func (h *NotificationHandler) HandleUnreadCount(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserIDFromContext(r.Context())
-	count, err := h.Store.CountUnreadNotifications(r.Context(), userID)
+	count, err := h.Q.CountUnreadNotifications(r.Context(), userID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to count unread"})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]int{"count": count})
+	writeJSON(w, http.StatusOK, map[string]int{"count": int(count)})
 }
 
 func (h *NotificationHandler) HandleMarkRead(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +81,10 @@ func (h *NotificationHandler) HandleMarkRead(w http.ResponseWriter, r *http.Requ
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid notification id"})
 		return
 	}
-	if err := h.Store.MarkNotificationRead(r.Context(), notifID, userID); err != nil {
+	if err := h.Q.MarkNotificationRead(r.Context(), sqlcdb.MarkNotificationReadParams{
+		ID:     notifID,
+		UserID: userID,
+	}); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to mark read"})
 		return
 	}
@@ -67,7 +93,7 @@ func (h *NotificationHandler) HandleMarkRead(w http.ResponseWriter, r *http.Requ
 
 func (h *NotificationHandler) HandleMarkAllRead(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserIDFromContext(r.Context())
-	if err := h.Store.MarkAllNotificationsRead(r.Context(), userID); err != nil {
+	if err := h.Q.MarkAllNotificationsRead(r.Context(), userID); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to mark all read"})
 		return
 	}
@@ -96,21 +122,29 @@ func (h *NotificationHandler) HandleWebhookNotification(w http.ResponseWriter, r
 		return
 	}
 	forumName := body.ForumDomain
-	if name, err := h.Store.GetForumNameByDomain(r.Context(), body.ForumDomain); err == nil {
+	if name, err := h.Q.GetForumNameByDomain(r.Context(), body.ForumDomain); err == nil {
 		forumName = name
 	}
 	link := body.Link
 	if link == "" {
 		link = "/"
 	}
-	id, createdAt, err := h.Store.InsertNotification(r.Context(), body.ForumlineUserID, body.ForumDomain, forumName, body.Type, body.Title, body.Body, link)
+	row, err := h.Q.InsertNotification(r.Context(), sqlcdb.InsertNotificationParams{
+		UserID:      body.ForumlineUserID,
+		ForumDomain: body.ForumDomain,
+		ForumName:   forumName,
+		Type:        body.Type,
+		Title:       body.Title,
+		Body:        body.Body,
+		Link:        link,
+	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create notification"})
 		return
 	}
 	if h.EventBus != nil {
 		_ = events.Publish(h.EventBus, r.Context(), "forumline_notification_changes", events.ForumlineNotificationEvent{
-			ID:          id,
+			ID:          row.ID,
 			UserID:      body.ForumlineUserID,
 			ForumDomain: body.ForumDomain,
 			ForumName:   forumName,
@@ -119,7 +153,7 @@ func (h *NotificationHandler) HandleWebhookNotification(w http.ResponseWriter, r
 			Body:        body.Body,
 			Link:        link,
 			Read:        false,
-			CreatedAt:   createdAt,
+			CreatedAt:   row.CreatedAt,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -147,7 +181,7 @@ func (h *NotificationHandler) HandleWebhookNotificationBatch(w http.ResponseWrit
 	}
 	forumName := body.ForumName
 	if forumName == "" {
-		if name, err := h.Store.GetForumNameByDomain(r.Context(), body.ForumDomain); err == nil {
+		if name, err := h.Q.GetForumNameByDomain(r.Context(), body.ForumDomain); err == nil {
 			forumName = name
 		} else {
 			forumName = body.ForumDomain
@@ -162,14 +196,22 @@ func (h *NotificationHandler) HandleWebhookNotificationBatch(w http.ResponseWrit
 		if link == "" {
 			link = "/"
 		}
-		id, createdAt, err := h.Store.InsertNotification(r.Context(), item.ForumlineUserID, body.ForumDomain, forumName, item.Type, item.Title, item.Body, link)
+		row, err := h.Q.InsertNotification(r.Context(), sqlcdb.InsertNotificationParams{
+			UserID:      item.ForumlineUserID,
+			ForumDomain: body.ForumDomain,
+			ForumName:   forumName,
+			Type:        item.Type,
+			Title:       item.Title,
+			Body:        item.Body,
+			Link:        link,
+		})
 		if err != nil {
 			log.Printf("[webhook] batch insert error: %v", err)
 			continue
 		}
 		if h.EventBus != nil {
 			_ = events.Publish(h.EventBus, r.Context(), "forumline_notification_changes", events.ForumlineNotificationEvent{
-				ID:          id,
+				ID:          row.ID,
 				UserID:      item.ForumlineUserID,
 				ForumDomain: body.ForumDomain,
 				ForumName:   forumName,
@@ -178,7 +220,7 @@ func (h *NotificationHandler) HandleWebhookNotificationBatch(w http.ResponseWrit
 				Body:        item.Body,
 				Link:        link,
 				Read:        false,
-				CreatedAt:   createdAt,
+				CreatedAt:   row.CreatedAt,
 			})
 		}
 		inserted++

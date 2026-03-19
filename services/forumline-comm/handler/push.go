@@ -7,19 +7,20 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/forumline/forumline/backend/auth"
 	"github.com/forumline/forumline/services/forumline-comm/service"
-	"github.com/forumline/forumline/services/forumline-comm/store"
+	"github.com/forumline/forumline/services/forumline-comm/sqlcdb"
 )
 
 type PushHandler struct {
-	Store       *store.Store
+	Q           *sqlcdb.Queries
 	PushService *service.PushService
 }
 
-func NewPushHandler(s *store.Store, ps *service.PushService) *PushHandler {
-	return &PushHandler{Store: s, PushService: ps}
+func NewPushHandler(q *sqlcdb.Queries, ps *service.PushService) *PushHandler {
+	return &PushHandler{Q: q, PushService: ps}
 }
 
 func (h *PushHandler) HandleConfig(w http.ResponseWriter, _ *http.Request) {
@@ -56,7 +57,12 @@ func (h *PushHandler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "keys.p256dh and keys.auth are required for subscribe"})
 			return
 		}
-		if err := h.Store.UpsertPushSubscription(r.Context(), userID, body.Endpoint, body.Keys.P256dh, body.Keys.Auth); err != nil {
+		if err := h.Q.UpsertPushSubscription(r.Context(), sqlcdb.UpsertPushSubscriptionParams{
+			UserID:   userID,
+			Endpoint: body.Endpoint,
+			P256dh:   body.Keys.P256dh,
+			Auth:     body.Keys.Auth,
+		}); err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save subscription"})
 			return
 		}
@@ -65,7 +71,10 @@ func (h *PushHandler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// unsubscribe
-	_ = h.Store.DeletePushSubscription(r.Context(), userID, body.Endpoint)
+	_ = h.Q.DeletePushSubscription(r.Context(), sqlcdb.DeletePushSubscriptionParams{
+		UserID:   userID,
+		Endpoint: body.Endpoint,
+	})
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
@@ -102,7 +111,7 @@ func (h *PushHandler) HandleNotify(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	targetUserID := body.UserID
 	if targetUserID == "" && body.ForumlineID != "" {
-		exists, _ := h.Store.ProfileExists(r.Context(), body.ForumlineID)
+		exists, _ := h.Q.ProfileExists(r.Context(), body.ForumlineID)
 		if !exists {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})
 			return
@@ -115,10 +124,13 @@ func (h *PushHandler) HandleNotify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if body.ForumDomain != "" {
-		forumID := h.Store.GetForumIDByDomain(ctx, body.ForumDomain)
-		if forumID != uuid.Nil {
-			muted, err := h.Store.IsNotificationsMuted(ctx, targetUserID, forumID)
-			if err != nil {
+		forumID, err := h.Q.GetForumIDByDomain(ctx, body.ForumDomain)
+		if err == nil && forumID != uuid.Nil {
+			muted, err := h.Q.IsNotificationsMuted(ctx, sqlcdb.IsNotificationsMutedParams{
+				UserID:  targetUserID,
+				ForumID: forumID,
+			})
+			if err != nil && err != pgx.ErrNoRows {
 				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to check mute status"})
 				return
 			}

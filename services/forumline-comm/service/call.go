@@ -9,12 +9,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/livekit/protocol/livekit"
 	lksdk "github.com/livekit/server-sdk-go/v2"
 
 	"github.com/forumline/forumline/backend/events"
 	"github.com/forumline/forumline/backend/pubsub"
-	"github.com/forumline/forumline/services/forumline-comm/store"
+	"github.com/forumline/forumline/services/forumline-comm/sqlcdb"
 )
 
 // LiveKitClient wraps the LiveKit Room Service API for creating/deleting rooms.
@@ -23,7 +25,6 @@ type LiveKitClient struct {
 }
 
 // NewLiveKitClient creates a new LiveKit room service client.
-// livekitURL should be the HTTP(S) URL of the LiveKit server.
 func NewLiveKitClient(livekitURL, apiKey, apiSecret string) *LiveKitClient {
 	httpHost := strings.Replace(strings.Replace(livekitURL, "wss://", "https://", 1), "ws://", "http://", 1)
 	return &LiveKitClient{
@@ -31,18 +32,16 @@ func NewLiveKitClient(livekitURL, apiKey, apiSecret string) *LiveKitClient {
 	}
 }
 
-// CreateRoom creates a LiveKit room with the given name and metadata JSON.
 func (lk *LiveKitClient) CreateRoom(ctx context.Context, roomName string, metadata string) (*livekit.Room, error) {
 	return lk.roomClient.CreateRoom(ctx, &livekit.CreateRoomRequest{
-		Name:            roomName,
-		EmptyTimeout:    60, // close room if nobody joins within 60s
-		DepartureTimeout: 10, // close room 10s after last participant leaves
-		MaxParticipants: 2,
-		Metadata:        metadata,
+		Name:             roomName,
+		EmptyTimeout:     60,
+		DepartureTimeout: 10,
+		MaxParticipants:  2,
+		Metadata:         metadata,
 	})
 }
 
-// DeleteRoom deletes a LiveKit room.
 func (lk *LiveKitClient) DeleteRoom(ctx context.Context, roomName string) error {
 	_, err := lk.roomClient.DeleteRoom(ctx, &livekit.DeleteRoomRequest{
 		Room: roomName,
@@ -51,18 +50,17 @@ func (lk *LiveKitClient) DeleteRoom(ctx context.Context, roomName string) error 
 }
 
 type CallService struct {
-	Store       *store.Store
+	Q           *sqlcdb.Queries
 	PushService *PushService
 	EventBus    pubsub.EventBus
 	LK          *LiveKitClient
 }
 
-func NewCallService(s *store.Store, ps *PushService, bus pubsub.EventBus, lk *LiveKitClient) *CallService {
-	return &CallService{Store: s, PushService: ps, EventBus: bus, LK: lk}
+func NewCallService(q *sqlcdb.Queries, ps *PushService, bus pubsub.EventBus, lk *LiveKitClient) *CallService {
+	return &CallService{Q: q, PushService: ps, EventBus: bus, LK: lk}
 }
 
 // RoomMetadata is stored as JSON in the LiveKit room metadata field.
-// This lets the webhook handler look up call context without a DB query.
 type RoomMetadata struct {
 	CallID         string `json:"call_id"`
 	ConversationID string `json:"conversation_id"`
@@ -71,22 +69,41 @@ type RoomMetadata struct {
 }
 
 type InitiateResult struct {
-	Call *store.CallRecord
+	Call *CallRecord
 }
 
 func (cs *CallService) Initiate(ctx context.Context, callerID string, conversationID uuid.UUID) (*InitiateResult, error) {
-	calleeID, err := cs.Store.GetCalleeFor1to1(ctx, callerID, conversationID)
+	calleeID, err := cs.Q.GetCalleeFor1to1(ctx, sqlcdb.GetCalleeFor1to1Params{
+		UserID:         callerID,
+		ConversationID: conversationID,
+	})
 	if err != nil {
 		return nil, &NotFoundError{Msg: "1:1 conversation not found"}
 	}
 
-	// Generate a unique room name: call_{conversationId}_{timestamp}
 	roomName := fmt.Sprintf("call_%s_%d", conversationID.String(), time.Now().UnixMilli())
 
-	// Create call record first (for the ID)
-	call, err := cs.Store.CreateCallRecord(ctx, conversationID, callerID, calleeID, roomName)
+	row, err := cs.Q.CreateCallRecord(ctx, sqlcdb.CreateCallRecordParams{
+		ConversationID: conversationID,
+		CallerID:       callerID,
+		CalleeID:       calleeID,
+		RoomName:       &roomName,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create call record: %w", err)
+	}
+	rn := ""
+	if row.RoomName != nil {
+		rn = *row.RoomName
+	}
+	call := &CallRecord{
+		ID:             row.ID,
+		ConversationID: row.ConversationID,
+		CallerID:       row.CallerID,
+		CalleeID:       row.CalleeID,
+		Status:         row.Status,
+		RoomName:       rn,
+		CreatedAt:      row.CreatedAt.Format(time.RFC3339),
 	}
 
 	// Create LiveKit room with metadata
@@ -100,36 +117,30 @@ func (cs *CallService) Initiate(ctx context.Context, callerID string, conversati
 		metaJSON, _ := json.Marshal(meta)
 		if _, err := cs.LK.CreateRoom(ctx, roomName, string(metaJSON)); err != nil {
 			log.Printf("[Call] Warning: failed to create LiveKit room %s: %v", roomName, err)
-			// Don't fail the call — frontend can still attempt to connect and LiveKit
-			// auto-creates rooms when the first participant joins with a valid token.
 		}
 	}
 
-	// Publish incoming_call signal to callee
-	callerProfile, err := cs.Store.GetProfile(ctx, callerID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get caller info: %w", err)
-	}
+	// Get caller profile for display name in signal + push
+	profile, err := cs.Q.GetProfile(ctx, callerID)
 	displayName := "Unknown"
 	callerUsername := ""
 	var callerAvatarURL *string
-	if callerProfile != nil {
-		callerUsername = callerProfile.Username
-		displayName = callerProfile.DisplayName
+	if err == nil {
+		callerUsername = profile.Username
+		displayName = profile.DisplayName
 		if displayName == "" {
 			displayName = callerUsername
 		}
-		callerAvatarURL = callerProfile.AvatarURL
+		callerAvatarURL = profile.AvatarUrl
+	} else if err != pgx.ErrNoRows {
+		return nil, fmt.Errorf("failed to get caller info: %w", err)
 	}
-
-	callID := call.ID
-	convoID := conversationID
 
 	if cs.EventBus != nil {
 		_ = events.Publish(cs.EventBus, ctx, "call_signal", events.CallSignalEvent{
 			Type:              "incoming_call",
-			CallID:            callID,
-			ConversationID:    convoID,
+			CallID:            call.ID,
+			ConversationID:    conversationID,
 			CallerID:          callerID,
 			CallerUsername:    callerUsername,
 			CallerDisplayName: displayName,
@@ -158,7 +169,7 @@ func (cs *CallService) Respond(ctx context.Context, userID string, callID uuid.U
 		return nil, &ValidationError{Msg: "action must be 'accept' or 'decline'"}
 	}
 
-	call, err := cs.Store.GetCallByID(ctx, callID)
+	call, err := cs.getCallByID(ctx, callID)
 	if err != nil {
 		return nil, &NotFoundError{Msg: "Call not found"}
 	}
@@ -170,8 +181,6 @@ func (cs *CallService) Respond(ctx context.Context, userID string, callID uuid.U
 	}
 
 	if action == "accept" {
-		// Just publish the signal — frontend connects to LiveKit directly,
-		// and participant_joined webhook will activate the call record.
 		if cs.EventBus != nil {
 			_ = events.Publish(cs.EventBus, ctx, "call_signal", events.CallSignalEvent{
 				Type:         "call_accepted",
@@ -179,18 +188,20 @@ func (cs *CallService) Respond(ctx context.Context, userID string, callID uuid.U
 				TargetUserID: call.CallerID,
 			})
 		}
-		// Mark as active in DB right away so the token endpoint works
-		_ = cs.Store.ActivateCall(ctx, callID)
+		_ = cs.Q.ActivateCall(ctx, callID)
 		return &RespondResult{Status: "accepted"}, nil
 	}
 
-	// Decline: delete the LiveKit room and update DB
+	// Decline
 	if cs.LK != nil && call.RoomName != "" {
 		if err := cs.LK.DeleteRoom(ctx, call.RoomName); err != nil {
 			log.Printf("[Call] Warning: failed to delete LiveKit room %s on decline: %v", call.RoomName, err)
 		}
 	}
-	_ = cs.Store.EndCallWithoutDuration(ctx, callID, "declined")
+	_ = cs.Q.EndCallWithoutDuration(ctx, sqlcdb.EndCallWithoutDurationParams{
+		Status: "declined",
+		ID:     callID,
+	})
 
 	if cs.EventBus != nil {
 		_ = events.Publish(cs.EventBus, ctx, "call_signal", events.CallSignalEvent{
@@ -208,7 +219,7 @@ type EndResult struct {
 }
 
 func (cs *CallService) End(ctx context.Context, userID string, callID uuid.UUID) (*EndResult, error) {
-	call, err := cs.Store.GetCallByID(ctx, callID)
+	call, err := cs.getCallByID(ctx, callID)
 	if err != nil {
 		return nil, &NotFoundError{Msg: "Call not found"}
 	}
@@ -219,14 +230,12 @@ func (cs *CallService) End(ctx context.Context, userID string, callID uuid.UUID)
 		return nil, &ForbiddenError{Msg: "Not a participant"}
 	}
 
-	// Delete the LiveKit room — this will also trigger room_finished webhook
 	if cs.LK != nil && call.RoomName != "" {
 		if err := cs.LK.DeleteRoom(ctx, call.RoomName); err != nil {
 			log.Printf("[Call] Warning: failed to delete LiveKit room %s on end: %v", call.RoomName, err)
 		}
 	}
 
-	// Determine final status
 	newStatus := "completed"
 	if call.Status == "ringing" {
 		if userID == call.CallerID {
@@ -236,7 +245,10 @@ func (cs *CallService) End(ctx context.Context, userID string, callID uuid.UUID)
 		}
 	}
 
-	_ = cs.Store.EndCallWithoutDuration(ctx, callID, newStatus)
+	_ = cs.Q.EndCallWithoutDuration(ctx, sqlcdb.EndCallWithoutDurationParams{
+		Status: newStatus,
+		ID:     callID,
+	})
 
 	otherUserID := call.CalleeID
 	if userID == call.CalleeID {
@@ -256,15 +268,12 @@ func (cs *CallService) End(ctx context.Context, userID string, callID uuid.UUID)
 }
 
 // HandleRoomFinished processes a LiveKit room_finished webhook event.
-// It finalizes the call record with duration and publishes call_ended if needed.
 func (cs *CallService) HandleRoomFinished(ctx context.Context, roomName string, room *livekit.Room) {
-	call, err := cs.Store.GetCallByRoomName(ctx, roomName)
+	call, err := cs.getCallByRoomName(ctx, roomName)
 	if err != nil {
-		// No active call for this room — could be a forum voice room or already ended.
 		return
 	}
 
-	// Calculate duration from room creation time
 	var durationSec int
 	if room != nil && room.CreationTime > 0 {
 		durationSec = int(time.Now().Unix() - room.CreationTime)
@@ -275,16 +284,22 @@ func (cs *CallService) HandleRoomFinished(ctx context.Context, roomName string, 
 
 	status := "completed"
 	if call.Status == "ringing" {
-		status = "missed" // room closed before callee joined
+		status = "missed"
 	}
 
 	if durationSec > 0 && call.Status == "active" {
-		_ = cs.Store.EndCallWithDuration(ctx, call.ID, status, durationSec)
+		_ = cs.Q.EndCallWithDuration(ctx, sqlcdb.EndCallWithDurationParams{
+			Status:          status,
+			DurationSeconds: pgtype.Int4{Int32: int32(durationSec), Valid: true},
+			ID:              call.ID,
+		})
 	} else {
-		_ = cs.Store.EndCallWithoutDuration(ctx, call.ID, status)
+		_ = cs.Q.EndCallWithoutDuration(ctx, sqlcdb.EndCallWithoutDurationParams{
+			Status: status,
+			ID:     call.ID,
+		})
 	}
 
-	// Publish call_ended to both participants
 	for _, targetID := range []string{call.CallerID, call.CalleeID} {
 		if cs.EventBus != nil {
 			_ = events.Publish(cs.EventBus, ctx, "call_signal", events.CallSignalEvent{
@@ -297,17 +312,59 @@ func (cs *CallService) HandleRoomFinished(ctx context.Context, roomName string, 
 }
 
 // HandleParticipantJoined processes a LiveKit participant_joined webhook event.
-// If the second participant has joined, it activates the call.
 func (cs *CallService) HandleParticipantJoined(ctx context.Context, roomName string, numParticipants uint32) {
 	if numParticipants < 2 {
 		return
 	}
-	call, err := cs.Store.GetCallByRoomName(ctx, roomName)
+	call, err := cs.getCallByRoomName(ctx, roomName)
 	if err != nil {
 		return
 	}
 	if call.Status != "ringing" {
-		return // already active
+		return
 	}
-	_ = cs.Store.ActivateCall(ctx, call.ID)
+	_ = cs.Q.ActivateCall(ctx, call.ID)
+}
+
+// GetCallByID returns a call record by ID (exported for handler use).
+func (cs *CallService) GetCallByID(ctx context.Context, callID uuid.UUID) (*CallRecord, error) {
+	return cs.getCallByID(ctx, callID)
+}
+
+// IsCallParticipant checks if a user is a participant in a call.
+func (cs *CallService) IsCallParticipant(ctx context.Context, callID uuid.UUID, userID string) (bool, error) {
+	return cs.Q.IsCallParticipant(ctx, sqlcdb.IsCallParticipantParams{
+		ID:       callID,
+		CallerID: userID,
+	})
+}
+
+// GetProfileDisplayName returns the display name for a user (for LiveKit tokens).
+func (cs *CallService) GetProfileDisplayName(ctx context.Context, userID string) string {
+	profile, err := cs.Q.GetProfile(ctx, userID)
+	if err != nil {
+		return userID
+	}
+	if profile.DisplayName != "" {
+		return profile.DisplayName
+	}
+	return profile.Username
+}
+
+func (cs *CallService) getCallByID(ctx context.Context, callID uuid.UUID) (*CallRecord, error) {
+	row, err := cs.Q.GetCallByID(ctx, callID)
+	if err != nil {
+		return nil, err
+	}
+	return callRowToRecord(row.ID, row.ConversationID, row.CallerID, row.CalleeID,
+		row.Status, row.RoomName, row.CreatedAt, row.StartedAt, row.EndedAt, row.DurationSeconds), nil
+}
+
+func (cs *CallService) getCallByRoomName(ctx context.Context, roomName string) (*CallRecord, error) {
+	row, err := cs.Q.GetCallByRoomName(ctx, &roomName)
+	if err != nil {
+		return nil, err
+	}
+	return callRowToRecord(row.ID, row.ConversationID, row.CallerID, row.CalleeID,
+		row.Status, row.RoomName, row.CreatedAt, row.StartedAt, row.EndedAt, row.DurationSeconds), nil
 }
