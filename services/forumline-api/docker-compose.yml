@@ -16,6 +16,21 @@ services:
       timeout: 5s
       retries: 10
 
+  hasura:
+    image: hasura/graphql-engine:v2.44.0
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: "postgres://postgres:postgres@db:5432/postgres"
+      HASURA_GRAPHQL_ADMIN_SECRET: "local-dev-admin"
+      HASURA_GRAPHQL_JWT_SECRET: '{"type":"RS256","jwk_url":"https://auth.forumline.net/oauth/v2/keys","claims_namespace":"https://hasura.io/jwt/claims","claims_format":"json","audience":"forumline"}'
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+      HASURA_GRAPHQL_DEV_MODE: "true"
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: "startup, http-log, webhook-log, websocket-log"
+    ports:
+      - "8080:8080"
+
   nats:
     image: nats:2-alpine
     command: ["-js", "-m", "8222"]
