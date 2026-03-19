@@ -117,9 +117,8 @@ func (m *JetStreamManager) GetMessages(ctx context.Context, conversationID strin
 		startSeq = info.State.FirstSeq
 	}
 
-	sub, err := m.js.Subscribe(
+	sub, err := m.js.SubscribeSync(
 		"conv."+conversationID+".msg",
-		func(_ *nats.Msg) {},
 		nats.OrderedConsumer(),
 		nats.StartSequence(startSeq),
 	)

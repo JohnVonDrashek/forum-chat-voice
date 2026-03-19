@@ -18,8 +18,10 @@ services:
 
   nats:
     image: nats:2-alpine
+    command: ["-js", "-m", "8222"]
     ports:
       - "4222:4222"
+      - "8222:8222"
     healthcheck:
       test: ["CMD", "sh", "-c", "wget -qO- http://localhost:8222/healthz || exit 1"]
       interval: 5s
