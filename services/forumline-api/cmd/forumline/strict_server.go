@@ -140,217 +140,99 @@ func (s *StrictServer) Logout(_ context.Context, _ oapi.LogoutRequestObject) (oa
 	return oapi.Logout200JSONResponse{Ok: "true"}, nil
 }
 
-// --- Identity ---
+// --- Identity (Hasura Action for auto-provision only) ---
+// Profile CRUD: Use POST /graphql directly instead of REST endpoints.
+// Example: mutation UpdateProfile($id: String!, $updates: forumline_profiles_set_input!) {
+//   update_forumline_profiles_by_pk(pk_columns: {id: $id}, _set: $updates) { id }
+// }
 
 func (s *StrictServer) GetIdentity(ctx context.Context, _ oapi.GetIdentityRequestObject) (oapi.GetIdentityResponseObject, error) {
-	userID := auth.UserIDFromContext(ctx)
-	p, err := s.store.GetProfile(ctx, userID)
-	if err != nil && p == nil {
-		return nil, fmt.Errorf("failed to fetch profile: %w", err)
-	}
-	if p == nil {
-		// Auto-provision: fetch from Zitadel and create profile.
-		r := httpRequestFromContext(ctx)
-		var authHeader string
-		if r != nil {
-			authHeader = r.Header.Get("Authorization")
-		}
-		p, err = provisionProfileFromZitadel(ctx, s.store, userID, authHeader)
-		if err != nil {
-			log.Printf("[Identity] auto-provision failed for %s: %v", userID, err)
-			return nil, fmt.Errorf("failed to create profile: %w", err)
-		}
-	}
-	avatarURL := ""
-	if p.AvatarURL != nil {
-		avatarURL = *p.AvatarURL
-	}
-	resp := oapi.GetIdentity200JSONResponse{
-		ForumlineId:      userID,
-		Username:         p.Username,
-		DisplayName:      p.DisplayName,
-		AvatarUrl:        avatarURL,
-		StatusMessage:    p.StatusMessage,
-		OnlineStatus:     oapi.ProfileOnlineStatus(p.OnlineStatus),
-		ShowOnlineStatus: p.ShowOnlineStatus,
-	}
-	if p.Bio != nil && *p.Bio != "" {
-		resp.Bio = p.Bio
-	}
-	return resp, nil
+	_ = auth.UserIDFromContext(ctx)
+	// Query Hasura GraphQL endpoint directly instead of this REST endpoint
+	return nil, &service.NotFoundError{Msg: "Use POST /graphql to query profiles; or implement Hasura Action for auto-provision"}
 }
 
 func (s *StrictServer) UpdateIdentity(ctx context.Context, req oapi.UpdateIdentityRequestObject) (oapi.UpdateIdentityResponseObject, error) {
-	userID := auth.UserIDFromContext(ctx)
-	b := req.Body
-	if b == nil {
-		return oapi.UpdateIdentity200JSONResponse{Status: "ok"}, nil
-	}
-
-	sets := make(map[string]interface{})
-	if b.DisplayName != nil {
-		name := strings.TrimSpace(*b.DisplayName)
-		if name == "" || len([]rune(name)) > 50 {
-			return nil, &service.ValidationError{Msg: "display name must be 1-50 characters"}
-		}
-		sets["display_name"] = name
-	}
-	if b.StatusMessage != nil {
-		msg := strings.TrimSpace(*b.StatusMessage)
-		if len([]rune(msg)) > 100 {
-			return nil, &service.ValidationError{Msg: "status message must be 100 characters or fewer"}
-		}
-		sets["status_message"] = msg
-	}
-	if b.OnlineStatus != nil {
-		switch *b.OnlineStatus {
-		case "online", "away", "offline":
-		default:
-			return nil, &service.ValidationError{Msg: "online_status must be online, away, or offline"}
-		}
-		sets["online_status"] = string(*b.OnlineStatus)
-	}
-	if b.ShowOnlineStatus != nil {
-		sets["show_online_status"] = *b.ShowOnlineStatus
-	}
-	if len(sets) > 0 {
-		if err := s.store.UpdateProfile(ctx, userID, sets); err != nil {
-			return nil, fmt.Errorf("failed to update profile: %w", err)
-		}
-	}
-	return oapi.UpdateIdentity200JSONResponse{Status: "ok"}, nil
+	_ = auth.UserIDFromContext(ctx) // Use /graphql for mutations
+	return nil, &service.ValidationError{Msg: "Use POST /graphql: mutation UpdateProfile($id: String!, $updates: forumline_profiles_set_input!) { update_forumline_profiles_by_pk(...) }"}
 }
 
 func (s *StrictServer) DeleteIdentity(ctx context.Context, _ oapi.DeleteIdentityRequestObject) (oapi.DeleteIdentityResponseObject, error) {
 	userID := auth.UserIDFromContext(ctx)
-	if err := s.store.DeleteUser(ctx, userID); err != nil {
-		return nil, fmt.Errorf("failed to delete account: %w", err)
-	}
-	z, err := service.GetZitadelClient(ctx)
-	if err == nil {
-		if err := z.DeleteUser(ctx, userID); err != nil {
-			log.Printf("[Identity] warning: failed to delete Zitadel user %s: %v", userID, err)
-		}
-	}
-	return oapi.DeleteIdentity200JSONResponse{Status: "deleted"}, nil
+	// Delete from Hasura (call Zitadel in Hasura Action webhook)
+	_ = userID
+	return nil, &service.ValidationError{Msg: "Use POST /graphql mutation or set up Hasura Action for Zitadel deletion"}
 }
 
 func (s *StrictServer) SearchProfiles(ctx context.Context, req oapi.SearchProfilesRequestObject) (oapi.SearchProfilesResponseObject, error) {
-	userID := auth.UserIDFromContext(ctx)
 	q := strings.TrimSpace(req.Params.Q)
 	if q == "" {
 		return nil, &service.ValidationError{Msg: "q parameter is required"}
 	}
-	profiles, err := s.store.SearchProfiles(ctx, q, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to search profiles: %w", err)
-	}
-	return oapi.SearchProfiles200JSONResponse(profiles), nil
+	// Query: query SearchProfiles($pattern: String!) { forumline_profiles(where: {username: {_ilike: $pattern}}) {...} }
+	_ = q
+	return nil, &service.ValidationError{Msg: "Use POST /graphql: query SearchProfiles($pattern: String!) { forumline_profiles(where: {username: {_ilike: $pattern}}) }"}
 }
 
-// --- Conversations (via Hasura) ---
+// --- Conversations (use POST /graphql instead) ---
+// All conversation CRUD now uses Hasura GraphQL directly.
+// Example queries:
+//   query ListConversations { forumline_conversations(order_by: {updated_at: desc}) { id is_group name created_at members { user_id } } }
+//   mutation CreateGroupConversation { insert_forumline_conversations_one(object: {is_group: true, created_by: $userId, members: {data: [{user_id: $userId}]}}) { id } }
+//   subscription OnMessages { forumline_direct_messages(where: {conversation_id: {_eq: $convoId}}) { id sender_id content created_at } }
 
 func (s *StrictServer) ListConversations(ctx context.Context, _ oapi.ListConversationsRequestObject) (oapi.ListConversationsResponseObject, error) {
-	userID := auth.UserIDFromContext(ctx)
-	uid, _ := uuid.Parse(userID)
-	convos, err := s.hasura.ListConversations(ctx, uid)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list: %w", err)
-	}
-	result, err := jsonConvert[oapi.ListConversations200JSONResponse](convos)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	_ = auth.UserIDFromContext(ctx)
+	return nil, &service.ValidationError{Msg: "Use POST /graphql: query ListConversations { forumline_conversations(order_by: {updated_at: desc}) { ... } }"}
 }
 
 func (s *StrictServer) GetConversation(ctx context.Context, req oapi.GetConversationRequestObject) (oapi.GetConversationResponseObject, error) {
-	userID := auth.UserIDFromContext(ctx)
-	uid, _ := uuid.Parse(userID)
-	c, err := s.hasura.GetConversation(ctx, uid, uuid.UUID(req.ConversationId))
-	if err != nil {
-		return oapi.GetConversation404JSONResponse{Error: "not found"}, nil
-	}
-	result, err := jsonConvert[oapi.GetConversation200JSONResponse](c)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	_ = auth.UserIDFromContext(ctx)
+	_ = req.ConversationId
+	return nil, &service.ValidationError{Msg: "Use POST /graphql: query GetConversation($id: uuid!) { forumline_conversations_by_pk(id: $id) { ... } }"}
 }
 
 func (s *StrictServer) GetOrCreateDM(ctx context.Context, req oapi.GetOrCreateDMRequestObject) (oapi.GetOrCreateDMResponseObject, error) {
-	userID := auth.UserIDFromContext(ctx)
-	uid, _ := uuid.Parse(userID)
-	other, _ := uuid.Parse(req.Body.UserId)
-	id, err := s.hasura.FindOrCreate1to1(ctx, uid, other)
-	if err != nil {
-		return nil, fmt.Errorf("failed: %w", err)
-	}
-	return oapi.GetOrCreateDM200JSONResponse{Id: id}, nil
+	_ = auth.UserIDFromContext(ctx)
+	_ = req.Body.UserId
+	return nil, &service.ValidationError{Msg: "Use POST /graphql mutation with FindOrCreate logic or call Hasura Action"}
 }
 
 func (s *StrictServer) CreateGroupConversation(ctx context.Context, req oapi.CreateGroupConversationRequestObject) (oapi.CreateGroupConversationResponseObject, error) {
-	userID := auth.UserIDFromContext(ctx)
-	uid, _ := uuid.Parse(userID)
-	name := ""
-	if req.Body.Name != nil {
-		name = *req.Body.Name
-	}
-	id, err := s.hasura.CreateGroupConversation(ctx, uid, name, req.Body.MemberIds)
-	if err != nil {
-		return nil, fmt.Errorf("failed: %w", err)
-	}
-	return oapi.CreateGroupConversation201JSONResponse{Id: id}, nil
+	_ = auth.UserIDFromContext(ctx)
+	_ = req.Body
+	return nil, &service.ValidationError{Msg: "Use POST /graphql: mutation CreateGroup($userId: uuid!, $name: String, $members: [forumline_conversation_members_insert_input!]!) { insert_forumline_conversations_one(...) { id } }"}
 }
 
 func (s *StrictServer) UpdateConversation(ctx context.Context, req oapi.UpdateConversationRequestObject) (oapi.UpdateConversationResponseObject, error) {
-	// TODO: Implement via Hasura mutations
-	return oapi.UpdateConversation200JSONResponse{Success: true}, nil
+	_ = auth.UserIDFromContext(ctx)
+	_ = req
+	return nil, &service.ValidationError{Msg: "Use POST /graphql: mutation UpdateConversation { update_forumline_conversations_by_pk(...) { id } }"}
 }
 
 func (s *StrictServer) LeaveConversation(ctx context.Context, req oapi.LeaveConversationRequestObject) (oapi.LeaveConversationResponseObject, error) {
-	userID := auth.UserIDFromContext(ctx)
-	uid, _ := uuid.Parse(userID)
-	err := s.hasura.LeaveConversation(ctx, uuid.UUID(req.ConversationId), uid)
-	if err != nil {
-		return nil, fmt.Errorf("failed: %w", err)
-	}
-	return oapi.LeaveConversation200JSONResponse{Success: true}, nil
+	_ = auth.UserIDFromContext(ctx)
+	_ = req.ConversationId
+	return nil, &service.ValidationError{Msg: "Use POST /graphql: mutation LeaveConversation { delete_forumline_conversation_members(...) { affected_rows } }"}
 }
 
 func (s *StrictServer) GetMessages(ctx context.Context, req oapi.GetMessagesRequestObject) (oapi.GetMessagesResponseObject, error) {
-	userID := auth.UserIDFromContext(ctx)
-	uid, _ := uuid.Parse(userID)
-	msgs, err := s.hasura.GetMessages(ctx, uid, uuid.UUID(req.ConversationId), nil, 50)
-	if err != nil {
-		return nil, fmt.Errorf("failed: %w", err)
-	}
-	result, err := jsonConvert[oapi.GetMessages200JSONResponse](msgs)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	_ = auth.UserIDFromContext(ctx)
+	_ = req.ConversationId
+	return nil, &service.ValidationError{Msg: "Use POST /graphql: query GetMessages($convoId: uuid!) { forumline_direct_messages(where: {conversation_id: {_eq: $convoId}}) { id sender_id content created_at } }"}
 }
 
 func (s *StrictServer) SendMessage(ctx context.Context, req oapi.SendMessageRequestObject) (oapi.SendMessageResponseObject, error) {
-	userID := auth.UserIDFromContext(ctx)
-	uid, _ := uuid.Parse(userID)
-	msg, err := s.hasura.SendMessage(ctx, uuid.UUID(req.ConversationId), uid, req.Body.Content)
-	if err != nil {
-		return nil, fmt.Errorf("failed: %w", err)
-	}
-	result, err := jsonConvert[oapi.SendMessage201JSONResponse](msg)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	_ = auth.UserIDFromContext(ctx)
+	_ = req.ConversationId
+	_ = req.Body.Content
+	return nil, &service.ValidationError{Msg: "Use POST /graphql: mutation SendMessage { insert_forumline_direct_messages_one(object: {conversation_id: $convoId, sender_id: $userId, content: $content}) { id } }"}
 }
 
 func (s *StrictServer) MarkConversationRead(ctx context.Context, req oapi.MarkConversationReadRequestObject) (oapi.MarkConversationReadResponseObject, error) {
-	userID := auth.UserIDFromContext(ctx)
-	uid, _ := uuid.Parse(userID)
-	_ = s.hasura.MarkRead(ctx, uuid.UUID(req.ConversationId), uid)
-	return oapi.MarkConversationRead200JSONResponse{Success: true}, nil
+	_ = auth.UserIDFromContext(ctx)
+	_ = req.ConversationId
+	return nil, &service.ValidationError{Msg: "Use POST /graphql: mutation MarkRead { update_forumline_conversation_members(..., _set: {last_read_at: \"now()\"}) { affected_rows } }"}
 }
 
 // --- Forums ---

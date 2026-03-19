@@ -2,27 +2,27 @@ package store
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
-	"github.com/forumline/forumline/services/forumline-api/oapi"
-	"github.com/forumline/forumline/services/forumline-api/sqlcdb"
 	"github.com/jackc/pgx/v5"
+
+	"github.com/forumline/forumline/services/forumline-api/sqlcdb"
 )
 
-// Profile is a lightweight internal type for profile data that doesn't map 1:1
-// to the oapi.Profile response shape (which has ForumlineId instead of ID, etc.).
+// Profile is minimal internal type for internal services (call, push).
+// Clients should query Hasura GraphQL directly for profile CRUD.
 type Profile struct {
-	ID               string
-	Username         string
-	DisplayName      string
-	AvatarURL        *string
-	Bio              *string
-	StatusMessage    string
-	OnlineStatus     string
+	ID           string
+	Username     string
+	DisplayName  string
+	AvatarURL    *string
+	Bio          *string
+	StatusMessage string
+	OnlineStatus string
 	ShowOnlineStatus bool
 }
 
+// GetProfile — minimal version for internal services only (call, push notifications).
+// For user-facing profile CRUD, use POST /graphql instead.
 func (s *Store) GetProfile(ctx context.Context, id string) (*Profile, error) {
 	row, err := s.Q.GetProfile(ctx, id)
 	if err == pgx.ErrNoRows {
@@ -43,6 +43,17 @@ func (s *Store) GetProfile(ctx context.Context, id string) (*Profile, error) {
 	}, nil
 }
 
+// ProfileExists — used by push notifications to validate recipient exists.
+func (s *Store) ProfileExists(ctx context.Context, userID string) (bool, error) {
+	return s.Q.ProfileExists(ctx, userID)
+}
+
+// UsernameExists — used by auto-provisioning to generate unique username.
+func (s *Store) UsernameExists(ctx context.Context, username string) (bool, error) {
+	return s.Q.UsernameExists(ctx, username)
+}
+
+// CreateProfile — used by auto-provisioning from Zitadel.
 func (s *Store) CreateProfile(ctx context.Context, id, username, displayName, avatarURL string) error {
 	var avatarPtr *string
 	if avatarURL != "" {
@@ -54,80 +65,4 @@ func (s *Store) CreateProfile(ctx context.Context, id, username, displayName, av
 		DisplayName: displayName,
 		AvatarUrl:   avatarPtr,
 	})
-}
-
-func (s *Store) UsernameExists(ctx context.Context, username string) (bool, error) {
-	return s.Q.UsernameExists(ctx, username)
-}
-
-// UpdateProfile uses dynamic SQL — can't be expressed in sqlc.
-func (s *Store) UpdateProfile(ctx context.Context, id string, sets map[string]interface{}) error {
-	if len(sets) == 0 {
-		return nil
-	}
-	clauses := make([]string, 0, len(sets))
-	args := make([]interface{}, 0, len(sets)+1)
-	i := 1
-	for col, val := range sets {
-		clauses = append(clauses, fmt.Sprintf("%s = $%d", col, i))
-		args = append(args, val)
-		i++
-	}
-	args = append(args, id)
-	query := fmt.Sprintf("UPDATE forumline_profiles SET %s WHERE id = $%d", strings.Join(clauses, ", "), i)
-	_, err := s.Pool.Exec(ctx, query, args...)
-	return err
-}
-
-func (s *Store) DeleteUser(ctx context.Context, id string) error {
-	return s.Q.DeleteUser(ctx, id)
-}
-
-func (s *Store) SearchProfiles(ctx context.Context, query, excludeUserID string) ([]oapi.ProfileSearchResult, error) {
-	pattern := "%" + query + "%"
-	rows, err := s.Q.SearchProfiles(ctx, sqlcdb.SearchProfilesParams{
-		ID:       excludeUserID,
-		Username: pattern,
-	})
-	if err != nil {
-		return nil, err
-	}
-	results := make([]oapi.ProfileSearchResult, len(rows))
-	for i, r := range rows {
-		var displayNamePtr *string
-		if r.DisplayName != "" {
-			displayNamePtr = &r.DisplayName
-		}
-		results[i] = oapi.ProfileSearchResult{
-			Id:          r.ID,
-			Username:    r.Username,
-			DisplayName: displayNamePtr,
-			AvatarUrl:   r.AvatarUrl,
-		}
-	}
-	return results, nil
-}
-
-func (s *Store) ProfileExists(ctx context.Context, id string) (bool, error) {
-	return s.Q.ProfileExists(ctx, id)
-}
-
-func (s *Store) FetchProfilesByIDs(ctx context.Context, ids []string) (map[string]*Profile, error) {
-	profiles := make(map[string]*Profile)
-	if len(ids) == 0 {
-		return profiles, nil
-	}
-	rows, err := s.Q.FetchProfilesByIDs(ctx, ids)
-	if err != nil {
-		return profiles, err
-	}
-	for _, r := range rows {
-		profiles[r.ID] = &Profile{
-			ID:          r.ID,
-			Username:    r.Username,
-			DisplayName: r.DisplayName,
-			AvatarURL:   r.AvatarUrl,
-		}
-	}
-	return profiles, nil
 }

@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -138,70 +137,6 @@ func fetchForumThreads(ctx context.Context, webBase string) ([]activityThread, e
 		return nil, err
 	}
 	return threads, nil
-}
-
-// --- Profile auto-provisioning ---
-
-var zitadelUserinfoURL string
-
-func init() {
-	if u := os.Getenv("ZITADEL_URL"); u != "" {
-		zitadelUserinfoURL = u + "/oidc/v1/userinfo"
-	}
-}
-
-// provisionProfileFromZitadel fetches user info from Zitadel and creates a local profile.
-func provisionProfileFromZitadel(ctx context.Context, s *store.Store, userID, authHeader string) (*store.Profile, error) {
-	if zitadelUserinfoURL == "" {
-		return nil, fmt.Errorf("ZITADEL_URL not set")
-	}
-	req, err := http.NewRequestWithContext(ctx, "GET", zitadelUserinfoURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	if authHeader != "" {
-		req.Header.Set("Authorization", authHeader)
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("userinfo request failed: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("userinfo returned %d", resp.StatusCode)
-	}
-	var info struct {
-		Sub               string `json:"sub"`
-		PreferredUsername string `json:"preferred_username"`
-		Name              string `json:"name"`
-		GivenName         string `json:"given_name"`
-		FamilyName        string `json:"family_name"`
-		Picture           string `json:"picture"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
-		return nil, fmt.Errorf("decode userinfo: %w", err)
-	}
-	username := info.PreferredUsername
-	if username == "" {
-		username = "user_" + userID[len(userID)-6:]
-	}
-	displayName := info.Name
-	if displayName == "" {
-		displayName = strings.TrimSpace(info.GivenName + " " + info.FamilyName)
-	}
-	if displayName == "" {
-		displayName = username
-	}
-	if exists, _ := s.UsernameExists(ctx, username); exists {
-		username = username + "_" + userID[len(userID)-4:]
-	}
-	if err := s.CreateProfile(ctx, userID, username, displayName, info.Picture); err != nil {
-		return nil, fmt.Errorf("create profile: %w", err)
-	}
-	return &store.Profile{
-		ID: userID, Username: username, DisplayName: displayName,
-		StatusMessage: "", OnlineStatus: "online", ShowOnlineStatus: true,
-	}, nil
 }
 
 // --- LiveKit token ---

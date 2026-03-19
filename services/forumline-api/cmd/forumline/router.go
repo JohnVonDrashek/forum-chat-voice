@@ -38,19 +38,19 @@ func newRouter(s *store.Store, sseHub *sse.Hub, valkey *redis.Client, bus pubsub
 	callSvc := service.NewCallService(s, pushSvc, bus)
 	presenceTracker := presence.NewTracker(90*time.Second, valkey)
 
-	// Hasura client for conversations
-	hasuraClient := handler.NewHasuraClient(
+	// GraphQL proxy for direct Hasura access
+	graphqlProxy := handler.NewGraphQLProxy(
 		os.Getenv("HASURA_GRAPHQL_ENDPOINT"),
 		os.Getenv("HASURA_GRAPHQL_ADMIN_SECRET"),
 	)
 
-	// Strict server — implements all spec endpoints
+	// Strict server — implements spec endpoints
 	ss := &StrictServer{
 		store:    s,
 		forumSvc: forumSvc,
 		callSvc:  callSvc,
 		pushSvc:  pushSvc,
-		hasura:   hasuraClient,
+		hasura:   nil, // No longer used — use /graphql endpoint
 		lkCfg: &lkConfig{
 			URL:       os.Getenv("LIVEKIT_URL"),
 			APIKey:    os.Getenv("LIVEKIT_API_KEY"),
@@ -88,6 +88,9 @@ func newRouter(s *store.Store, sseHub *sse.Hub, valkey *redis.Client, bus pubsub
 
 	r.Group(func(r chi.Router) {
 		r.Use(authMW)
+
+		// GraphQL — direct Hasura access (eliminates REST API boilerplate)
+		r.Post("/graphql", graphqlProxy.Handler)
 
 		// Auth & Identity
 		r.Get("/api/auth/session", w.GetSession)
@@ -170,16 +173,9 @@ func newRouter(s *store.Store, sseHub *sse.Hub, valkey *redis.Client, bus pubsub
 	r.Get("/api/push/config", pushH.HandleConfig)
 	r.Post("/api/push/notify", pushH.HandleNotify)
 
-	// ── Legacy /api/dms/* routes (backward compatibility) ───────────────
-
-	convoH := handler.NewConversationHandler(hasuraClient)
-	r.Group(func(r chi.Router) {
-		r.Use(authMW)
-		r.Get("/api/dms", convoH.HandleList)
-		r.Get("/api/dms/{userId}", convoH.HandleLegacyGetMessages)
-		r.With(httpkit.UserRateLimit(30, time.Minute)).Post("/api/dms/{userId}", convoH.HandleLegacySendMessage)
-		r.Post("/api/dms/{userId}/read", convoH.HandleLegacyMarkRead)
-	})
+	// ── Legacy /api/dms/* routes (removed — use POST /graphql instead) ───────────────
+	// Clients should use GraphQL queries/mutations for conversations:
+	// POST /graphql with conversations queries (ListConversations, GetMessages, etc.)
 
 	// ── Internal Connect RPC services (service-to-service, not browser-facing) ──
 
