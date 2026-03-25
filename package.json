@@ -23,10 +23,10 @@
     "postinstall": "git config core.hooksPath ci/hooks"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.7",
+    "@biomejs/biome": "^2.4.8",
     "@playwright/test": "^1.58.2",
-    "turbo": "^2.8.17",
-    "vitest": "^4.0.18",
-    "yaml": "^2.8.2"
+    "turbo": "^2.8.20",
+    "vitest": "^4.1.1",
+    "yaml": "^2.8.3"
   }
 }

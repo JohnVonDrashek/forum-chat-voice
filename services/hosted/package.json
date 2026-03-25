@@ -12,18 +12,18 @@
     "generate": "openapi-typescript ../../packages/forum/openapi.yaml -o src/lib/forum-api.gen.ts"
   },
   "dependencies": {
-    "@dicebear/avataaars": "^9.3.2",
-    "@dicebear/core": "^9.3.2",
-    "@dicebear/shapes": "^9.3.2",
-    "@sentry/browser": "^10.44.0",
-    "livekit-client": "^2.17.2",
-    "openapi-fetch": "^0.13.5"
+    "@dicebear/avataaars": "^9.4.2",
+    "@dicebear/core": "^9.4.2",
+    "@dicebear/shapes": "^9.4.2",
+    "@sentry/browser": "^10.45.0",
+    "livekit-client": "^2.18.0",
+    "openapi-fetch": "^0.17.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
-    "@tailwindcss/vite": "^4.2.1",
+    "@tailwindcss/vite": "^4.2.2",
     "openapi-typescript": "^7.8.0",
-    "tailwindcss": "^4.2.1",
-    "vite": "^7.3.1"
+    "tailwindcss": "^4.2.2",
+    "vite": "^8.0.2"
   }
 }
